@@ -1,0 +1,717 @@
+.battle-effect-layer {
+  position: absolute;
+  z-index: 8;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  isolation: isolate;
+}
+
+.battle-effect-layer i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  border: 2px solid var(--battle-effect-secondary, #fff7d8);
+  border-radius: 0;
+  opacity: 0;
+  background: var(--battle-effect-primary, #ff7a00);
+  box-shadow: 2px 2px 0 var(--battle-effect-glow, #a52b12);
+  image-rendering: pixelated;
+  will-change: transform, opacity;
+}
+
+.battle-effect-layer[data-element="grass"] i {
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+.battle-effect-layer[data-element="earth"] i {
+  clip-path: polygon(16% 0, 84% 0, 100% 28%, 84% 100%, 16% 100%, 0 72%);
+}
+
+.battle-effect-layer[data-element="lightning"] i {
+  clip-path: polygon(
+    58% 0,
+    100% 0,
+    68% 40%,
+    100% 40%,
+    28% 100%,
+    44% 56%,
+    8% 56%
+  );
+}
+
+.battle-effect-layer[data-element="water"] i {
+  clip-path: polygon(50% 0, 100% 56%, 76% 100%, 24% 100%, 0 56%);
+}
+
+.battle-effect-layer[data-trajectory="01"] i {
+  width: 18px;
+  height: 8px;
+  border: 2px solid var(--battle-effect-secondary, #fff7d8);
+  background: var(--battle-effect-primary, #ff6a2b);
+  box-shadow: 2px 2px 0 var(--battle-effect-glow, #c92d12);
+  clip-path: polygon(0 18%, 68% 18%, 68% 0, 100% 50%, 68% 100%, 68% 82%, 0 82%);
+}
+
+.battle-effect-layer[data-trajectory="01"] i:nth-child(1) {
+  width: 42px;
+  height: 16px;
+  border-width: 3px;
+  box-shadow:
+    inset 0 0 0 3px var(--battle-effect-secondary, #fff7d8),
+    3px 3px 0 var(--battle-effect-glow, #c92d12);
+}
+
+.battle-effect-layer[data-trajectory="01"] i:nth-child(2) {
+  width: 28px;
+  height: 8px;
+  border: 0;
+  background: var(--battle-effect-secondary, #fff7d8);
+  box-shadow: 2px 2px 0 var(--battle-effect-primary, #ff6a2b);
+}
+
+.battle-effect-layer[data-trajectory="01"] i:nth-child(n + 3) {
+  width: 13px;
+  height: 6px;
+  border-width: 1px;
+}
+
+.battle-effect-layer[data-trajectory="02"] i {
+  width: 22px;
+  height: 8px;
+  border: 2px solid var(--battle-effect-secondary, #fff7d8);
+  background: var(--battle-effect-primary, #ff6a2b);
+  box-shadow: 2px 2px 0 var(--battle-effect-glow, #c92d12);
+  clip-path: polygon(0 35%, 76% 0, 100% 50%, 76% 100%, 0 65%);
+}
+
+.battle-effect-layer[data-trajectory="02"] i:nth-child(6n + 1) {
+  width: 36px;
+  height: 13px;
+  border-width: 3px;
+  box-shadow:
+    inset 0 0 0 2px var(--battle-effect-secondary, #fff7d8),
+    3px 3px 0 var(--battle-effect-glow, #c92d12);
+}
+
+.battle-effect-layer[data-trajectory="02"] i:nth-child(6n + 2) {
+  width: 27px;
+  height: 7px;
+  border: 0;
+  background: var(--battle-effect-secondary, #fff7d8);
+}
+
+.battle-effect-layer[data-trajectory="02"] i:nth-child(6n + 3),
+.battle-effect-layer[data-trajectory="02"] i:nth-child(6n + 4),
+.battle-effect-layer[data-trajectory="02"] i:nth-child(6n + 5),
+.battle-effect-layer[data-trajectory="02"] i:nth-child(6n + 6) {
+  width: 12px;
+  height: 6px;
+  border-width: 1px;
+}
+
+.battle-effect-layer[data-trajectory="03"] i {
+  width: 11px;
+  height: 17px;
+  border: 2px solid var(--battle-effect-secondary, #fff7d8);
+  background: var(--battle-effect-primary, #ff6a2b);
+  box-shadow: 2px 2px 0 var(--battle-effect-glow, #c92d12);
+  clip-path: polygon(48% 0, 100% 28%, 68% 52%, 88% 100%, 24% 76%, 0 42%);
+}
+
+.battle-effect-layer[data-trajectory="03"] i:nth-child(1),
+.battle-effect-layer[data-trajectory="03"] i:nth-child(2),
+.battle-effect-layer[data-trajectory="03"] i:nth-child(3) {
+  width: 18px;
+  height: 28px;
+  border-width: 3px;
+  box-shadow:
+    inset 0 0 0 2px var(--battle-effect-secondary, #fff7d8),
+    3px 3px 0 var(--battle-effect-glow, #c92d12);
+}
+
+.battle-effect-layer:is(
+    [data-trajectory="01"],
+    [data-trajectory="02"],
+    [data-trajectory="03"]
+  )[data-element="fire"]
+  i:nth-child(n + 4) {
+  clip-path: polygon(24% 0, 76% 0, 100% 42%, 72% 100%, 28% 100%, 0 42%);
+}
+
+.battle-effect-layer:is(
+    [data-trajectory="01"],
+    [data-trajectory="02"],
+    [data-trajectory="03"]
+  )[data-element="grass"]
+  i:nth-child(n + 4) {
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+.battle-effect-layer:is(
+    [data-trajectory="01"],
+    [data-trajectory="02"],
+    [data-trajectory="03"]
+  )[data-element="earth"]
+  i:nth-child(n + 4) {
+  clip-path: polygon(16% 0, 84% 0, 100% 28%, 84% 100%, 16% 100%, 0 72%);
+}
+
+.battle-effect-layer:is(
+    [data-trajectory="01"],
+    [data-trajectory="02"],
+    [data-trajectory="03"]
+  )[data-element="lightning"]
+  i:nth-child(n + 4) {
+  clip-path: polygon(
+    58% 0,
+    100% 0,
+    68% 40%,
+    100% 40%,
+    28% 100%,
+    44% 56%,
+    8% 56%
+  );
+}
+
+.battle-effect-layer:is(
+    [data-trajectory="01"],
+    [data-trajectory="02"],
+    [data-trajectory="03"]
+  )[data-element="water"]
+  i:nth-child(n + 4) {
+  clip-path: polygon(50% 0, 100% 56%, 76% 100%, 24% 100%, 0 56%);
+}
+
+.battle-effect-layer[data-trajectory="04"] i {
+  clip-path: none;
+}
+
+.battle-effect-layer[data-trajectory="04"] i:nth-child(1) {
+  width: 36px;
+  height: 36px;
+  border: 4px solid var(--battle-effect-secondary, #ffd166);
+  background: var(--battle-effect-primary, #ff6a2b);
+  box-shadow: inset 0 0 0 5px var(--battle-effect-glow, #c92d12);
+  clip-path: polygon(
+    25% 0,
+    75% 0,
+    100% 25%,
+    100% 75%,
+    75% 100%,
+    25% 100%,
+    0 75%,
+    0 25%
+  );
+}
+
+.battle-effect-layer[data-trajectory="04"] i:nth-child(2) {
+  width: 16px;
+  height: 16px;
+  border: 3px solid #fff7d8;
+  background: var(--battle-effect-secondary, #ffd166);
+  box-shadow: none;
+  clip-path: polygon(
+    25% 0,
+    75% 0,
+    100% 25%,
+    100% 75%,
+    75% 100%,
+    25% 100%,
+    0 75%,
+    0 25%
+  );
+}
+
+.battle-effect-layer[data-trajectory="04"] i:nth-child(3) {
+  width: 52px;
+  height: 52px;
+  border: 4px solid var(--battle-effect-primary, #ff6a2b);
+  background: transparent;
+  box-shadow: inset 0 0 0 3px var(--battle-effect-secondary, #ffd166);
+  clip-path: polygon(
+    25% 0,
+    75% 0,
+    100% 25%,
+    100% 75%,
+    75% 100%,
+    25% 100%,
+    0 75%,
+    0 25%
+  );
+}
+
+.battle-effect-layer[data-trajectory="04"] i:nth-child(n + 4) {
+  width: 8px;
+  height: 8px;
+  border-width: 1px;
+  box-shadow: 2px 2px 0 var(--battle-effect-glow, #c92d12);
+}
+
+.battle-effect-layer[data-trajectory="04"]
+  i:nth-child(n + 4):nth-child(3n + 1) {
+  width: 11px;
+  height: 11px;
+  background: var(--battle-effect-secondary, #ffd166);
+}
+
+.battle-effect-layer[data-trajectory="04"][data-element="grass"]
+  i:nth-child(n + 4) {
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+.battle-effect-layer[data-trajectory="04"][data-element="earth"]
+  i:nth-child(n + 4) {
+  clip-path: polygon(16% 0, 84% 0, 100% 28%, 84% 100%, 16% 100%, 0 72%);
+}
+
+.battle-effect-layer[data-trajectory="04"][data-element="lightning"]
+  i:nth-child(n + 4) {
+  clip-path: polygon(
+    58% 0,
+    100% 0,
+    68% 40%,
+    100% 40%,
+    28% 100%,
+    44% 56%,
+    8% 56%
+  );
+}
+
+.battle-effect-layer[data-trajectory="04"][data-element="water"]
+  i:nth-child(n + 4) {
+  clip-path: polygon(50% 0, 100% 56%, 76% 100%, 24% 100%, 0 56%);
+}
+
+.battle-effect-layer[data-trajectory="05"] i {
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--battle-effect-secondary, #fff7d8);
+  background: var(--battle-effect-primary, #ff6a2b);
+  box-shadow: 2px 2px 0 var(--battle-effect-glow, #c92d12);
+}
+
+.battle-effect-layer[data-trajectory="05"] i:nth-child(1) {
+  width: 62px;
+  height: 62px;
+  border: 7px solid var(--battle-effect-primary, #ff6a2b);
+  border-radius: 0;
+  background: transparent;
+  box-shadow:
+    inset 0 0 0 3px var(--battle-effect-secondary, #fff7d8),
+    4px 4px 0 var(--battle-effect-glow, #c92d12);
+  clip-path: polygon(
+    25% 0,
+    75% 0,
+    100% 25%,
+    100% 75%,
+    75% 100%,
+    25% 100%,
+    0 75%,
+    0 25%
+  );
+}
+
+.battle-effect-layer[data-trajectory="05"] i:nth-child(2) {
+  width: 38px;
+  height: 38px;
+  border: 5px solid var(--battle-effect-secondary, #fff7d8);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: 3px 3px 0 var(--battle-effect-primary, #ff6a2b);
+  clip-path: polygon(
+    25% 0,
+    75% 0,
+    100% 25%,
+    100% 75%,
+    75% 100%,
+    25% 100%,
+    0 75%,
+    0 25%
+  );
+}
+
+.battle-effect-layer[data-trajectory="05"] i:nth-child(n + 3) {
+  width: 10px;
+  height: 15px;
+  border-width: 2px;
+}
+
+.battle-effect-layer[data-trajectory="06"] i {
+  border-radius: 0;
+  clip-path: none;
+}
+
+.battle-effect-layer[data-trajectory="06"] i:nth-child(1) {
+  width: 28px;
+  height: 104px;
+  border: 4px solid var(--battle-effect-secondary, #fff7d8);
+  background: var(--battle-effect-primary, #ff6a2b);
+  box-shadow:
+    inset 0 0 0 4px var(--battle-effect-glow, #c92d12),
+    5px 4px 0 var(--battle-effect-glow, #c92d12);
+  clip-path: polygon(22% 0, 78% 0, 100% 22%, 100% 100%, 0 100%, 0 22%);
+}
+
+.battle-effect-layer[data-trajectory="06"] i:nth-child(2) {
+  width: 54px;
+  height: 22px;
+  border: 4px solid var(--battle-effect-primary, #ff6a2b);
+  background: var(--battle-effect-secondary, #fff7d8);
+  box-shadow: 4px 4px 0 var(--battle-effect-glow, #c92d12);
+  clip-path: polygon(12% 0, 88% 0, 100% 36%, 100% 100%, 0 100%, 0 36%);
+}
+
+.battle-effect-layer[data-trajectory="06"] i:nth-child(n + 3) {
+  width: 12px;
+  height: 14px;
+  border-width: 2px;
+  clip-path: polygon(16% 0, 84% 0, 100% 28%, 84% 100%, 16% 100%, 0 72%);
+}
+
+.battle-effect-layer:is(
+    [data-trajectory="05"],
+    [data-trajectory="06"]
+  )[data-element="fire"]
+  i:nth-child(n + 3) {
+  clip-path: polygon(24% 0, 76% 0, 100% 42%, 72% 100%, 28% 100%, 0 42%);
+}
+
+.battle-effect-layer:is(
+    [data-trajectory="05"],
+    [data-trajectory="06"]
+  )[data-element="grass"]
+  i:nth-child(n + 3) {
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+.battle-effect-layer:is(
+    [data-trajectory="05"],
+    [data-trajectory="06"]
+  )[data-element="earth"]
+  i:nth-child(n + 3) {
+  clip-path: polygon(16% 0, 84% 0, 100% 28%, 84% 100%, 16% 100%, 0 72%);
+}
+
+.battle-effect-layer:is(
+    [data-trajectory="05"],
+    [data-trajectory="06"]
+  )[data-element="lightning"]
+  i:nth-child(n + 3) {
+  clip-path: polygon(
+    58% 0,
+    100% 0,
+    68% 40%,
+    100% 40%,
+    28% 100%,
+    44% 56%,
+    8% 56%
+  );
+}
+
+.battle-effect-layer:is(
+    [data-trajectory="05"],
+    [data-trajectory="06"]
+  )[data-element="water"]
+  i:nth-child(n + 3) {
+  clip-path: polygon(50% 0, 100% 56%, 76% 100%, 24% 100%, 0 56%);
+}
+
+.battle-effect-layer[data-trajectory="07"] i {
+  border: 0;
+  border-radius: 0;
+  box-shadow: 3px 0 0 var(--battle-effect-glow, #2588d8);
+  clip-path: polygon(40% 0, 60% 0, 78% 100%, 22% 100%);
+}
+
+.battle-effect-layer[data-trajectory="07"] i:nth-child(1) {
+  width: 24px;
+  height: 24px;
+  border: 4px solid var(--battle-effect-secondary, #dff8ff);
+  background: var(--battle-effect-primary, #ffe14f);
+  box-shadow: inset 0 0 0 4px var(--battle-effect-glow, #2588d8);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+.battle-effect-layer[data-trajectory="07"]
+  i:nth-child(n + 2):nth-child(-n + 9) {
+  width: 12px;
+  height: 54px;
+}
+
+.battle-effect-layer[data-trajectory="07"][data-element="grass"]
+  i:nth-child(n + 2):nth-child(-n + 9) {
+  height: 30px;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+.battle-effect-layer[data-trajectory="07"][data-element="earth"]
+  i:nth-child(n + 2):nth-child(-n + 9) {
+  width: 18px;
+  height: 30px;
+  clip-path: polygon(16% 0, 84% 0, 100% 28%, 84% 100%, 16% 100%, 0 72%);
+}
+
+.battle-effect-layer[data-trajectory="07"][data-element="lightning"]
+  i:nth-child(n + 2):nth-child(-n + 9) {
+  clip-path: polygon(
+    58% 0,
+    100% 0,
+    68% 40%,
+    100% 40%,
+    28% 100%,
+    44% 56%,
+    8% 56%
+  );
+}
+
+.battle-effect-layer[data-trajectory="07"][data-element="water"]
+  i:nth-child(n + 2):nth-child(-n + 9) {
+  width: 14px;
+  height: 34px;
+  clip-path: polygon(50% 0, 100% 56%, 76% 100%, 24% 100%, 0 56%);
+}
+
+.battle-effect-layer[data-trajectory="07"] i:nth-child(even) {
+  background: var(--battle-effect-secondary, #dff8ff);
+}
+
+.battle-effect-layer[data-trajectory="07"] i:nth-child(n + 10) {
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--battle-effect-primary, #ffe14f);
+  background: var(--battle-effect-secondary, #dff8ff);
+  box-shadow: none;
+  clip-path: none;
+}
+
+.battle-effect-layer[data-trajectory="08"] i {
+  width: 28px;
+  height: 8px;
+  border: 2px solid var(--battle-effect-secondary, #fff7d8);
+  background: var(--battle-effect-primary, #ff6a2b);
+  box-shadow: 2px 2px 0 var(--battle-effect-glow, #c92d12);
+  clip-path: polygon(0 18%, 82% 18%, 100% 50%, 82% 82%, 0 82%);
+}
+
+.battle-effect-layer[data-trajectory="08"] i:nth-child(-n + 4) {
+  width: 82px;
+  height: 14px;
+  border-width: 3px;
+  box-shadow:
+    inset 0 0 0 2px var(--battle-effect-secondary, #fff7d8),
+    4px 4px 0 var(--battle-effect-glow, #c92d12);
+}
+
+.battle-effect-layer[data-trajectory="08"] i:nth-child(2),
+.battle-effect-layer[data-trajectory="08"] i:nth-child(4) {
+  background: var(--battle-effect-secondary, #fff7d8);
+  box-shadow: 3px 3px 0 var(--battle-effect-primary, #ff6a2b);
+}
+
+.battle-effect-layer[data-trajectory="08"] i:nth-child(n + 5) {
+  width: 16px;
+  height: 7px;
+  border-width: 1px;
+}
+
+.battle-effect-layer[data-trajectory="09"] i {
+  width: 13px;
+  height: 13px;
+  border: 2px solid var(--battle-effect-secondary, #fff7d8);
+  background: var(--battle-effect-primary, #ff6a2b);
+  box-shadow: 2px 2px 0 var(--battle-effect-glow, #c92d12);
+}
+
+.battle-effect-layer[data-trajectory="09"] i:nth-child(1) {
+  width: 78px;
+  height: 78px;
+  border: 6px dashed var(--battle-effect-primary, #ff6a2b);
+  border-radius: 0;
+  background: transparent;
+  box-shadow:
+    inset 0 0 0 3px var(--battle-effect-secondary, #fff7d8),
+    4px 4px 0 var(--battle-effect-glow, #c92d12);
+  clip-path: polygon(
+    25% 0,
+    75% 0,
+    100% 25%,
+    100% 75%,
+    75% 100%,
+    25% 100%,
+    0 75%,
+    0 25%
+  );
+}
+
+.battle-effect-layer[data-trajectory="09"] i:nth-child(2) {
+  width: 48px;
+  height: 48px;
+  border: 5px solid var(--battle-effect-secondary, #fff7d8);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: 3px 3px 0 var(--battle-effect-primary, #ff6a2b);
+  clip-path: polygon(
+    25% 0,
+    75% 0,
+    100% 25%,
+    100% 75%,
+    75% 100%,
+    25% 100%,
+    0 75%,
+    0 25%
+  );
+}
+
+.battle-effect-layer[data-trajectory="09"] i:nth-child(n + 3) {
+  width: 12px;
+  height: 18px;
+}
+
+.battle-effect-layer:is(
+    [data-trajectory="08"],
+    [data-trajectory="09"]
+  )[data-element="fire"]
+  i:nth-child(n + 5) {
+  clip-path: polygon(24% 0, 76% 0, 100% 42%, 72% 100%, 28% 100%, 0 42%);
+}
+
+.battle-effect-layer:is(
+    [data-trajectory="08"],
+    [data-trajectory="09"]
+  )[data-element="grass"]
+  i:nth-child(n + 5) {
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+.battle-effect-layer:is(
+    [data-trajectory="08"],
+    [data-trajectory="09"]
+  )[data-element="earth"]
+  i:nth-child(n + 5) {
+  clip-path: polygon(16% 0, 84% 0, 100% 28%, 84% 100%, 16% 100%, 0 72%);
+}
+
+.battle-effect-layer:is(
+    [data-trajectory="08"],
+    [data-trajectory="09"]
+  )[data-element="lightning"]
+  i:nth-child(n + 5) {
+  clip-path: polygon(
+    58% 0,
+    100% 0,
+    68% 40%,
+    100% 40%,
+    28% 100%,
+    44% 56%,
+    8% 56%
+  );
+}
+
+.battle-effect-layer:is(
+    [data-trajectory="08"],
+    [data-trajectory="09"]
+  )[data-element="water"]
+  i:nth-child(n + 5) {
+  clip-path: polygon(50% 0, 100% 56%, 76% 100%, 24% 100%, 0 56%);
+}
+
+.battle-effect-layer[data-trajectory="10"] i {
+  border-radius: 0;
+  clip-path: none;
+}
+
+.battle-effect-layer[data-trajectory="10"] i:nth-child(1) {
+  width: 24px;
+  height: 126px;
+  border: 4px solid var(--battle-effect-primary, #42c7ff);
+  background: var(--battle-effect-secondary, #d8f8ff);
+  box-shadow:
+    5px 0 0 var(--battle-effect-glow, #1768bd),
+    -5px 0 0 var(--battle-effect-primary, #42c7ff);
+  clip-path: polygon(
+    34% 0,
+    66% 0,
+    66% 78%,
+    100% 78%,
+    100% 100%,
+    0 100%,
+    0 78%,
+    34% 78%
+  );
+}
+
+.battle-effect-layer[data-trajectory="10"] i:nth-child(2) {
+  width: 104px;
+  height: 32px;
+  border: 5px solid var(--battle-effect-primary, #42c7ff);
+  background: transparent;
+  box-shadow:
+    inset 0 0 0 3px var(--battle-effect-secondary, #d8f8ff),
+    4px 4px 0 var(--battle-effect-glow, #1768bd);
+  clip-path: polygon(
+    14% 0,
+    86% 0,
+    100% 35%,
+    100% 65%,
+    86% 100%,
+    14% 100%,
+    0 65%,
+    0 35%
+  );
+}
+
+.battle-effect-layer[data-trajectory="10"]
+  i:nth-child(n + 3):nth-child(-n + 8) {
+  width: 10px;
+  height: 48px;
+  border: 2px solid var(--battle-effect-secondary, #d8f8ff);
+  background: var(--battle-effect-primary, #42c7ff);
+  box-shadow: 3px 0 0 var(--battle-effect-glow, #1768bd);
+  clip-path: polygon(50% 0, 100% 72%, 70% 100%, 30% 100%, 0 72%);
+}
+
+.battle-effect-layer[data-trajectory="10"] i:nth-child(n + 9) {
+  width: 7px;
+  height: 14px;
+  border: 2px solid var(--battle-effect-primary, #42c7ff);
+  background: var(--battle-effect-secondary, #d8f8ff);
+  box-shadow: 2px 2px 0 var(--battle-effect-glow, #1768bd);
+  clip-path: polygon(50% 0, 100% 58%, 76% 100%, 24% 100%, 0 58%);
+}
+
+.battle-effect-layer[data-trajectory="10"][data-element="fire"]
+  i:nth-child(n + 3) {
+  clip-path: polygon(24% 0, 76% 0, 100% 42%, 72% 100%, 28% 100%, 0 42%);
+}
+
+.battle-effect-layer[data-trajectory="10"][data-element="grass"]
+  i:nth-child(n + 3) {
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+.battle-effect-layer[data-trajectory="10"][data-element="earth"]
+  i:nth-child(n + 3) {
+  clip-path: polygon(16% 0, 84% 0, 100% 28%, 84% 100%, 16% 100%, 0 72%);
+}
+
+.battle-effect-layer[data-trajectory="10"][data-element="lightning"]
+  i:nth-child(n + 3) {
+  clip-path: polygon(
+    58% 0,
+    100% 0,
+    68% 40%,
+    100% 40%,
+    28% 100%,
+    44% 56%,
+    8% 56%
+  );
+}
+
+.battle-effect-layer {
+  display: block;
+  pointer-events: none;
+}

@@ -844,7 +844,8 @@ Web 收到终局快照时先应用 authority 并立即执行 Battle、identity �
 ### 13.4 Web
 
 - `BattleView.tsx` 拆分 authority room、动作游标和表现队列输入，并使终局结果等待队列。
-- `BattleArena.tsx`、`useBattleAnimation.ts` 与 `battle.css` 实现当前行动操作区、本地施法、权威反馈、顺序队列和无指针遮挡动画。
+- `BattleArena.tsx`、`useBattleAnimation.ts` 与 `battle-core.css` 实现当前行动操作区、本地施法、权威反馈、顺序队列和无指针遮挡动画；`battleRuntimeLoader.ts`、`battleEffectPlayer.ts` 与 `battle-effects.css` 固定可重试的重表现动态边界。
+- battle-realtime workflow 把 Ably SDK 隔离到 `battleRealtimeRuntime.ts`，token 与模块并行取得；`battleRuntimeBudget.ts` 对 Battle 增量核心执行 JS/CSS 四项预算和禁止模块门禁。原 `game-page.css` 只由实际组合转盘的任务页加载，不进入 `/game`。
 - `useBattleCommand.ts`、`useBattleTerminalRefresh.ts` 与 battle-realtime workflow 同步新路由、游标补齐和恢复规则。
 - `TeamSelector.tsx`、技能卡与 Battle 文案删除已撤销字段和阶段语义。
 
@@ -958,6 +959,10 @@ git diff --check
 
 ### 15.6 实时、动画与性能
 
+- Battle 增量核心生产构建必须满足 JS 原始 `160000` 字节、gzip `45000` 字节，CSS 原始 `45000` 字节、gzip `9000` 字节，且静态闭包不含 Ably、`battleEffectPlayer.ts` 或技能轨迹 CSS。
+- 首次进入 `home` 时不随核心下载 Ably 和重特效；首页稳定后只在可见、在线、Telegram active、明确非省流量 4G 的 idle 时准备。非首页权威状态和触摸、指针、键盘意图立即准备，不等待 Promise。
+- Realtime token 与 Ably 模块并行；达到 `connected` 前保持 active 1 秒、其他活动状态 2 秒 REST 回正。模块下载中不显示离线，实际失败后进入同一恢复且后续可以重试。
+- 技能命令与重表现下载并行；未完成时只显示“战斗准备中”且倒计时优先。模块、CSS 或动画失败时跳过重表现，仍按权威事件推进 HP、动作权与结果，不重提命令。
 - 本人点击后立即出现施法/移动/弹道；服务端事件前绝不出现命中、伤害、HP 或死亡反馈。
 - 对手动作完整播放；两个客户端看到相同动作顺序。新动作入队但不覆盖当前动画。
 - 上一动画期间，authority 已开放的下一玩家按钮和倒计时可操作；其提交立即到服务端。

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import * as Ably from "ably";
 import { parseBattleRealtimeInvalidation } from "@pokepets/api-contracts/app-client";
 
 import { apiRequest } from "../../platform/api/client.ts";
+import { loadBattleRealtimeRuntime } from "./battleRealtimeRuntimeLoader.ts";
 
 const uuidPattern =
   "[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
@@ -26,6 +26,11 @@ export type BattleRealtimeStatus =
   | "connected"
   | "offline";
 
+type RuntimeConnection = {
+  reconnectIfFailed(): void;
+  close(): void;
+};
+
 export function useBattleRealtime({
   enabled,
   pageActive,
@@ -44,7 +49,8 @@ export function useBattleRealtime({
   const [status, setStatus] = useState<BattleRealtimeStatus>(
     enabled ? "connecting" : "idle",
   );
-  const clientRef = useRef<Ably.Realtime | null>(null);
+  const connectionRef = useRef<RuntimeConnection | null>(null);
+  const connectRef = useRef<(() => Promise<void>) | null>(null);
   const versionRef = useRef(stateVersion);
   const refetchRef = useRef(refetch);
   const seenEvents = useRef(new Set<string>());
@@ -59,8 +65,8 @@ export function useBattleRealtime({
     if (!enabled) return;
     const initialController = new AbortController();
     const authControllers = new Set<AbortController>();
-    const channels: Ably.RealtimeChannel[] = [];
     let disposed = false;
+    let connectInFlight = false;
     let refreshTimer: number | undefined;
     let refreshInFlight = false;
     let refreshQueued = false;
@@ -93,8 +99,8 @@ export function useBattleRealtime({
       }, 80);
     };
     scheduleRef.current = scheduleRefetch;
-    const onMessage = (message: Ably.InboundMessage) => {
-      void parseBattleRealtimeInvalidation(message.data)
+    const onMessage = (data: unknown) => {
+      void parseBattleRealtimeInvalidation(data)
         .then((parsed) => {
           if (
             parsed.state_version < versionRef.current ||
@@ -110,86 +116,64 @@ export function useBattleRealtime({
         })
         .catch(() => undefined);
     };
-    const onConnectionState = (change: Ably.ConnectionStateChange) => {
-      if (disposed) return;
-      if (change.current === "connected") {
-        setStatus("connected");
-        scheduleRefetch();
-      } else if (
-        change.current === "disconnected" ||
-        change.current === "suspended" ||
-        change.current === "failed"
-      ) {
-        setStatus("offline");
-      } else if (
-        change.current === "initialized" ||
-        change.current === "connecting"
-      ) {
-        setStatus("connecting");
-      }
-    };
     const connect = async () => {
+      if (disposed || connectInFlight || connectionRef.current) return;
+      connectInFlight = true;
+      setStatus("connecting");
       try {
-        const token = await apiRequest(
+        const tokenPromise = apiRequest(
           "battle.realtime_token",
           {},
           { signal: initialController.signal },
         );
+        const runtimePromise = loadBattleRealtimeRuntime();
+        const [token, runtime] = await Promise.all([
+          tokenPromise,
+          runtimePromise,
+        ]);
         if (disposed) return;
         const authorized = parseAuthorizedChannels(token.data.capability);
         if (!authorized || authorized.length === 0)
           throw new Error("BATTLE_REALTIME_CAPABILITY_INVALID");
-        const tokenDetails: Ably.TokenDetails = token.data;
-        const client = new Ably.Realtime({
-          tokenDetails,
-          autoConnect: false,
-          logLevel: 0,
-          authCallback: (_params, callback) => {
+        connectionRef.current = runtime.connectBattleRealtimeRuntime({
+          tokenDetails: token.data,
+          authorizedChannels: authorized,
+          refreshToken: async () => {
             const controller = new AbortController();
             authControllers.add(controller);
-            void apiRequest(
-              "battle.realtime_token",
-              {},
-              { signal: controller.signal },
-            )
-              .then((result) => {
-                if (disposed) return;
-                const refreshed = parseAuthorizedChannels(
-                  result.data.capability,
-                );
-                if (!refreshed || !sameChannels(refreshed, authorized)) {
-                  setStatus("offline");
-                  callback("BATTLE_REALTIME_CAPABILITY_INVALID", null);
-                  return;
-                }
-                callback(null, result.data);
-              })
-              .catch((cause: unknown) => {
-                if (!disposed)
-                  callback(
-                    cause instanceof Error
-                      ? cause.message
-                      : "BATTLE_REALTIME_TOKEN_FAILED",
-                    null,
-                  );
-              })
-              .finally(() => authControllers.delete(controller));
+            try {
+              return (
+                await apiRequest(
+                  "battle.realtime_token",
+                  {},
+                  { signal: controller.signal },
+                )
+              ).data;
+            } finally {
+              authControllers.delete(controller);
+            }
+          },
+          validateRefreshedToken: (refreshed) => {
+            const capability = tokenCapability(refreshed);
+            const channels = capability
+              ? parseAuthorizedChannels(capability)
+              : null;
+            return Boolean(channels && sameChannels(channels, authorized));
+          },
+          onMessage,
+          onStatus: (next) => {
+            if (disposed) return;
+            setStatus(next);
+            if (next === "connected") scheduleRefetch();
           },
         });
-        clientRef.current = client;
-        client.connection.on(onConnectionState);
-        for (const name of authorized) {
-          const channel = client.channels.get(name);
-          channels.push(channel);
-          void channel.subscribe(onMessage).catch(() => {
-            if (!disposed) setStatus("offline");
-          });
-        }
-        client.connect();
       } catch {
         if (!disposed) setStatus("offline");
+      } finally {
+        connectInFlight = false;
       }
     };
+    connectRef.current = connect;
     void connect();
     return () => {
       disposed = true;
@@ -198,16 +182,10 @@ export function useBattleRealtime({
       authControllers.clear();
       if (refreshTimer !== undefined) window.clearTimeout(refreshTimer);
       scheduleRef.current = null;
-      const client = clientRef.current;
-      if (client) {
-        client.connection.off(onConnectionState);
-        for (const channel of channels) {
-          channel.unsubscribe(onMessage);
-          void channel.detach().catch(() => undefined);
-        }
-        client.close();
-      }
-      if (clientRef.current === client) clientRef.current = null;
+      if (connectRef.current === connect) connectRef.current = null;
+      const connection = connectionRef.current;
+      connection?.close();
+      if (connectionRef.current === connection) connectionRef.current = null;
     };
   }, [contextKey, enabled, pageActive]);
 
@@ -220,7 +198,7 @@ export function useBattleRealtime({
       !enabled ||
       !pageActive ||
       interval === null ||
-      status !== "offline" ||
+      status === "connected" ||
       document.visibilityState !== "visible"
     )
       return;
@@ -232,8 +210,9 @@ export function useBattleRealtime({
     if (!enabled) return;
     const onOnline = () => {
       scheduleRef.current?.();
-      const client = clientRef.current;
-      if (client?.connection.state === "failed") client.connect();
+      const connection = connectionRef.current;
+      if (connection) connection.reconnectIfFailed();
+      else void connectRef.current?.();
     };
     const onOffline = () => setStatus("offline");
     window.addEventListener("online", onOnline);
@@ -299,4 +278,9 @@ function sameChannels(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function tokenCapability(value: unknown): string | null {
+  if (!isRecord(value)) return null;
+  return typeof value.capability === "string" ? value.capability : null;
 }

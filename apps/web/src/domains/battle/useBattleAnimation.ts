@@ -14,13 +14,12 @@ import type {
   BattleSelfTeamDto,
 } from "@pokepets/api-contracts/app-client";
 import {
-  clearBattleEffectLayer,
-  parseBattleEffectKey,
-  playBattleEffectCast,
-  playBattleEffectOutcome,
-} from "./battleEffectPlayer.ts";
+  isBattleEffectRuntimePrepared,
+  loadBattleEffectRuntime,
+} from "./battleRuntimeLoader.ts";
 
 type TeamSlot = 1 | 2 | 3;
+type BattleEffectRuntime = Awaited<ReturnType<typeof loadBattleEffectRuntime>>;
 
 type PresentationState = {
   selfTeam: BattleSelfTeamDto;
@@ -69,11 +68,12 @@ export function useBattleAnimation({
   cancelledLocalActionKey: string | null;
   resetVersion: number;
   onBusyChange(busy: boolean): void;
-}): PresentationState & { busy: boolean } {
+}): PresentationState & { busy: boolean; runtimePreparing: boolean } {
   const [presentation, setPresentation] = useState<PresentationState>(() =>
     presentationFrom(snapshot),
   );
   const [busy, setBusy] = useState(false);
+  const [runtimePreparing, setRuntimePreparing] = useState(false);
   const snapshotRef = useRef(snapshot);
   const queue = useRef<QueueItem[]>([]);
   const seenEvents = useRef(new Set<string>());
@@ -84,6 +84,14 @@ export function useBattleAnimation({
   const reset = useRef(resetVersion);
   const busyRef = useRef(false);
   const onBusyChangeRef = useRef(onBusyChange);
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     snapshotRef.current = snapshot;
@@ -107,6 +115,18 @@ export function useBattleAnimation({
     }));
   }, []);
 
+  const prepareEffectRuntime = useCallback(async () => {
+    const pending = !isBattleEffectRuntimePrepared();
+    if (pending && mounted.current) setRuntimePreparing(true);
+    try {
+      return await loadBattleEffectRuntime();
+    } catch {
+      return null;
+    } finally {
+      if (pending && mounted.current) setRuntimePreparing(false);
+    }
+  }, []);
+
   const drain = useCallback(async () => {
     if (running.current) return;
     running.current = true;
@@ -119,6 +139,8 @@ export function useBattleAnimation({
         const reduced = window.matchMedia(
           "(prefers-reduced-motion: reduce)",
         ).matches;
+        const effects = reduced ? null : await prepareEffectRuntime();
+        if (run.current !== startedRun) break;
         const local = item.local;
         if (local && !item.castPlayed) {
           if (local.kind === "replace_attack" && local.teamSlot !== null) {
@@ -129,12 +151,14 @@ export function useBattleAnimation({
               if (actor) await playSwitchIn(actor);
             }
           }
-          const effect = parseBattleEffectKey(local.effectKey);
-          if (effect && !reduced)
-            await playBattleEffectCast(
-              arena,
-              actorElement(arena, "self"),
-              effect,
+          const effect = effects?.parseBattleEffectKey(local.effectKey);
+          if (effect && effects)
+            await safelyPlayEffect(arena, effects, () =>
+              effects.playBattleEffectCast(
+                arena,
+                actorElement(arena, "self"),
+                effect,
+              ),
             );
           item.castPlayed = true;
           if (run.current !== startedRun) break;
@@ -144,6 +168,7 @@ export function useBattleAnimation({
           arena,
           item,
           reduced,
+          effects,
           setPresentation,
           () => run.current !== startedRun,
         );
@@ -159,7 +184,7 @@ export function useBattleAnimation({
         }
       }
     }
-  }, [arenaRef, publishBusy, reconcile]);
+  }, [arenaRef, prepareEffectRuntime, publishBusy, reconcile]);
   useEffect(() => {
     if (room.current === snapshot.room_id && reset.current === resetVersion)
       return;
@@ -282,13 +307,14 @@ export function useBattleAnimation({
     };
   }, [arenaRef, publishBusy, reconcile]);
 
-  return { ...presentation, busy };
+  return { ...presentation, busy, runtimePreparing };
 }
 
 async function playAuthoritativeEvent(
   arena: HTMLDivElement,
   item: QueueItem,
   reduced: boolean,
+  effects: BattleEffectRuntime | null,
   setPresentation: Dispatch<SetStateAction<PresentationState>>,
   cancelled: () => boolean,
 ): Promise<void> {
@@ -318,25 +344,29 @@ async function playAuthoritativeEvent(
       continue;
     }
     const covered = localCovered && action.actor === "self";
-    const effect = parseBattleEffectKey(action.effect_key);
-    if (!covered && effect && !reduced)
-      await playBattleEffectCast(
-        arena,
-        actorElement(arena, action.actor),
-        effect,
+    const effect = effects?.parseBattleEffectKey(action.effect_key);
+    if (!covered && effect && effects)
+      await safelyPlayEffect(arena, effects, () =>
+        effects.playBattleEffectCast(
+          arena,
+          actorElement(arena, action.actor),
+          effect,
+        ),
       );
     setPresentation((current) => ({ ...current, feedback: event }));
-    if (!reduced && effect) {
+    if (!reduced && effect && effects) {
       const target = actorElement(
         arena,
         action.actor === "self" ? "opponent" : "self",
       );
-      await playBattleEffectOutcome(
-        arena,
-        target,
-        effect,
-        action.hit,
-        action.knockout,
+      await safelyPlayEffect(arena, effects, () =>
+        effects.playBattleEffectOutcome(
+          arena,
+          target,
+          effect,
+          action.hit,
+          action.knockout,
+        ),
       );
     }
   }
@@ -479,7 +509,33 @@ function cancelAnimation(arena: HTMLDivElement | null): void {
   arena.getAnimations({ subtree: true }).forEach((animation) => {
     animation.cancel();
   });
-  clearBattleEffectLayer(arena);
+  clearEffectLayer(arena);
+}
+
+async function safelyPlayEffect(
+  arena: HTMLDivElement,
+  effects: BattleEffectRuntime,
+  play: () => Promise<void>,
+): Promise<void> {
+  try {
+    await play();
+  } catch {
+    effects.clearBattleEffectLayer(arena);
+  }
+}
+
+function clearEffectLayer(arena: HTMLDivElement): void {
+  const layer = arena.querySelector<HTMLElement>("[data-battle-effect-layer]");
+  if (!layer) return;
+  layer.getAnimations({ subtree: true }).forEach((animation) => {
+    animation.cancel();
+  });
+  delete layer.dataset.element;
+  delete layer.dataset.phase;
+  delete layer.dataset.trajectory;
+  layer.style.removeProperty("--battle-effect-primary");
+  layer.style.removeProperty("--battle-effect-secondary");
+  layer.style.removeProperty("--battle-effect-glow");
 }
 
 function nextPaint(): Promise<void> {

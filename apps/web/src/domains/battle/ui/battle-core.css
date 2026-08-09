@@ -1629,48 +1629,17 @@
 
 .battle-arena {
   position: relative;
-  min-height: 720px;
   display: grid;
-  grid-template-rows:
-    auto minmax(220px, 1fr) minmax(74px, auto) minmax(230px, 1fr)
-    auto;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.95);
-  border-radius: 28px;
-  background:
-    radial-gradient(
-      ellipse at 50% 48%,
-      rgba(255, 255, 255, 0.98),
-      transparent 31%
-    ),
-    linear-gradient(180deg, #eef8f2 0 44%, #f8f4e8 44% 100%);
-  box-shadow: 0 18px 45px rgba(54, 67, 75, 0.12);
-}
-
-.battle-arena::before {
-  position: absolute;
-  z-index: 0;
-  inset: 42% -20% auto;
-  height: 20%;
-  border: 1px solid rgba(77, 187, 57, 0.15);
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.46);
-  content: "";
-  transform: rotate(-2deg);
 }
 
 .battle-turn-hud {
   position: relative;
   z-index: 6;
-  min-height: 48px;
   display: grid;
   grid-template-columns: 1fr auto auto;
   align-items: center;
   gap: 7px;
-  padding: 7px 10px;
-  border-bottom: 1px solid rgba(54, 67, 75, 0.08);
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(12px);
 }
 
 .battle-turn-hud span,
@@ -1686,47 +1655,13 @@
 }
 
 .battle-turn-hud > strong {
-  min-width: 64px;
   justify-content: center;
-  padding: 7px;
-  border-radius: 11px;
-  color: #fff;
-  background: var(--battle-ink);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
 
-.battle-side-chip {
-  padding: 6px 7px;
-  border: 1px solid var(--battle-line);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.65);
-}
-
 .battle-arena-side {
-  position: relative;
   z-index: 2;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: 54px minmax(0, 1fr);
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-}
-
-.battle-arena-side.self {
-  grid-template-columns: minmax(0, 1fr) 54px;
-}
-
-.battle-arena-side.self .battle-bench {
-  grid-column: 2;
-  grid-row: 1;
-}
-
-.battle-arena-side.self .battle-active-pet,
-.battle-arena-side.self .battle-empty-active {
-  grid-column: 1;
-  grid-row: 1;
 }
 
 .battle-bench {
@@ -1736,18 +1671,8 @@
 
 .battle-bench > div {
   position: relative;
-  width: 48px;
-  height: 48px;
   display: grid;
   place-items: center;
-  border: 2px solid rgba(255, 255, 255, 0.9);
-  border-radius: 15px;
-  background: rgba(255, 255, 255, 0.68);
-  box-shadow: 0 5px 12px rgba(54, 67, 75, 0.08);
-}
-
-.battle-bench > div.active {
-  border-color: var(--battle-orange);
 }
 
 .battle-bench > div.knocked-out {
@@ -1757,35 +1682,14 @@
 
 .battle-bench .catalog-image,
 .battle-bench .image-missing {
-  width: 40px;
-  height: 40px;
   object-fit: contain;
 }
 
 .battle-bench span {
-  position: absolute;
-  right: -2px;
-  bottom: -2px;
-  width: 17px;
-  height: 17px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  color: white;
-  background: var(--battle-ink);
-  font-size: 8px;
-  font-weight: 900;
-}
-
-.battle-active-pet {
-  min-width: 0;
-  display: grid;
-  place-items: center;
+  display: none;
 }
 
 .battle-active-art {
-  width: min(100%, 220px);
-  height: 135px;
   display: grid;
   place-items: center;
 }
@@ -1795,23 +1699,10 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
-  filter: drop-shadow(0 13px 11px rgba(54, 67, 75, 0.18));
-}
-
-.battle-arena-side.opponent .battle-active-art {
-  transform: scale(0.9);
 }
 
 .battle-pet-hud {
-  width: min(100%, 260px);
   display: grid;
-  gap: 2px;
-  padding: 8px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.92);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 8px 20px rgba(54, 67, 75, 0.09);
-  backdrop-filter: blur(10px);
 }
 
 .battle-pet-hud > span {
@@ -1829,29 +1720,20 @@
 
 .battle-hp {
   position: relative;
-  height: 15px;
   overflow: hidden;
-  border-radius: 999px;
-  background: rgba(54, 67, 75, 0.11);
 }
 
 .battle-hp i {
   position: absolute;
   inset: 0 auto 0 0;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #42aa30, #78d85d);
 }
 
 .battle-hp span {
   position: relative;
   z-index: 1;
   display: block;
-  color: #24333b;
-  font-size: 8px;
   font-weight: 950;
-  line-height: 15px;
   text-align: center;
-  text-shadow: 0 1px rgba(255, 255, 255, 0.85);
 }
 
 .battle-empty-active {
@@ -1865,769 +1747,39 @@
 .battle-stage-feedback {
   position: relative;
   z-index: 5;
-  min-height: 74px;
   display: grid;
   place-items: center;
   align-content: center;
   gap: 3px;
-  padding: 7px 20px;
-  text-align: center;
 }
 
 .battle-stage-feedback > small {
-  color: var(--battle-muted);
   font-size: 8px;
 }
 
 .battle-resolution {
   display: grid;
   gap: 3px;
-  font-size: 10px;
 }
 
 .battle-resolution span {
   display: block;
 }
 
-.battle-effect-layer {
-  position: absolute;
-  z-index: 8;
-  inset: 0;
-  overflow: visible;
-  pointer-events: none;
-  isolation: isolate;
-}
-
-.battle-effect-layer i {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 12px;
-  height: 12px;
-  box-sizing: border-box;
-  border: 2px solid var(--battle-effect-secondary, #fff7d8);
-  border-radius: 0;
-  opacity: 0;
-  background: var(--battle-effect-primary, #ff7a00);
-  box-shadow: 2px 2px 0 var(--battle-effect-glow, #a52b12);
-  image-rendering: pixelated;
-  will-change: transform, opacity;
-}
-
-.battle-effect-layer[data-element="grass"] i {
-  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-}
-
-.battle-effect-layer[data-element="earth"] i {
-  clip-path: polygon(16% 0, 84% 0, 100% 28%, 84% 100%, 16% 100%, 0 72%);
-}
-
-.battle-effect-layer[data-element="lightning"] i {
-  clip-path: polygon(
-    58% 0,
-    100% 0,
-    68% 40%,
-    100% 40%,
-    28% 100%,
-    44% 56%,
-    8% 56%
-  );
-}
-
-.battle-effect-layer[data-element="water"] i {
-  clip-path: polygon(50% 0, 100% 56%, 76% 100%, 24% 100%, 0 56%);
-}
-
-.battle-effect-layer[data-trajectory="01"] i {
-  width: 18px;
-  height: 8px;
-  border: 2px solid var(--battle-effect-secondary, #fff7d8);
-  background: var(--battle-effect-primary, #ff6a2b);
-  box-shadow: 2px 2px 0 var(--battle-effect-glow, #c92d12);
-  clip-path: polygon(0 18%, 68% 18%, 68% 0, 100% 50%, 68% 100%, 68% 82%, 0 82%);
-}
-
-.battle-effect-layer[data-trajectory="01"] i:nth-child(1) {
-  width: 42px;
-  height: 16px;
-  border-width: 3px;
-  box-shadow:
-    inset 0 0 0 3px var(--battle-effect-secondary, #fff7d8),
-    3px 3px 0 var(--battle-effect-glow, #c92d12);
-}
-
-.battle-effect-layer[data-trajectory="01"] i:nth-child(2) {
-  width: 28px;
-  height: 8px;
-  border: 0;
-  background: var(--battle-effect-secondary, #fff7d8);
-  box-shadow: 2px 2px 0 var(--battle-effect-primary, #ff6a2b);
-}
-
-.battle-effect-layer[data-trajectory="01"] i:nth-child(n + 3) {
-  width: 13px;
-  height: 6px;
-  border-width: 1px;
-}
-
-.battle-effect-layer[data-trajectory="02"] i {
-  width: 22px;
-  height: 8px;
-  border: 2px solid var(--battle-effect-secondary, #fff7d8);
-  background: var(--battle-effect-primary, #ff6a2b);
-  box-shadow: 2px 2px 0 var(--battle-effect-glow, #c92d12);
-  clip-path: polygon(0 35%, 76% 0, 100% 50%, 76% 100%, 0 65%);
-}
-
-.battle-effect-layer[data-trajectory="02"] i:nth-child(6n + 1) {
-  width: 36px;
-  height: 13px;
-  border-width: 3px;
-  box-shadow:
-    inset 0 0 0 2px var(--battle-effect-secondary, #fff7d8),
-    3px 3px 0 var(--battle-effect-glow, #c92d12);
-}
-
-.battle-effect-layer[data-trajectory="02"] i:nth-child(6n + 2) {
-  width: 27px;
-  height: 7px;
-  border: 0;
-  background: var(--battle-effect-secondary, #fff7d8);
-}
-
-.battle-effect-layer[data-trajectory="02"] i:nth-child(6n + 3),
-.battle-effect-layer[data-trajectory="02"] i:nth-child(6n + 4),
-.battle-effect-layer[data-trajectory="02"] i:nth-child(6n + 5),
-.battle-effect-layer[data-trajectory="02"] i:nth-child(6n + 6) {
-  width: 12px;
-  height: 6px;
-  border-width: 1px;
-}
-
-.battle-effect-layer[data-trajectory="03"] i {
-  width: 11px;
-  height: 17px;
-  border: 2px solid var(--battle-effect-secondary, #fff7d8);
-  background: var(--battle-effect-primary, #ff6a2b);
-  box-shadow: 2px 2px 0 var(--battle-effect-glow, #c92d12);
-  clip-path: polygon(48% 0, 100% 28%, 68% 52%, 88% 100%, 24% 76%, 0 42%);
-}
-
-.battle-effect-layer[data-trajectory="03"] i:nth-child(1),
-.battle-effect-layer[data-trajectory="03"] i:nth-child(2),
-.battle-effect-layer[data-trajectory="03"] i:nth-child(3) {
-  width: 18px;
-  height: 28px;
-  border-width: 3px;
-  box-shadow:
-    inset 0 0 0 2px var(--battle-effect-secondary, #fff7d8),
-    3px 3px 0 var(--battle-effect-glow, #c92d12);
-}
-
-.battle-effect-layer:is(
-    [data-trajectory="01"],
-    [data-trajectory="02"],
-    [data-trajectory="03"]
-  )[data-element="fire"]
-  i:nth-child(n + 4) {
-  clip-path: polygon(24% 0, 76% 0, 100% 42%, 72% 100%, 28% 100%, 0 42%);
-}
-
-.battle-effect-layer:is(
-    [data-trajectory="01"],
-    [data-trajectory="02"],
-    [data-trajectory="03"]
-  )[data-element="grass"]
-  i:nth-child(n + 4) {
-  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-}
-
-.battle-effect-layer:is(
-    [data-trajectory="01"],
-    [data-trajectory="02"],
-    [data-trajectory="03"]
-  )[data-element="earth"]
-  i:nth-child(n + 4) {
-  clip-path: polygon(16% 0, 84% 0, 100% 28%, 84% 100%, 16% 100%, 0 72%);
-}
-
-.battle-effect-layer:is(
-    [data-trajectory="01"],
-    [data-trajectory="02"],
-    [data-trajectory="03"]
-  )[data-element="lightning"]
-  i:nth-child(n + 4) {
-  clip-path: polygon(
-    58% 0,
-    100% 0,
-    68% 40%,
-    100% 40%,
-    28% 100%,
-    44% 56%,
-    8% 56%
-  );
-}
-
-.battle-effect-layer:is(
-    [data-trajectory="01"],
-    [data-trajectory="02"],
-    [data-trajectory="03"]
-  )[data-element="water"]
-  i:nth-child(n + 4) {
-  clip-path: polygon(50% 0, 100% 56%, 76% 100%, 24% 100%, 0 56%);
-}
-
-.battle-effect-layer[data-trajectory="04"] i {
-  clip-path: none;
-}
-
-.battle-effect-layer[data-trajectory="04"] i:nth-child(1) {
-  width: 36px;
-  height: 36px;
-  border: 4px solid var(--battle-effect-secondary, #ffd166);
-  background: var(--battle-effect-primary, #ff6a2b);
-  box-shadow: inset 0 0 0 5px var(--battle-effect-glow, #c92d12);
-  clip-path: polygon(
-    25% 0,
-    75% 0,
-    100% 25%,
-    100% 75%,
-    75% 100%,
-    25% 100%,
-    0 75%,
-    0 25%
-  );
-}
-
-.battle-effect-layer[data-trajectory="04"] i:nth-child(2) {
-  width: 16px;
-  height: 16px;
-  border: 3px solid #fff7d8;
-  background: var(--battle-effect-secondary, #ffd166);
-  box-shadow: none;
-  clip-path: polygon(
-    25% 0,
-    75% 0,
-    100% 25%,
-    100% 75%,
-    75% 100%,
-    25% 100%,
-    0 75%,
-    0 25%
-  );
-}
-
-.battle-effect-layer[data-trajectory="04"] i:nth-child(3) {
-  width: 52px;
-  height: 52px;
-  border: 4px solid var(--battle-effect-primary, #ff6a2b);
-  background: transparent;
-  box-shadow: inset 0 0 0 3px var(--battle-effect-secondary, #ffd166);
-  clip-path: polygon(
-    25% 0,
-    75% 0,
-    100% 25%,
-    100% 75%,
-    75% 100%,
-    25% 100%,
-    0 75%,
-    0 25%
-  );
-}
-
-.battle-effect-layer[data-trajectory="04"] i:nth-child(n + 4) {
-  width: 8px;
-  height: 8px;
-  border-width: 1px;
-  box-shadow: 2px 2px 0 var(--battle-effect-glow, #c92d12);
-}
-
-.battle-effect-layer[data-trajectory="04"]
-  i:nth-child(n + 4):nth-child(3n + 1) {
-  width: 11px;
-  height: 11px;
-  background: var(--battle-effect-secondary, #ffd166);
-}
-
-.battle-effect-layer[data-trajectory="04"][data-element="grass"]
-  i:nth-child(n + 4) {
-  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-}
-
-.battle-effect-layer[data-trajectory="04"][data-element="earth"]
-  i:nth-child(n + 4) {
-  clip-path: polygon(16% 0, 84% 0, 100% 28%, 84% 100%, 16% 100%, 0 72%);
-}
-
-.battle-effect-layer[data-trajectory="04"][data-element="lightning"]
-  i:nth-child(n + 4) {
-  clip-path: polygon(
-    58% 0,
-    100% 0,
-    68% 40%,
-    100% 40%,
-    28% 100%,
-    44% 56%,
-    8% 56%
-  );
-}
-
-.battle-effect-layer[data-trajectory="04"][data-element="water"]
-  i:nth-child(n + 4) {
-  clip-path: polygon(50% 0, 100% 56%, 76% 100%, 24% 100%, 0 56%);
-}
-
-.battle-effect-layer[data-trajectory="05"] i {
-  width: 11px;
-  height: 11px;
-  border: 2px solid var(--battle-effect-secondary, #fff7d8);
-  background: var(--battle-effect-primary, #ff6a2b);
-  box-shadow: 2px 2px 0 var(--battle-effect-glow, #c92d12);
-}
-
-.battle-effect-layer[data-trajectory="05"] i:nth-child(1) {
-  width: 62px;
-  height: 62px;
-  border: 7px solid var(--battle-effect-primary, #ff6a2b);
-  border-radius: 0;
-  background: transparent;
-  box-shadow:
-    inset 0 0 0 3px var(--battle-effect-secondary, #fff7d8),
-    4px 4px 0 var(--battle-effect-glow, #c92d12);
-  clip-path: polygon(
-    25% 0,
-    75% 0,
-    100% 25%,
-    100% 75%,
-    75% 100%,
-    25% 100%,
-    0 75%,
-    0 25%
-  );
-}
-
-.battle-effect-layer[data-trajectory="05"] i:nth-child(2) {
-  width: 38px;
-  height: 38px;
-  border: 5px solid var(--battle-effect-secondary, #fff7d8);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: 3px 3px 0 var(--battle-effect-primary, #ff6a2b);
-  clip-path: polygon(
-    25% 0,
-    75% 0,
-    100% 25%,
-    100% 75%,
-    75% 100%,
-    25% 100%,
-    0 75%,
-    0 25%
-  );
-}
-
-.battle-effect-layer[data-trajectory="05"] i:nth-child(n + 3) {
-  width: 10px;
-  height: 15px;
-  border-width: 2px;
-}
-
-.battle-effect-layer[data-trajectory="06"] i {
-  border-radius: 0;
-  clip-path: none;
-}
-
-.battle-effect-layer[data-trajectory="06"] i:nth-child(1) {
-  width: 28px;
-  height: 104px;
-  border: 4px solid var(--battle-effect-secondary, #fff7d8);
-  background: var(--battle-effect-primary, #ff6a2b);
-  box-shadow:
-    inset 0 0 0 4px var(--battle-effect-glow, #c92d12),
-    5px 4px 0 var(--battle-effect-glow, #c92d12);
-  clip-path: polygon(22% 0, 78% 0, 100% 22%, 100% 100%, 0 100%, 0 22%);
-}
-
-.battle-effect-layer[data-trajectory="06"] i:nth-child(2) {
-  width: 54px;
-  height: 22px;
-  border: 4px solid var(--battle-effect-primary, #ff6a2b);
-  background: var(--battle-effect-secondary, #fff7d8);
-  box-shadow: 4px 4px 0 var(--battle-effect-glow, #c92d12);
-  clip-path: polygon(12% 0, 88% 0, 100% 36%, 100% 100%, 0 100%, 0 36%);
-}
-
-.battle-effect-layer[data-trajectory="06"] i:nth-child(n + 3) {
-  width: 12px;
-  height: 14px;
-  border-width: 2px;
-  clip-path: polygon(16% 0, 84% 0, 100% 28%, 84% 100%, 16% 100%, 0 72%);
-}
-
-.battle-effect-layer:is(
-    [data-trajectory="05"],
-    [data-trajectory="06"]
-  )[data-element="fire"]
-  i:nth-child(n + 3) {
-  clip-path: polygon(24% 0, 76% 0, 100% 42%, 72% 100%, 28% 100%, 0 42%);
-}
-
-.battle-effect-layer:is(
-    [data-trajectory="05"],
-    [data-trajectory="06"]
-  )[data-element="grass"]
-  i:nth-child(n + 3) {
-  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-}
-
-.battle-effect-layer:is(
-    [data-trajectory="05"],
-    [data-trajectory="06"]
-  )[data-element="earth"]
-  i:nth-child(n + 3) {
-  clip-path: polygon(16% 0, 84% 0, 100% 28%, 84% 100%, 16% 100%, 0 72%);
-}
-
-.battle-effect-layer:is(
-    [data-trajectory="05"],
-    [data-trajectory="06"]
-  )[data-element="lightning"]
-  i:nth-child(n + 3) {
-  clip-path: polygon(
-    58% 0,
-    100% 0,
-    68% 40%,
-    100% 40%,
-    28% 100%,
-    44% 56%,
-    8% 56%
-  );
-}
-
-.battle-effect-layer:is(
-    [data-trajectory="05"],
-    [data-trajectory="06"]
-  )[data-element="water"]
-  i:nth-child(n + 3) {
-  clip-path: polygon(50% 0, 100% 56%, 76% 100%, 24% 100%, 0 56%);
-}
-
-.battle-effect-layer[data-trajectory="07"] i {
-  border: 0;
-  border-radius: 0;
-  box-shadow: 3px 0 0 var(--battle-effect-glow, #2588d8);
-  clip-path: polygon(40% 0, 60% 0, 78% 100%, 22% 100%);
-}
-
-.battle-effect-layer[data-trajectory="07"] i:nth-child(1) {
-  width: 24px;
-  height: 24px;
-  border: 4px solid var(--battle-effect-secondary, #dff8ff);
-  background: var(--battle-effect-primary, #ffe14f);
-  box-shadow: inset 0 0 0 4px var(--battle-effect-glow, #2588d8);
-  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-}
-
-.battle-effect-layer[data-trajectory="07"]
-  i:nth-child(n + 2):nth-child(-n + 9) {
-  width: 12px;
-  height: 54px;
-}
-
-.battle-effect-layer[data-trajectory="07"][data-element="grass"]
-  i:nth-child(n + 2):nth-child(-n + 9) {
-  height: 30px;
-  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-}
-
-.battle-effect-layer[data-trajectory="07"][data-element="earth"]
-  i:nth-child(n + 2):nth-child(-n + 9) {
-  width: 18px;
-  height: 30px;
-  clip-path: polygon(16% 0, 84% 0, 100% 28%, 84% 100%, 16% 100%, 0 72%);
-}
-
-.battle-effect-layer[data-trajectory="07"][data-element="lightning"]
-  i:nth-child(n + 2):nth-child(-n + 9) {
-  clip-path: polygon(
-    58% 0,
-    100% 0,
-    68% 40%,
-    100% 40%,
-    28% 100%,
-    44% 56%,
-    8% 56%
-  );
-}
-
-.battle-effect-layer[data-trajectory="07"][data-element="water"]
-  i:nth-child(n + 2):nth-child(-n + 9) {
-  width: 14px;
-  height: 34px;
-  clip-path: polygon(50% 0, 100% 56%, 76% 100%, 24% 100%, 0 56%);
-}
-
-.battle-effect-layer[data-trajectory="07"] i:nth-child(even) {
-  background: var(--battle-effect-secondary, #dff8ff);
-}
-
-.battle-effect-layer[data-trajectory="07"] i:nth-child(n + 10) {
-  width: 8px;
-  height: 8px;
-  border: 2px solid var(--battle-effect-primary, #ffe14f);
-  background: var(--battle-effect-secondary, #dff8ff);
-  box-shadow: none;
-  clip-path: none;
-}
-
-.battle-effect-layer[data-trajectory="08"] i {
-  width: 28px;
-  height: 8px;
-  border: 2px solid var(--battle-effect-secondary, #fff7d8);
-  background: var(--battle-effect-primary, #ff6a2b);
-  box-shadow: 2px 2px 0 var(--battle-effect-glow, #c92d12);
-  clip-path: polygon(0 18%, 82% 18%, 100% 50%, 82% 82%, 0 82%);
-}
-
-.battle-effect-layer[data-trajectory="08"] i:nth-child(-n + 4) {
-  width: 82px;
-  height: 14px;
-  border-width: 3px;
-  box-shadow:
-    inset 0 0 0 2px var(--battle-effect-secondary, #fff7d8),
-    4px 4px 0 var(--battle-effect-glow, #c92d12);
-}
-
-.battle-effect-layer[data-trajectory="08"] i:nth-child(2),
-.battle-effect-layer[data-trajectory="08"] i:nth-child(4) {
-  background: var(--battle-effect-secondary, #fff7d8);
-  box-shadow: 3px 3px 0 var(--battle-effect-primary, #ff6a2b);
-}
-
-.battle-effect-layer[data-trajectory="08"] i:nth-child(n + 5) {
-  width: 16px;
-  height: 7px;
-  border-width: 1px;
-}
-
-.battle-effect-layer[data-trajectory="09"] i {
-  width: 13px;
-  height: 13px;
-  border: 2px solid var(--battle-effect-secondary, #fff7d8);
-  background: var(--battle-effect-primary, #ff6a2b);
-  box-shadow: 2px 2px 0 var(--battle-effect-glow, #c92d12);
-}
-
-.battle-effect-layer[data-trajectory="09"] i:nth-child(1) {
-  width: 78px;
-  height: 78px;
-  border: 6px dashed var(--battle-effect-primary, #ff6a2b);
-  border-radius: 0;
-  background: transparent;
-  box-shadow:
-    inset 0 0 0 3px var(--battle-effect-secondary, #fff7d8),
-    4px 4px 0 var(--battle-effect-glow, #c92d12);
-  clip-path: polygon(
-    25% 0,
-    75% 0,
-    100% 25%,
-    100% 75%,
-    75% 100%,
-    25% 100%,
-    0 75%,
-    0 25%
-  );
-}
-
-.battle-effect-layer[data-trajectory="09"] i:nth-child(2) {
-  width: 48px;
-  height: 48px;
-  border: 5px solid var(--battle-effect-secondary, #fff7d8);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: 3px 3px 0 var(--battle-effect-primary, #ff6a2b);
-  clip-path: polygon(
-    25% 0,
-    75% 0,
-    100% 25%,
-    100% 75%,
-    75% 100%,
-    25% 100%,
-    0 75%,
-    0 25%
-  );
-}
-
-.battle-effect-layer[data-trajectory="09"] i:nth-child(n + 3) {
-  width: 12px;
-  height: 18px;
-}
-
-.battle-effect-layer:is(
-    [data-trajectory="08"],
-    [data-trajectory="09"]
-  )[data-element="fire"]
-  i:nth-child(n + 5) {
-  clip-path: polygon(24% 0, 76% 0, 100% 42%, 72% 100%, 28% 100%, 0 42%);
-}
-
-.battle-effect-layer:is(
-    [data-trajectory="08"],
-    [data-trajectory="09"]
-  )[data-element="grass"]
-  i:nth-child(n + 5) {
-  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-}
-
-.battle-effect-layer:is(
-    [data-trajectory="08"],
-    [data-trajectory="09"]
-  )[data-element="earth"]
-  i:nth-child(n + 5) {
-  clip-path: polygon(16% 0, 84% 0, 100% 28%, 84% 100%, 16% 100%, 0 72%);
-}
-
-.battle-effect-layer:is(
-    [data-trajectory="08"],
-    [data-trajectory="09"]
-  )[data-element="lightning"]
-  i:nth-child(n + 5) {
-  clip-path: polygon(
-    58% 0,
-    100% 0,
-    68% 40%,
-    100% 40%,
-    28% 100%,
-    44% 56%,
-    8% 56%
-  );
-}
-
-.battle-effect-layer:is(
-    [data-trajectory="08"],
-    [data-trajectory="09"]
-  )[data-element="water"]
-  i:nth-child(n + 5) {
-  clip-path: polygon(50% 0, 100% 56%, 76% 100%, 24% 100%, 0 56%);
-}
-
-.battle-effect-layer[data-trajectory="10"] i {
-  border-radius: 0;
-  clip-path: none;
-}
-
-.battle-effect-layer[data-trajectory="10"] i:nth-child(1) {
-  width: 24px;
-  height: 126px;
-  border: 4px solid var(--battle-effect-primary, #42c7ff);
-  background: var(--battle-effect-secondary, #d8f8ff);
-  box-shadow:
-    5px 0 0 var(--battle-effect-glow, #1768bd),
-    -5px 0 0 var(--battle-effect-primary, #42c7ff);
-  clip-path: polygon(
-    34% 0,
-    66% 0,
-    66% 78%,
-    100% 78%,
-    100% 100%,
-    0 100%,
-    0 78%,
-    34% 78%
-  );
-}
-
-.battle-effect-layer[data-trajectory="10"] i:nth-child(2) {
-  width: 104px;
-  height: 32px;
-  border: 5px solid var(--battle-effect-primary, #42c7ff);
-  background: transparent;
-  box-shadow:
-    inset 0 0 0 3px var(--battle-effect-secondary, #d8f8ff),
-    4px 4px 0 var(--battle-effect-glow, #1768bd);
-  clip-path: polygon(
-    14% 0,
-    86% 0,
-    100% 35%,
-    100% 65%,
-    86% 100%,
-    14% 100%,
-    0 65%,
-    0 35%
-  );
-}
-
-.battle-effect-layer[data-trajectory="10"]
-  i:nth-child(n + 3):nth-child(-n + 8) {
-  width: 10px;
-  height: 48px;
-  border: 2px solid var(--battle-effect-secondary, #d8f8ff);
-  background: var(--battle-effect-primary, #42c7ff);
-  box-shadow: 3px 0 0 var(--battle-effect-glow, #1768bd);
-  clip-path: polygon(50% 0, 100% 72%, 70% 100%, 30% 100%, 0 72%);
-}
-
-.battle-effect-layer[data-trajectory="10"] i:nth-child(n + 9) {
-  width: 7px;
-  height: 14px;
-  border: 2px solid var(--battle-effect-primary, #42c7ff);
-  background: var(--battle-effect-secondary, #d8f8ff);
-  box-shadow: 2px 2px 0 var(--battle-effect-glow, #1768bd);
-  clip-path: polygon(50% 0, 100% 58%, 76% 100%, 24% 100%, 0 58%);
-}
-
-.battle-effect-layer[data-trajectory="10"][data-element="fire"]
-  i:nth-child(n + 3) {
-  clip-path: polygon(24% 0, 76% 0, 100% 42%, 72% 100%, 28% 100%, 0 42%);
-}
-
-.battle-effect-layer[data-trajectory="10"][data-element="grass"]
-  i:nth-child(n + 3) {
-  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-}
-
-.battle-effect-layer[data-trajectory="10"][data-element="earth"]
-  i:nth-child(n + 3) {
-  clip-path: polygon(16% 0, 84% 0, 100% 28%, 84% 100%, 16% 100%, 0 72%);
-}
-
-.battle-effect-layer[data-trajectory="10"][data-element="lightning"]
-  i:nth-child(n + 3) {
-  clip-path: polygon(
-    58% 0,
-    100% 0,
-    68% 40%,
-    100% 40%,
-    28% 100%,
-    44% 56%,
-    8% 56%
-  );
-}
-
 .battle-action-hud {
   position: relative;
   z-index: 9;
   display: grid;
-  gap: 8px;
-  padding: 9px;
-  border-top: 1px solid rgba(54, 67, 75, 0.09);
-  background: rgba(255, 255, 255, 0.91);
-  backdrop-filter: blur(14px);
 }
 
 .battle-skill-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
 }
 
 .battle-skill-grid > button {
-  min-height: 66px;
   display: grid;
   gap: 3px;
-  padding: 8px 9px;
-  border: 1px solid var(--battle-line);
-  border-radius: 14px;
-  color: inherit;
-  background: rgba(255, 255, 255, 0.9);
   text-align: left;
   cursor: pointer;
 }
@@ -2645,7 +1797,6 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 11px;
   font-weight: 900;
 }
 
@@ -2655,8 +1806,6 @@
 }
 
 .battle-skill-grid small {
-  color: var(--battle-muted);
-  font-size: 8px;
   line-height: 1.35;
 }
 
@@ -2665,15 +1814,11 @@
 }
 
 .battle-action-status {
-  min-height: 54px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 9px;
   padding: 10px;
-  border: 1px solid var(--battle-line);
-  border-radius: 15px;
-  background: rgba(54, 67, 75, 0.045);
   font-size: 12px;
   text-align: center;
 }
@@ -3172,11 +2317,6 @@
 
 .battle-resolution {
   font-size: 9px;
-}
-
-.battle-effect-layer {
-  display: block;
-  pointer-events: none;
 }
 
 .battle-action-hud {

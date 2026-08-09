@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { ReferralPanel } from "../../domains/referral/index.ts";
 import { TasksView } from "../../domains/tasks/index.ts";
 import { WheelPanel } from "../../domains/wheel/index.ts";
+import "../../shared/styles/game-page.css";
 import "../../shared/styles/tasks-page.css";
 
 export function TasksPage(): ReactNode {

@@ -1,10 +1,11 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
+import { battleRuntimeBudgetPlugin } from "./vite/battleRuntimeBudget.ts";
 import { firstScreenBudgetPlugin } from "./vite/firstScreenBudget.ts";
 
 export default defineConfig({
-  plugins: [react(), firstScreenBudgetPlugin()],
+  plugins: [react(), firstScreenBudgetPlugin(), battleRuntimeBudgetPlugin()],
   build: {
     target: "es2023",
     sourcemap: false,

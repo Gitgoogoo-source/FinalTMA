@@ -68,6 +68,7 @@ REQUIRED_PATHS = (
     "docs/architecture/adr/ADR-043-adaptive-page-module-warmup.md",
     "docs/architecture/adr/ADR-045-telegram-identity-initial-and-profile-photo-minimization.md",
     "docs/architecture/adr/ADR-046-first-screen-direct-dependency-and-native-navigation.md",
+    "docs/architecture/adr/ADR-047-battle-staged-runtime-loading.md",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
     "docs/architecture/adr/ADR-025-battle-active-switch-atomicity.md",
@@ -182,6 +183,7 @@ def main() -> None:
     verify_evolution_refresh_semantics()
     verify_operation_recovery_discovery()
     verify_game_page_boundary()
+    verify_battle_staged_runtime_loading()
     verify_battle_legacy_removal()
     verify_battle_terminal_refresh_semantics()
     verify_battle_accept_operation_ordering()
@@ -769,7 +771,7 @@ def verify_adaptive_page_warmup() -> None:
     )
     for required_document_term in (
         "未知网络",
-        "Battle 永不进入自动列表",
+        "Battle 页面模块永不进入",
         "不调用 `prefetchApiQuery`",
         "ADR-043",
     ):
@@ -1116,6 +1118,7 @@ def verify_game_page_boundary() -> None:
         or '<main className="page game-page" aria-label="Battle">'
         not in game_page
         or "<BattleView />" not in game_page
+        or "game-page.css" in game_page
     ):
         raise SystemExit("Game page must compose the Battle Web domain")
 
@@ -1154,7 +1157,7 @@ def verify_game_page_boundary() -> None:
         for value in required_battle_terms
         if value not in battle_source
         and value
-        not in (WEB_ROOT / "domains/battle/ui/battle.css").read_text(
+        not in (WEB_ROOT / "domains/battle/ui/battle-core.css").read_text(
             encoding="utf-8"
         )
     ]
@@ -1195,7 +1198,7 @@ def verify_game_page_boundary() -> None:
             "Battle locked countdown page is incomplete: "
             f"{missing_countdown_terms}"
         )
-    battle_css = (WEB_ROOT / "domains/battle/ui/battle.css").read_text(
+    battle_css = (WEB_ROOT / "domains/battle/ui/battle-core.css").read_text(
         encoding="utf-8"
     )
     countdown_rule = battle_css.partition(".battle-countdown-lock {")[2].partition(
@@ -1232,11 +1235,19 @@ def verify_game_page_boundary() -> None:
             "Battle lobby must use the fixed repository silhouette asset and "
             "neutral offline icons only"
         )
+    battle_realtime_runtime = (
+        WEB_ROOT / "workflows/battle-realtime/battleRealtimeRuntime.ts"
+    ).read_text(encoding="utf-8")
     required_realtime_terms = (
         '"battle.realtime_token"',
-        "parseBattleRealtimeInvalidation(message.data)",
+        "parseBattleRealtimeInvalidation(data)",
         "return 1_000",
         "return 2_000",
+        "loadBattleRealtimeRuntime()",
+        "Promise.all([",
+    )
+    required_realtime_runtime_terms = (
+        'import * as Ably from "ably"',
         "channel.unsubscribe",
         "client.close()",
     )
@@ -1246,6 +1257,16 @@ def verify_game_page_boundary() -> None:
     if missing_realtime_terms:
         raise SystemExit(
             f"Battle realtime invalidation boundary is incomplete: {missing_realtime_terms}"
+        )
+    missing_realtime_runtime_terms = [
+        value
+        for value in required_realtime_runtime_terms
+        if value not in battle_realtime_runtime
+    ]
+    if missing_realtime_runtime_terms:
+        raise SystemExit(
+            "Battle realtime dynamic runtime is incomplete: "
+            f"{missing_realtime_runtime_terms}"
         )
 
     tasks_view = (
@@ -1269,6 +1290,7 @@ def verify_game_page_boundary() -> None:
         or tasks_view.index("{afterCheckIn}")
         > tasks_view.index('id="task-filters"')
         or "<TasksView afterCheckIn={<WheelPanel />} />" not in tasks_page
+        or 'import "../../shared/styles/game-page.css";' not in tasks_page
         or 'key: "expedition"' in tasks_view
         or 'key: "wallet"' in tasks_view
         or 'key: "mint"' in tasks_view
@@ -1320,6 +1342,121 @@ def verify_game_page_boundary() -> None:
             "Current MVP must not expose wallet/Mint UI, routing, recovery, prefetch, or Cron"
         )
 
+
+def verify_battle_staged_runtime_loading() -> None:
+    battle_root = WEB_ROOT / "domains/battle"
+    battle_view = (battle_root / "ui/BattleView.tsx").read_text(encoding="utf-8")
+    battle_arena = (battle_root / "ui/BattleArena.tsx").read_text(encoding="utf-8")
+    animation = (battle_root / "useBattleAnimation.ts").read_text(encoding="utf-8")
+    effect_loader = (battle_root / "battleRuntimeLoader.ts").read_text(
+        encoding="utf-8"
+    )
+    effect_player = (battle_root / "battleEffectPlayer.ts").read_text(
+        encoding="utf-8"
+    )
+    core_css = (battle_root / "ui/battle-core.css").read_text(encoding="utf-8")
+    effect_css = (battle_root / "ui/battle-effects.css").read_text(
+        encoding="utf-8"
+    )
+    realtime_hook = (
+        WEB_ROOT / "workflows/battle-realtime/useBattleRealtime.ts"
+    ).read_text(encoding="utf-8")
+    realtime_loader = (
+        WEB_ROOT
+        / "workflows/battle-realtime/battleRealtimeRuntimeLoader.ts"
+    ).read_text(encoding="utf-8")
+    realtime_runtime = (
+        WEB_ROOT / "workflows/battle-realtime/battleRealtimeRuntime.ts"
+    ).read_text(encoding="utf-8")
+    vite_config = (ROOT / "apps/web/vite.config.ts").read_text(encoding="utf-8")
+    budget = (ROOT / "apps/web/vite/battleRuntimeBudget.ts").read_text(
+        encoding="utf-8"
+    )
+
+    if (battle_root / "ui/battle.css").exists():
+        raise SystemExit("Battle must not retain the former combined stylesheet")
+    if 'from "ably"' in realtime_hook or "battleEffectPlayer" in animation:
+        raise SystemExit(
+            "Ably and the heavy Battle effect player must not enter Battle Core statically"
+        )
+    required_sources = {
+        "Battle runtime preparation": (
+            battle_view,
+            (
+                "Promise.allSettled([",
+                "prepareBattleRealtimeRuntime()",
+                "prepareBattleEffectRuntime()",
+                "startAdaptiveBattleRuntimeWarmup",
+                'pageState !== "home"',
+                "onPointerDownCapture={prepareBattleRuntimeModules}",
+            ),
+        ),
+        "Battle preparation feedback": (
+            battle_arena,
+            ("presentation.runtimePreparing", "战斗准备中"),
+        ),
+        "Battle effect degradation": (
+            animation,
+            (
+                "loadBattleEffectRuntime",
+                "return null;",
+                "safelyPlayEffect",
+                "applyHpResult(setPresentation, event)",
+            ),
+        ),
+        "Battle effect retry loader": (
+            effect_loader,
+            (
+                'import("./battleEffectPlayer.ts")',
+                "effectRuntimePromise = null",
+                'connection.effectiveType === "4g"',
+                "connection?.saveData === false",
+            ),
+        ),
+        "Battle effect stylesheet boundary": (
+            effect_player + effect_css,
+            ('import "./ui/battle-effects.css";', 'data-trajectory="10"'),
+        ),
+        "Battle realtime parallel loading": (
+            realtime_hook,
+            (
+                "const tokenPromise = apiRequest(",
+                "const runtimePromise = loadBattleRealtimeRuntime();",
+                "await Promise.all([",
+                'status === "connected"',
+            ),
+        ),
+        "Battle realtime retry loader": (
+            realtime_loader,
+            ('import("./battleRealtimeRuntime.ts")', "runtimePromise = null"),
+        ),
+        "Battle realtime isolated runtime": (
+            realtime_runtime,
+            ('import * as Ably from "ably";', "connectBattleRealtimeRuntime"),
+        ),
+        "Battle build budget": (
+            vite_config + budget,
+            (
+                "battleRuntimeBudgetPlugin()",
+                "jsRaw: 160_000",
+                "jsGzip: 45_000",
+                "cssRaw: 45_000",
+                "cssGzip: 9_000",
+                '"/node_modules/ably/"',
+                '"/apps/web/src/domains/battle/battleEffectPlayer.ts"',
+                ".battle-effect-layer[data-trajectory=",
+            ),
+        ),
+    }
+    missing = {
+        label: [term for term in terms if term not in source]
+        for label, (source, terms) in required_sources.items()
+        if any(term not in source for term in terms)
+    }
+    if missing:
+        raise SystemExit(f"Battle staged runtime loading is incomplete: {missing}")
+    if "data-trajectory" in core_css or "--battle-effect-primary" in core_css:
+        raise SystemExit("Heavy effect trajectory CSS entered Battle Core")
 
 def verify_battle_legacy_removal() -> None:
     files = {

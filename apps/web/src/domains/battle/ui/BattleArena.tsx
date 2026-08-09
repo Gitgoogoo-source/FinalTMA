@@ -150,13 +150,15 @@ export function BattleArena({
         </div>
         <ActionFeedback event={presentation.feedback} />
         <small>
-          {presentation.busy
-            ? "动作正在按服务端顺序播放；操作区保持可用"
-            : snapshot.status !== "active_turn"
-              ? "服务端已完成战斗结算"
-              : snapshot.active_actor === "self"
-                ? "你的 15 秒行动窗口已经开放"
-                : "等待对手在其 15 秒行动窗口内操作"}
+          {presentation.runtimePreparing
+            ? "战斗准备中；倒计时与操作保持可用"
+            : presentation.busy
+              ? "动作正在按服务端顺序播放；操作区保持可用"
+              : snapshot.status !== "active_turn"
+                ? "服务端已完成战斗结算"
+                : snapshot.active_actor === "self"
+                  ? "你的 15 秒行动窗口已经开放"
+                  : "等待对手在其 15 秒行动窗口内操作"}
         </small>
       </div>
 

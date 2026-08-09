@@ -46,8 +46,15 @@ import {
   usePageActive,
   usePageSearchParams,
 } from "../../../shared/navigation/pageActivity.tsx";
-import { useBattleRealtime } from "../../../workflows/battle-realtime/index.ts";
+import {
+  prepareBattleRealtimeRuntime,
+  useBattleRealtime,
+} from "../../../workflows/battle-realtime/index.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/context.ts";
+import {
+  prepareBattleEffectRuntime,
+  startAdaptiveBattleRuntimeWarmup,
+} from "../battleRuntimeLoader.ts";
 import { useBattleCommand } from "../useBattleCommand.ts";
 import {
   battlePresentationActionKey,
@@ -72,7 +79,7 @@ import {
   BattleWaiting,
 } from "./BattleScreens.tsx";
 import type { BattleTeamSlots } from "./TeamSelector.tsx";
-import "./battle.css";
+import "./battle-core.css";
 
 type Invite = RouteOutput<"battle.current_invite">;
 type InviteRoom = Extract<Invite, { room_id: string }>;
@@ -199,6 +206,12 @@ export function BattleView(): ReactNode {
   );
   const refetchBootstrap = bootstrap.refetch;
   const refetchInvite = invite.refetch;
+  const prepareBattleRuntimeModules = useCallback(() => {
+    void Promise.allSettled([
+      prepareBattleRealtimeRuntime(),
+      prepareBattleEffectRuntime(),
+    ]);
+  }, []);
 
   const publishRoom = useCallback(
     (
@@ -1324,6 +1337,15 @@ export function BattleView(): ReactNode {
       : roomId
         ? room === null
         : invite.isLoading);
+  useEffect(() => {
+    if (!pageActive) return;
+    if (pageState !== "home") {
+      prepareBattleRuntimeModules();
+      return;
+    }
+    if (loading) return;
+    return startAdaptiveBattleRuntimeWarmup(prepareBattleRuntimeModules);
+  }, [loading, pageActive, pageState, prepareBattleRuntimeModules]);
   const content = (
     <BattleState
       pageState={pageState}
@@ -1397,6 +1419,9 @@ export function BattleView(): ReactNode {
       ref={battleRootRef}
       className="battle-root"
       data-battle-page-state={pageState}
+      onFocusCapture={prepareBattleRuntimeModules}
+      onPointerDownCapture={prepareBattleRuntimeModules}
+      onTouchStartCapture={prepareBattleRuntimeModules}
     >
       {content}
       {cancelOpen && pageActive ? (

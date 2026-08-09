@@ -1,3 +1,5 @@
+import "./ui/battle-effects.css";
+
 type EffectElement = "fire" | "grass" | "earth" | "lightning" | "water";
 
 type TrajectoryKey =
