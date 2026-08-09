@@ -17,7 +17,7 @@ Realtime token 请求与 Ably 动态模块下载并行开始。连接达到 `con
 
 技能或换宠反击的业务命令与特效运行时准备并行。模块仍在下载时只在战场行内显示“战斗准备中”，不增加第九种页面状态，不覆盖倒计时，不锁定已由权威快照开放的操作。动态 import、样式或 Web Animations 失败时跳过本次重表现，继续应用 viewer-specific 事件、生命、击倒、权威换宠与终局，并允许后续动作重新加载；表现失败不得重提业务命令。
 
-生产构建对“`GamePage` 静态闭包减去应用入口已交付静态闭包”定义 Battle 增量核心。硬门禁固定为 JS 原始 `160000` 字节、gzip `45000` 字节，CSS 原始 `45000` 字节、gzip `9000` 字节。Battle 增量核心禁止包含 Ably、`battleEffectPlayer.ts` 或带 `data-trajectory` 的重特效 CSS。不得通过提高预算、改变统计根、把静态依赖伪装成同步 vendor chunk 或延迟业务 API 规避门禁。
+生产构建对“`GamePage` 静态闭包减去应用入口已交付静态闭包”定义 Battle 增量核心。硬门禁固定为 JS 原始 `160000` 字节、gzip `45000` 字节，CSS 原始 `45000` 字节、gzip `9000` 字节。Battle 增量核心禁止包含 Ably、`battleEffectPlayer.ts` 或带 `data-trajectory` 的重特效 CSS。动态 preload 对已经执行入口 JS 的去重由 ADR-048 补充。不得通过提高预算、改变统计根、把静态依赖伪装成同步 vendor chunk 或延迟业务 API 规避门禁。
 
 ## 不变量
 

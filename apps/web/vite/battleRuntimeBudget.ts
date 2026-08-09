@@ -59,6 +59,9 @@ export function battleRuntimeBudgetPlugin(): Plugin {
 
       const js = measureChunks(incrementalBattleClosure);
       const css = measureAssets(bundle, cssFiles);
+      const preloadEntryDependencies = [...gameRoots].flatMap((chunk) =>
+        battlePreloadEntryDependencies(chunk.code),
+      );
       const forbiddenModules = [...incrementalBattleClosure]
         .flatMap((chunk) => Object.keys(chunk.modules))
         .map(normalizeModuleId)
@@ -101,6 +104,12 @@ export function battleRuntimeBudgetPlugin(): Plugin {
         failures.push(
           `heavy Battle effect CSS entered the Battle Core closure: ${forbiddenCss.join(", ")}`,
         );
+      if (preloadEntryDependencies.length > 0)
+        failures.push(
+          `application entry JS entered Battle dynamic preload hints: ${[
+            ...new Set(preloadEntryDependencies),
+          ].join(", ")}`,
+        );
 
       const report = [
         `Battle Core JS ${js.raw} B / gzip ${js.gzip} B`,
@@ -113,11 +122,22 @@ export function battleRuntimeBudgetPlugin(): Plugin {
           .sort()
           .join(", ")}`,
         `Battle Core CSS assets: ${[...cssFiles].sort().join(", ") || "none"}`,
+        `Battle dynamic preload entry JS: ${preloadEntryDependencies.length}`,
       ].join("\n");
       if (failures.length > 0) this.error(`${failures.join("\n")}\n${report}`);
       this.info(report);
     },
   };
+}
+
+function battlePreloadEntryDependencies(code: string): string[] {
+  const preloadMap = code
+    .split("\n", 1)
+    .find((line) => line.startsWith("const __vite__mapDeps="));
+  if (!preloadMap) return [];
+  return [...preloadMap.matchAll(/["`](assets\/index-[^"`]+\.js)["`]/g)].map(
+    (match) => match[1]!,
+  );
 }
 
 function outputChunks(bundle: OutputBundle): Map<string, OutputChunk> {

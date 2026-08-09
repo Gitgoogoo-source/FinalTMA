@@ -69,6 +69,7 @@ REQUIRED_PATHS = (
     "docs/architecture/adr/ADR-045-telegram-identity-initial-and-profile-photo-minimization.md",
     "docs/architecture/adr/ADR-046-first-screen-direct-dependency-and-native-navigation.md",
     "docs/architecture/adr/ADR-047-battle-staged-runtime-loading.md",
+    "docs/architecture/adr/ADR-048-battle-dynamic-preload-entry-deduplication.md",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
     "docs/architecture/adr/ADR-025-battle-active-switch-atomicity.md",
@@ -1372,6 +1373,9 @@ def verify_battle_staged_runtime_loading() -> None:
     budget = (ROOT / "apps/web/vite/battleRuntimeBudget.ts").read_text(
         encoding="utf-8"
     )
+    preload = (ROOT / "apps/web/vite/battleModulePreload.ts").read_text(
+        encoding="utf-8"
+    )
 
     if (battle_root / "ui/battle.css").exists():
         raise SystemExit("Battle must not retain the former combined stylesheet")
@@ -1445,6 +1449,19 @@ def verify_battle_staged_runtime_loading() -> None:
                 '"/node_modules/ably/"',
                 '"/apps/web/src/domains/battle/battleEffectPlayer.ts"',
                 ".battle-effect-layer[data-trajectory=",
+                "Battle dynamic preload entry JS",
+            ),
+        ),
+        "Battle dynamic preload entry deduplication": (
+            vite_config + preload + budget,
+            (
+                "resolveBattleModulePreloadDependencies",
+                "resolveDependencies: resolveBattleModulePreloadDependencies",
+                "battleRealtimeChunkPattern",
+                "applicationEntryChunkPattern",
+                'context.hostType !== "js"',
+                "battlePreloadEntryDependencies",
+                "application entry JS entered Battle dynamic preload hints",
             ),
         ),
     }
