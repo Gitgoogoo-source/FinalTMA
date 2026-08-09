@@ -141,7 +141,6 @@ const SECTOR_ANGLE = 360 / WHEEL_SLOTS.length;
 const MINIMUM_SPIN_MS = 720;
 const WHEEL_SETTLE_MS = 2_200;
 const WHEEL_SETTLE_REDUCED_MS = 560;
-const WHEEL_SETTLE_GRACE_MS = 300;
 
 export function WheelPanel(): ReactNode {
   const wheelPresentationEpoch = useWheelPresentationEpoch();
@@ -600,10 +599,7 @@ async function settleOnSlot(
       },
     );
     animationRef.current = animation;
-    await waitForAnimationOrTimeout(
-      animation,
-      duration + WHEEL_SETTLE_GRACE_MS,
-    );
+    await waitFor(duration);
   } catch {
     // The confirmed result must still converge when Web Animations is unavailable.
   } finally {
@@ -626,21 +622,4 @@ function prefersReducedMotion(): boolean {
 
 function waitFor(milliseconds: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
-}
-
-async function waitForAnimationOrTimeout(
-  animation: Animation,
-  milliseconds: number,
-): Promise<void> {
-  let timeout: number | undefined;
-  try {
-    await Promise.race([
-      animation.finished.catch(() => undefined),
-      new Promise<void>((resolve) => {
-        timeout = window.setTimeout(resolve, milliseconds);
-      }),
-    ]);
-  } finally {
-    if (timeout !== undefined) window.clearTimeout(timeout);
-  }
 }
