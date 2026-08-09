@@ -6,7 +6,10 @@ import { useApiQuery } from "../../../platform/query/index.ts";
 import { notifyFreeRareClaimed } from "../../../shared/events/vipDailyBenefits.ts";
 import { usePageModulePreparation } from "../../../shared/navigation/pageModulePreparation.ts";
 import { Button } from "../../../shared/ui/Button.tsx";
-import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
+import {
+  useOperationBlocked,
+  useOperationCommands,
+} from "../../../workflows/operation-recovery/context.ts";
 
 type Benefit = "fgems" | "freeBox";
 type Feedback = {
@@ -18,14 +21,15 @@ export function VipDailyBenefits(): ReactNode {
   const vip = useApiQuery("vip.get");
   const navigate = useAppNavigate();
   const preparePage = usePageModulePreparation();
-  const { isBlocked, run } = useOperationRegistry();
+  const { run } = useOperationCommands();
   const [pending, setPending] = useState<Partial<Record<Benefit, boolean>>>({});
   const [feedback, setFeedback] = useState<Partial<Record<Benefit, Feedback>>>(
     {},
   );
-  const fgemsPending = Boolean(pending.fgems) || isBlocked("vip.claim_fgems");
-  const freeBoxPending =
-    Boolean(pending.freeBox) || isBlocked("vip.claim_free_box");
+  const fgemsOperationBlocked = useOperationBlocked("vip.claim_fgems");
+  const freeBoxOperationBlocked = useOperationBlocked("vip.claim_free_box");
+  const fgemsPending = Boolean(pending.fgems) || fgemsOperationBlocked;
+  const freeBoxPending = Boolean(pending.freeBox) || freeBoxOperationBlocked;
   const data = vip.data;
   const benefitDate = data?.benefit_date ?? null;
   const refetchVip = vip.refetch;

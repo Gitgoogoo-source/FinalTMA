@@ -53,7 +53,10 @@ import { Badge } from "../../../shared/ui/Badge.tsx";
 import { Button } from "../../../shared/ui/Button.tsx";
 import { Card } from "../../../shared/ui/Card.tsx";
 import { PageState } from "../../../shared/ui/PageState.tsx";
-import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
+import {
+  useOperationBlocked,
+  useOperationCommands,
+} from "../../../workflows/operation-recovery/context.ts";
 import {
   isVisibleMvpTask,
   type Task,
@@ -170,7 +173,7 @@ export function TasksView({
   afterCheckIn: ReactNode;
 }): ReactNode {
   const tasks = useApiQuery("tasks.get");
-  const { isBlocked, run } = useOperationRegistry();
+  const { run } = useOperationCommands();
   const navigate = useAppNavigate();
   const preparePage = usePageModulePreparation();
   const session = useSession();
@@ -184,7 +187,9 @@ export function TasksView({
   const scrollRestored = useRef(rememberedScrollY === 0);
   const [checkingIn, setCheckingIn] = useState(false);
   const [claimingCode, setClaimingCode] = useState<Task["code"] | null>(null);
-  const blocked = isBlocked("tasks.check_in") || isBlocked("tasks.claim");
+  const checkInBlocked = useOperationBlocked("tasks.check_in");
+  const claimBlocked = useOperationBlocked("tasks.claim");
+  const blocked = checkInBlocked || claimBlocked;
   const checkIn = async () => {
     setCheckingIn(true);
     try {

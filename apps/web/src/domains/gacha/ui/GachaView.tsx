@@ -42,7 +42,10 @@ import {
   usePageActive,
   usePageSearchParams,
 } from "../../../shared/navigation/pageActivity.tsx";
-import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
+import {
+  useOperationBlocked,
+  useOperationCommands,
+} from "../../../workflows/operation-recovery/context.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/context.ts";
 type BoxTier = BoxArtTier;
 type Rarity = "common" | "rare" | "epic" | "legendary" | "mythic";
@@ -78,9 +81,9 @@ export function GachaView(): ReactNode {
   const catalog = useCatalogQuery();
   const identity = useApiQuery("identity.summary");
   const session = useSession();
-  const { isBlocked, preload, run } = useOperationRegistry();
+  const { preload, run } = useOperationCommands();
   const { requestTopup } = useNavigationIntent();
-  const blocked = isBlocked("gacha.open");
+  const blocked = useOperationBlocked("gacha.open");
   const pageActive = usePageActive();
   const [params, setParams] = usePageSearchParams();
   const requestedTier = params.get("tier");

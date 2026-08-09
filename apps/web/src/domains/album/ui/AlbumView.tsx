@@ -16,7 +16,10 @@ import { usePageModulePreparation } from "../../../shared/navigation/pageModuleP
 import { Badge } from "../../../shared/ui/Badge.tsx";
 import { Button } from "../../../shared/ui/Button.tsx";
 import { PageState } from "../../../shared/ui/PageState.tsx";
-import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
+import {
+  useOperationBlocked,
+  useOperationCommands,
+} from "../../../workflows/operation-recovery/context.ts";
 import { useBlockingOperationRecovery } from "../../../workflows/operation-recovery/useBlockingOperationRecovery.ts";
 import type { AlbumChain, AlbumFilter, AlbumNode } from "../types.ts";
 import { AlbumChainCard } from "./AlbumChainCard.tsx";
@@ -39,8 +42,8 @@ export function AlbumView(): ReactNode {
   const preparePage = usePageModulePreparation();
   const back = useCallback(() => navigate(-1), [navigate]);
   useTelegramBackButton(true, back);
-  const { isBlocked, preload, run } = useOperationRegistry();
-  const blocked = isBlocked("album.claim");
+  const { preload, run } = useOperationCommands();
+  const blocked = useOperationBlocked("album.claim");
   const [filter, setFilter] = useState<AlbumFilter>("all");
   const [claimingChainId, setClaimingChainId] = useState<string | null>(null);
   const [dialog, setDialog] = useState<{

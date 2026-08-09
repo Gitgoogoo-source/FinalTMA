@@ -20,7 +20,7 @@ import { getSession } from "../../../platform/session/store.ts";
 import { telegram } from "../../../platform/telegram/index.ts";
 import { AppModal } from "../../../shared/ui/AppModal.tsx";
 import { Button } from "../../../shared/ui/Button.tsx";
-import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
+import { useOperationCommands } from "../../../workflows/operation-recovery/context.ts";
 import type { TopupRequest } from "../../../workflows/payment-recovery/context.ts";
 import "../../../shared/styles/shell-dialogs.css";
 import type { PaymentOrder } from "../index.ts";
@@ -51,7 +51,7 @@ export function TopupDialog({
   const [createError, setCreateError] = useState<string | null>(null);
   const closing = useRef(false);
   const status = useApiQuery("topup.bootstrap");
-  const { run } = useOperationRegistry();
+  const { run } = useOperationCommands();
   const recoveryOrder = status.data?.orders.find(
     (order) =>
       order.kind === "kcoin_topup" &&

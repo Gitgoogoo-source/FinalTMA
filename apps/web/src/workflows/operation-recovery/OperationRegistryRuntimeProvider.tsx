@@ -49,11 +49,13 @@ import { Button } from "../../shared/ui/Button.tsx";
 import { useNewMarkers } from "../new-markers/context.ts";
 import { useNavigationIntent } from "../payment-recovery/context.ts";
 import {
-  OperationRegistryContext,
   type GachaHatchTier,
   type OperationPhase,
   type OperationPresentation,
-  type OperationRegistryValue,
+  type OperationRegistryCommands,
+  type OperationRegistryRuntimeHost,
+  type OperationRuntimeController,
+  type OperationRuntimeSignals,
 } from "./context.ts";
 import { operationLabel } from "./labels.ts";
 import { markOperationNewTemplates } from "./operation-new-markers.ts";
@@ -163,9 +165,9 @@ const playerFacingMarketPurchaseErrorCodes = new Set([
 ]);
 
 export function OperationRegistryRuntimeProvider({
-  children,
+  host,
 }: {
-  children: ReactNode;
+  host: OperationRegistryRuntimeHost;
 }): ReactNode {
   const navigate = useAppNavigate();
   const preparePage = usePageModulePreparation();
@@ -192,6 +194,8 @@ export function OperationRegistryRuntimeProvider({
     string | null
   >(null);
   const [wheelPresentationEpoch, setWheelPresentationEpoch] = useState(0);
+  const [hydrationEpoch, setHydrationEpoch] = useState(0);
+  const hydrationEpochRef = useRef(0);
   const [presentationState, setPresentationState] = useState<{
     operationId: string;
     loaded: LoadedOperationPresentation | null;
@@ -224,12 +228,39 @@ export function OperationRegistryRuntimeProvider({
     requiresDedicatedValidation(active.routeId) &&
     validationState?.source !== active,
   );
-  const recoveryQueueActive = Object.values(operations).some(
-    (operation) =>
-      operation.sessionGeneration === session?.generation &&
-      (serverAcknowledgementRouteIds.has(operation.routeId) ||
+  const operationSignals = useMemo(() => {
+    const blockedRoutes = new Set<RecoverableRouteId>();
+    let navigationLocked = false;
+    let recoveryQueueActive = false;
+    for (const operation of Object.values(operations)) {
+      if (operation.sessionGeneration !== session?.generation) continue;
+      if (
+        unresolvedPhases.has(operation.phase) ||
+        navigationLockedThroughResultRouteIds.has(operation.routeId)
+      )
+        blockedRoutes.add(operation.routeId);
+      if (
+        navigationLockedThroughResultRouteIds.has(operation.routeId) ||
+        (operation.routeId === "inventory.evolve" &&
+          unresolvedPhases.has(operation.phase))
+      )
+        navigationLocked = true;
+      if (
+        serverAcknowledgementRouteIds.has(operation.routeId) ||
         (operation.routeId === "wheel.spin" &&
-          unresolvedPhases.has(operation.phase))),
+          unresolvedPhases.has(operation.phase))
+      )
+        recoveryQueueActive = true;
+    }
+    return { blockedRoutes, navigationLocked, recoveryQueueActive };
+  }, [operations, session?.generation]);
+  const runtimeSignals = useMemo<OperationRuntimeSignals>(
+    () => ({
+      ...operationSignals,
+      wheelPresentationEpoch,
+      hydrationEpoch,
+    }),
+    [hydrationEpoch, operationSignals, wheelPresentationEpoch],
   );
   const validatedActive = validatedOperation;
   const gachaResult =
@@ -296,13 +327,6 @@ export function OperationRegistryRuntimeProvider({
     (operation) =>
       operation.routeId !== "market.create_listing" &&
       operation.routeId !== "market.purchase",
-  );
-  const navigationLocked = Object.values(operations).some(
-    (operation) =>
-      operation.sessionGeneration === session?.generation &&
-      (navigationLockedThroughResultRouteIds.has(operation.routeId) ||
-        (operation.routeId === "inventory.evolve" &&
-          unresolvedPhases.has(operation.phase))),
   );
   const closingBlocked = unresolved.some(
     (operation) =>
@@ -569,7 +593,7 @@ export function OperationRegistryRuntimeProvider({
     [],
   );
 
-  const run: OperationRegistryValue["run"] = useCallback(
+  const run: OperationRegistryCommands["run"] = useCallback(
     async <Id extends RecoverableRouteId>(
       label: string,
       routeId: Id,
@@ -782,9 +806,12 @@ export function OperationRegistryRuntimeProvider({
 
   const hydrate = useCallback(
     (incoming: readonly RecoverableOperationSummary[]) => {
+      const nextHydrationEpoch = hydrationEpochRef.current + 1;
+      hydrationEpochRef.current = nextHydrationEpoch;
+      setHydrationEpoch(nextHydrationEpoch);
       const sessionGeneration = getSession()?.generation;
       if (!sessionGeneration || getSession()?.accountStatus !== "normal")
-        return;
+        return nextHydrationEpoch;
       const next = { ...operationsRef.current };
       const completedOutsideRegistry = new Set<string>();
       let firstId: string | null = null;
@@ -860,6 +887,7 @@ export function OperationRegistryRuntimeProvider({
           : (current ?? firstId),
       );
       refreshAuthorityAfterLeave();
+      return nextHydrationEpoch;
     },
     [markNew, refreshAuthorityAfterLeave],
   );
@@ -1045,34 +1073,19 @@ export function OperationRegistryRuntimeProvider({
     };
   }, [pollingOperationId, recover]);
 
-  const value = useMemo<OperationRegistryValue>(
+  const controller = useMemo<OperationRuntimeController>(
     () => ({
       run,
-      isBlocked: (routeId) =>
-        Object.values(operations).some(
-          (operation) =>
-            operation.sessionGeneration === getSession()?.generation &&
-            operation.routeId === routeId &&
-            (unresolvedPhases.has(operation.phase) ||
-              navigationLockedThroughResultRouteIds.has(routeId)),
-        ),
       present,
       preload,
-      navigationLocked,
-      recoveryQueueActive,
-      wheelPresentationEpoch,
       hydrate,
     }),
-    [
-      hydrate,
-      navigationLocked,
-      operations,
-      preload,
-      present,
-      recoveryQueueActive,
-      run,
-      wheelPresentationEpoch,
-    ],
+    [hydrate, preload, present, run],
+  );
+  useLayoutEffect(() => host.attachRuntime(controller), [controller, host]);
+  useLayoutEffect(
+    () => host.publishRuntimeSignals(controller, runtimeSignals),
+    [controller, host, runtimeSignals],
   );
 
   const dismiss = useCallback(() => {
@@ -1325,8 +1338,7 @@ export function OperationRegistryRuntimeProvider({
   );
 
   return (
-    <OperationRegistryContext.Provider value={value}>
-      {children}
+    <>
       {session?.accountStatus === "normal" &&
         !active &&
         resumableUnresolved.length > 0 && (
@@ -1589,7 +1601,7 @@ export function OperationRegistryRuntimeProvider({
           )}
         </div>
       )}
-    </OperationRegistryContext.Provider>
+    </>
   );
 }
 

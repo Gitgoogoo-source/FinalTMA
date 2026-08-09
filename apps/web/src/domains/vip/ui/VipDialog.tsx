@@ -7,12 +7,15 @@ import { telegram } from "../../../platform/telegram/index.ts";
 import { AppModal } from "../../../shared/ui/AppModal.tsx";
 import { Badge } from "../../../shared/ui/Badge.tsx";
 import { Button } from "../../../shared/ui/Button.tsx";
-import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
+import {
+  useOperationBlocked,
+  useOperationCommands,
+} from "../../../workflows/operation-recovery/context.ts";
 
 export function VipDialog({ close }: { close(): void }): ReactNode {
   const query = useApiQuery("vip.get");
-  const { isBlocked, run } = useOperationRegistry();
-  const blocked = isBlocked("vip.create_order");
+  const { run } = useOperationCommands();
+  const blocked = useOperationBlocked("vip.create_order");
   const attentionOrder = query.data?.payment_attention_order;
   const order = () =>
     void run("正在创建 VIP 月卡订单", "vip.create_order", {}).then((result) => {

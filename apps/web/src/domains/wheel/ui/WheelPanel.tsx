@@ -25,7 +25,11 @@ import { usePageSearchParams } from "../../../shared/navigation/pageActivity.tsx
 import { Button } from "../../../shared/ui/Button.tsx";
 import { Card } from "../../../shared/ui/Card.tsx";
 import { StaleContentNotice } from "../../../shared/ui/PageState.tsx";
-import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
+import {
+  useOperationBlocked,
+  useOperationCommands,
+  useWheelPresentationEpoch,
+} from "../../../workflows/operation-recovery/context.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/context.ts";
 
 type WheelSpinResult = RouteOutput<"wheel.spin">;
@@ -137,7 +141,7 @@ const SECTOR_ANGLE = 360 / WHEEL_SLOTS.length;
 const MINIMUM_SPIN_MS = 720;
 
 export function WheelPanel(): ReactNode {
-  const { wheelPresentationEpoch } = useOperationRegistry();
+  const wheelPresentationEpoch = useWheelPresentationEpoch();
 
   return (
     <WheelPanelRuntime
@@ -154,9 +158,9 @@ function WheelPanelRuntime({
 }): ReactNode {
   const query = useApiQuery("wheel.get");
   const identity = useApiQuery("identity.summary");
-  const { isBlocked, preload, present, run } = useOperationRegistry();
+  const { preload, present, run } = useOperationCommands();
   const { requestTopup } = useNavigationIntent();
-  const blocked = isBlocked("wheel.spin");
+  const blocked = useOperationBlocked("wheel.spin");
   const [params, setParams] = usePageSearchParams();
   const heading = useRef<HTMLDivElement>(null);
   const rotor = useRef<HTMLDivElement>(null);

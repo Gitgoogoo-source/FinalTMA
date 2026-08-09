@@ -5,6 +5,7 @@ import type {
   DormantRouteInput,
   DormantRouteOutput,
 } from "@pokepets/api-contracts/dormant-app";
+import type { RecoverableRouteId } from "@pokepets/api-contracts/app-client";
 
 import { apiRequest, type ApiResult } from "../platform/api/client.ts";
 import {
@@ -12,7 +13,10 @@ import {
   invalidateApiQueries,
   useApiQuery,
 } from "../platform/query/index.ts";
-import { useOperationRegistry } from "../workflows/operation-recovery/context.ts";
+import {
+  useOperationBlocked,
+  useOperationCommands,
+} from "../workflows/operation-recovery/context.ts";
 
 export const dormantApiRequest = apiRequest as unknown as <
   Id extends DormantRouteId,
@@ -44,21 +48,25 @@ export const invalidateDormantApiQueries = invalidateApiQueries as unknown as (
   routeIds: readonly DormantRouteId[],
 ) => Promise<void>;
 
-export function useDormantOperationRegistry(): {
+export function useDormantOperationCommands(): {
   run<Id extends DormantRecoverableRouteId>(
     label: string,
     routeId: Id,
     input: DormantRouteInput<Id>,
   ): Promise<DormantRouteOutput<Id> | null>;
-  isBlocked(routeId: DormantRecoverableRouteId): boolean;
 } {
-  const registry = useOperationRegistry();
-  return registry as unknown as {
+  const commands = useOperationCommands();
+  return commands as unknown as {
     run<Id extends DormantRecoverableRouteId>(
       label: string,
       routeId: Id,
       input: DormantRouteInput<Id>,
     ): Promise<DormantRouteOutput<Id> | null>;
-    isBlocked(routeId: DormantRecoverableRouteId): boolean;
   };
+}
+
+export function useDormantOperationBlocked(
+  routeId: DormantRecoverableRouteId,
+): boolean {
+  return useOperationBlocked(routeId as unknown as RecoverableRouteId);
 }

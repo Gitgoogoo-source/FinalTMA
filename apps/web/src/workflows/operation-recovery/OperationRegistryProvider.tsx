@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -19,10 +20,15 @@ import {
 } from "../../platform/session/store.ts";
 import {
   OperationRegistryContext,
-  type OperationRegistryValue,
+  type OperationRegistryCommands,
+  type OperationRegistryRuntimeHost,
   type OperationRunOptions,
-  useOperationRegistry,
+  type OperationRuntimeController,
 } from "./context.ts";
+import {
+  createOperationRegistryStore,
+  type MutableOperationRegistryStore,
+} from "./operation-registry-store.ts";
 import {
   loadOperationRegistryRuntime,
   preloadOperationRegistryRuntime,
@@ -32,7 +38,8 @@ import {
 type PendingRun = {
   generation: string;
   routeId: RecoverableRouteId;
-  start(value: OperationRegistryValue): void;
+  background: boolean;
+  start(controller: OperationRuntimeController): Promise<void>;
   cancel(): void;
 };
 
@@ -43,28 +50,35 @@ export function OperationRegistryProvider({
 }): ReactNode {
   const [runtimeModule, setRuntimeModule] =
     useState<OperationRegistryRuntimeModule | null>(null);
-  const [runtimeValue, setRuntimeValue] =
-    useState<OperationRegistryValue | null>(null);
   const [pendingRun, setPendingRun] = useState<PendingRun | null>(null);
   const [recoveryPending, setRecoveryPending] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [store] = useState<MutableOperationRegistryStore>(
+    createOperationRegistryStore,
+  );
   const pendingRunRef = useRef<PendingRun | null>(null);
   const pendingHydration = useRef<{
     generation: string;
     operations: readonly RecoverableOperationSummary[];
   } | null>(null);
 
-  const publishPendingRun = useCallback((command: PendingRun | null) => {
-    pendingRunRef.current = command;
-    setPendingRun(command);
-  }, []);
+  const publishPendingRun = useCallback(
+    (command: PendingRun | null) => {
+      pendingRunRef.current = command;
+      setPendingRun(command);
+      store.setPendingRunRoute(command?.routeId ?? null);
+    },
+    [store],
+  );
   const resetPending = useCallback(() => {
     pendingRunRef.current?.cancel();
-    publishPendingRun(null);
+    pendingRunRef.current = null;
+    setPendingRun(null);
     pendingHydration.current = null;
     setRecoveryPending(false);
     setLoadFailed(false);
-  }, [publishPendingRun]);
+    store.resetSignals();
+  }, [store]);
   useEffect(() => registerSensitiveStateResetter(resetPending), [resetPending]);
 
   const load = useCallback(() => {
@@ -80,7 +94,7 @@ export function OperationRegistryProvider({
       input: RouteInput<Id>,
       options?: OperationRunOptions,
     ): Promise<RouteOutput<Id> | null> => {
-      const runtime = runtimeValue;
+      const runtime = store.getRuntime();
       if (runtime) return runtime.run(label, routeId, input, options);
       const generation = getSession()?.generation;
       if (
@@ -93,95 +107,118 @@ export function OperationRegistryProvider({
         publishPendingRun({
           generation,
           routeId,
-          start: (value) => {
-            void value.run(label, routeId, input, options).then(resolve);
+          background: options?.background === true,
+          start: async (controller) => {
+            try {
+              resolve(await controller.run(label, routeId, input, options));
+            } catch {
+              resolve(null);
+            }
           },
           cancel: () => resolve(null),
         });
         load();
       });
     },
-    [load, publishPendingRun, runtimeValue],
+    [load, publishPendingRun, store],
   );
   const preload = useCallback(
     (routeId: RecoverableRouteId) => {
-      if (runtimeValue) runtimeValue.preload(routeId);
+      const runtime = store.getRuntime();
+      if (runtime) runtime.preload(routeId);
       else preloadOperationRegistryRuntime(routeId);
     },
-    [runtimeValue],
+    [store],
   );
   const present = useCallback(
     (routeId: RecoverableRouteId): boolean => {
-      if (runtimeValue) return runtimeValue.present(routeId);
+      const runtime = store.getRuntime();
+      if (runtime) return runtime.present(routeId);
       preload(routeId);
       return false;
     },
-    [preload, runtimeValue],
+    [preload, store],
   );
   const hydrate = useCallback(
     (operations: readonly RecoverableOperationSummary[]) => {
       if (operations.length === 0) return;
-      if (runtimeValue) runtimeValue.hydrate(operations);
-      else {
-        const generation = getSession()?.generation;
-        if (!generation || getSession()?.accountStatus !== "normal") return;
-        const pending = pendingHydration.current;
-        pendingHydration.current = {
-          generation,
-          operations:
-            pending?.generation === generation
-              ? [...pending.operations, ...operations]
-              : operations,
-        };
-        setRecoveryPending(true);
-        load();
+      const generation = getSession()?.generation;
+      if (!generation || getSession()?.accountStatus !== "normal") return;
+      store.setFacadeRecoveryPending(true);
+      const runtime = store.getRuntime();
+      if (runtime) {
+        const hydrationEpoch = runtime.hydrate(operations);
+        store.expectHydrationCommit(runtime, hydrationEpoch);
+        return;
       }
+      const pending = pendingHydration.current;
+      pendingHydration.current = {
+        generation,
+        operations:
+          pending?.generation === generation
+            ? [...pending.operations, ...operations]
+            : operations,
+      };
+      setRecoveryPending(true);
+      load();
     },
-    [load, runtimeValue],
+    [load, store],
+  );
+  const commands = useMemo<OperationRegistryCommands>(
+    () => ({ run, present, preload }),
+    [preload, present, run],
+  );
+  useLayoutEffect(
+    () => store.bindFacade(commands, hydrate),
+    [commands, hydrate, store],
   );
 
-  const publishRuntime = useCallback(
-    (runtime: OperationRegistryValue) => {
-      setRuntimeValue(runtime);
+  const attachRuntime = useCallback(
+    (controller: OperationRuntimeController): (() => void) => {
+      store.attachRuntime(controller);
       const generation = getSession()?.generation;
       const hydration = pendingHydration.current;
       pendingHydration.current = null;
       setRecoveryPending(false);
-      if (hydration && hydration.generation === generation)
-        runtime.hydrate(hydration.operations);
-      const command = pendingRunRef.current;
-      publishPendingRun(null);
-      if (!command) return;
-      if (command.generation === generation) command.start(runtime);
-      else command.cancel();
-    },
-    [publishPendingRun],
-  );
+      if (hydration && hydration.generation === generation) {
+        const hydrationEpoch = controller.hydrate(hydration.operations);
+        store.expectHydrationCommit(controller, hydrationEpoch);
+      } else if (hydration) {
+        store.setFacadeRecoveryPending(false);
+      }
 
-  const value: OperationRegistryValue = {
-    run,
-    isBlocked: (routeId) =>
-      pendingRun?.routeId === routeId ||
-      runtimeValue?.isBlocked(routeId) === true,
-    present,
-    preload,
-    navigationLocked:
-      pendingRun !== null || runtimeValue?.navigationLocked === true,
-    recoveryQueueActive:
-      recoveryPending || runtimeValue?.recoveryQueueActive === true,
-    wheelPresentationEpoch: runtimeValue?.wheelPresentationEpoch ?? 0,
-    hydrate,
-  };
+      const command = pendingRunRef.current;
+      pendingRunRef.current = null;
+      setPendingRun(null);
+      if (command) {
+        if (command.generation === generation) {
+          if (command.background) store.clearPendingRunRoute(command.routeId);
+          void command
+            .start(controller)
+            .finally(() => store.clearPendingRunRoute(command.routeId));
+        } else {
+          command.cancel();
+          store.clearPendingRunRoute(command.routeId);
+        }
+      }
+      return () => store.detachRuntime(controller);
+    },
+    [store],
+  );
+  const runtimeHost = useMemo<OperationRegistryRuntimeHost>(
+    () => ({
+      attachRuntime,
+      publishRuntimeSignals: (controller, signals) =>
+        store.publishRuntimeSignals(controller, signals),
+    }),
+    [attachRuntime, store],
+  );
   const RuntimeProvider = runtimeModule?.OperationRegistryRuntimeProvider;
 
   return (
-    <OperationRegistryContext.Provider value={value}>
+    <OperationRegistryContext.Provider value={store}>
       {children}
-      {RuntimeProvider ? (
-        <RuntimeProvider>
-          <RuntimeValueBridge publish={publishRuntime} />
-        </RuntimeProvider>
-      ) : null}
+      {RuntimeProvider ? <RuntimeProvider host={runtimeHost} /> : null}
       {loadFailed && (pendingRun || recoveryPending) ? (
         <button className="operation-resume" type="button" onClick={load}>
           画面无法打开，重试
@@ -189,14 +226,4 @@ export function OperationRegistryProvider({
       ) : null}
     </OperationRegistryContext.Provider>
   );
-}
-
-function RuntimeValueBridge({
-  publish,
-}: {
-  publish(value: OperationRegistryValue): void;
-}): null {
-  const value = useOperationRegistry();
-  useLayoutEffect(() => publish(value), [publish, value]);
-  return null;
 }

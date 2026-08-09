@@ -9,7 +9,10 @@ import { AppModal } from "../../../shared/ui/AppModal.tsx";
 import { Badge } from "../../../shared/ui/Badge.tsx";
 import { Button } from "../../../shared/ui/Button.tsx";
 import { Card } from "../../../shared/ui/Card.tsx";
-import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
+import {
+  useOperationBlocked,
+  useOperationCommands,
+} from "../../../workflows/operation-recovery/context.ts";
 
 const tierNames = {
   normal: "普通",
@@ -29,9 +32,10 @@ export function ExpeditionPanel(): ReactNode {
   const [params] = useAppSearchParams();
   const query = useApiQuery("expedition.list");
   const refetchExpeditions = query.refetch;
-  const { isBlocked, run } = useOperationRegistry();
-  const blocked =
-    isBlocked("expedition.create") || isBlocked("expedition.claim");
+  const { run } = useOperationCommands();
+  const createBlocked = useOperationBlocked("expedition.create");
+  const claimBlocked = useOperationBlocked("expedition.claim");
+  const blocked = createBlocked || claimBlocked;
   const [selectionTier, setSelectionTier] = useState<Tier | null>(null);
   const [selection, setSelection] = useState<Record<string, number>>({});
   const grid = useRef<HTMLDivElement>(null);

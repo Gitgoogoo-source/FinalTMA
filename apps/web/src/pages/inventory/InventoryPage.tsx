@@ -12,7 +12,7 @@ import { Button } from "../../shared/ui/Button.tsx";
 import { focusTaskTarget } from "../../shared/navigation/focusTaskTarget.ts";
 import { usePageSearchParams } from "../../shared/navigation/pageActivity.tsx";
 import { usePageModulePreparation } from "../../shared/navigation/pageModulePreparation.ts";
-import { useOperationRegistry } from "../../workflows/operation-recovery/context.ts";
+import { useOperationBlocked } from "../../workflows/operation-recovery/context.ts";
 import "../../shared/styles/inventory-page.css";
 
 export function InventoryPage(): ReactNode {
@@ -21,9 +21,9 @@ export function InventoryPage(): ReactNode {
   const [params] = usePageSearchParams();
   const [sellItem, setSellItem] = useState<InventoryItem | null>(null);
   const requestedFocus = params.get("focus");
-  const { isBlocked } = useOperationRegistry();
-  const blocked =
-    isBlocked("inventory.evolve") || isBlocked("inventory.decompose");
+  const evolutionBlocked = useOperationBlocked("inventory.evolve");
+  const decompositionBlocked = useOperationBlocked("inventory.decompose");
+  const blocked = evolutionBlocked || decompositionBlocked;
   const actions = (item: InventoryItem, imageReady: boolean) => (
     <>
       <TaskActionTarget active={requestedFocus === "evolution"}>

@@ -22,6 +22,9 @@ OPERATION_REGISTRY_RUNTIME_PROVIDER = (
     WEB_ROOT
     / "workflows/operation-recovery/OperationRegistryRuntimeProvider.tsx"
 )
+OPERATION_REGISTRY_STORE = (
+    WEB_ROOT / "workflows/operation-recovery/operation-registry-store.ts"
+)
 BATTLE_SCHEMA = ROOT / "supabase/schemas/44_battle.sql"
 BATTLE_BASELINE_MIGRATION = (
     ROOT / "supabase/migrations/20260719104533_baseline.sql"
@@ -71,6 +74,7 @@ REQUIRED_PATHS = (
     "docs/architecture/adr/ADR-047-battle-staged-runtime-loading.md",
     "docs/architecture/adr/ADR-048-battle-dynamic-preload-entry-deduplication.md",
     "docs/architecture/adr/ADR-050-catalog-post-rebuild-readiness-gate.md",
+    "docs/architecture/adr/ADR-051-operation-registry-selective-subscription.md",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
     "docs/architecture/adr/ADR-025-battle-active-switch-atomicity.md",
@@ -94,6 +98,7 @@ REQUIRED_PATHS = (
     "supabase/schemas",
     "tools/product_data",
     "contracts/ton",
+    "apps/web/src/workflows/operation-recovery/operation-registry-store.ts",
 )
 FORBIDDEN_REFERENCES = (
     "packages/server",
@@ -181,6 +186,8 @@ def main() -> None:
     verify_identity_avatar_minimization()
     verify_persistent_page_route_leaves()
     verify_first_screen_runtime_boundaries()
+    verify_first_screen_persistent_page_boundaries()
+    verify_operation_registry_selective_subscriptions()
     verify_adaptive_page_warmup()
     verify_evolution_refresh_semantics()
     verify_operation_recovery_discovery()
@@ -509,6 +516,168 @@ def verify_first_screen_runtime_boundaries() -> None:
             f"First-screen production build gate is incomplete: {missing_gate_terms}"
         )
 
+
+def verify_operation_registry_selective_subscriptions() -> None:
+    context_path = WEB_ROOT / "workflows/operation-recovery/context.ts"
+    context_source = context_path.read_text(encoding="utf-8")
+    facade_source = OPERATION_REGISTRY_PROVIDER.read_text(encoding="utf-8")
+    runtime_source = OPERATION_REGISTRY_RUNTIME_PROVIDER.read_text(encoding="utf-8")
+    store_source = OPERATION_REGISTRY_STORE.read_text(encoding="utf-8")
+
+    context_terms = (
+        "createContext<OperationRegistryStore | null>",
+        "useSyncExternalStore",
+        "export function useOperationCommands()",
+        "export function useOperationHydrator()",
+        "export function useOperationBlocked(",
+        "export function useOperationNavigationLocked()",
+        "export function useOperationRecoveryQueueActive()",
+        "export function useWheelPresentationEpoch()",
+    )
+    missing_context_terms = [
+        term for term in context_terms if term not in context_source
+    ]
+    if missing_context_terms:
+        raise SystemExit(
+            "Operation registry selective hooks are incomplete: "
+            f"{missing_context_terms}"
+        )
+    if "useOperationRegistry" in context_source:
+        raise SystemExit("Aggregate useOperationRegistry hook must remain deleted")
+
+    forbidden_facade_terms = (
+        "runtimeValue",
+        "setRuntimeValue",
+        "RuntimeValueBridge",
+        "useOperationRegistry",
+    )
+    present_facade_terms = [
+        term for term in forbidden_facade_terms if term in facade_source
+    ]
+    if present_facade_terms:
+        raise SystemExit(
+            "Operation facade must not bridge a complete Runtime value: "
+            f"{present_facade_terms}"
+        )
+    required_facade_terms = (
+        "createOperationRegistryStore,",
+        "store.bindFacade(commands, hydrate)",
+        "<OperationRegistryContext.Provider value={store}>",
+        "<RuntimeProvider host={runtimeHost} />",
+        "store.expectHydrationCommit(controller, hydrationEpoch);",
+        "store.clearPendingRunRoute(command.routeId)",
+    )
+    missing_facade_terms = [
+        term for term in required_facade_terms if term not in facade_source
+    ]
+    if missing_facade_terms:
+        raise SystemExit(
+            "Operation facade stable Store handoff is incomplete: "
+            f"{missing_facade_terms}"
+        )
+
+    if "OperationRegistryContext" in runtime_source:
+        raise SystemExit("Heavy operation Runtime must not publish a nested Context")
+    required_runtime_terms = (
+        "host: OperationRegistryRuntimeHost;",
+        "const operationSignals = useMemo(",
+        "const controller = useMemo<OperationRuntimeController>(",
+        "host.attachRuntime(controller)",
+        "host.publishRuntimeSignals(controller, runtimeSignals)",
+        "hydrationEpochRef.current + 1",
+    )
+    missing_runtime_terms = [
+        term for term in required_runtime_terms if term not in runtime_source
+    ]
+    if missing_runtime_terms:
+        raise SystemExit(
+            "Operation Runtime selective signal publication is incomplete: "
+            f"{missing_runtime_terms}"
+        )
+
+    store_terms = (
+        "blockedListeners",
+        "navigationListeners",
+        "recoveryListeners",
+        "wheelEpochListeners",
+        "previousBlocked.get(routeId) !== getBlocked(routeId)",
+        "signals.hydrationEpoch >= expectedHydrationEpoch",
+        "runtimeController !== controller",
+    )
+    missing_store_terms = [term for term in store_terms if term not in store_source]
+    if missing_store_terms:
+        raise SystemExit(
+            "Operation registry signal Store is incomplete: "
+            f"{missing_store_terms}"
+        )
+
+    aggregate_consumers = [
+        relative(source)
+        for source in typescript_files(WEB_ROOT)
+        if source != context_path
+        and re.search(r"\buseOperationRegistry\s*\(", source.read_text(encoding="utf-8"))
+    ]
+    if aggregate_consumers:
+        raise SystemExit(
+            "Operation consumers must use selective hooks: "
+            f"{sorted(aggregate_consumers)}"
+        )
+    context_providers = [
+        relative(source)
+        for source in typescript_files(WEB_ROOT)
+        if "<OperationRegistryContext.Provider"
+        in source.read_text(encoding="utf-8")
+    ]
+    if context_providers != [relative(OPERATION_REGISTRY_PROVIDER)]:
+        raise SystemExit(
+            "The stable operation Store must have exactly one Context provider: "
+            f"{context_providers}"
+        )
+
+    consumer_terms = {
+        "app/shell/BottomNavigation.tsx": "useOperationNavigationLocked()",
+        "pages/inventory/InventoryPage.tsx": "useOperationBlocked(\"inventory.evolve\")",
+        "domains/gacha/ui/GachaView.tsx": "useOperationBlocked(\"gacha.open\")",
+        "domains/market/ui/MarketView.tsx": "useOperationBlocked(\"market.purchase\")",
+        "domains/tasks/ui/TasksView.tsx": "useOperationBlocked(\"tasks.claim\")",
+        "domains/wheel/ui/WheelPanel.tsx": "useWheelPresentationEpoch()",
+        "workflows/operation-recovery/useRecoverableOperationDiscovery.ts": "useOperationRecoveryQueueActive()",
+    }
+    missing_consumers = [
+        path
+        for path, term in consumer_terms.items()
+        if term not in (WEB_ROOT / path).read_text(encoding="utf-8")
+    ]
+    if missing_consumers:
+        raise SystemExit(
+            "Operation selective subscriptions are missing consumers: "
+            f"{missing_consumers}"
+        )
+
+    documentation = "\n".join(
+        (ROOT / path).read_text(encoding="utf-8")
+        for path in (
+            "docs/architecture/adr/ADR-051-operation-registry-selective-subscription.md",
+            "docs/architecture/operation-recovery.md",
+            "docs/architecture/runtime.md",
+            "docs/operations/acceptance.md",
+            "docs/operations/release.md",
+        )
+    )
+    for term in (
+        "稳定命令",
+        "选择性信号",
+        "useOperationBlocked",
+        "水合",
+    ):
+        if term not in documentation:
+            raise SystemExit(
+                "Operation selective subscription documentation is incomplete: "
+                f"{term}"
+            )
+
+
+def verify_first_screen_persistent_page_boundaries() -> None:
     app_handlers = (
         API_ROOT / "entrypoints/app/handlers.ts"
     ).read_text(encoding="utf-8")
@@ -805,7 +974,7 @@ def verify_evolution_refresh_semantics() -> None:
             f"{missing}"
         )
 
-    run_start = source.index('const run: OperationRegistryValue["run"]')
+    run_start = source.index('const run: OperationRegistryCommands["run"]')
     run_end = source.index("const hydrate = useCallback(")
     run_source = source[run_start:run_end]
     if run_source.count("refreshAfterLocalSettlement(id, routeId)") != 2:
@@ -921,7 +1090,9 @@ def verify_operation_recovery_discovery() -> None:
         or "wheelPresentationEpoch: number;" not in context
         or "serverAcknowledgementRouteIds.has(operation.routeId)" not in provider
         or 'operation.routeId === "wheel.spin"' not in provider
-        or "recoveryQueueActive," not in provider
+        or "let recoveryQueueActive = false;" not in provider
+        or "recoveryQueueActive = true;" not in provider
+        or "useOperationRecoveryQueueActive()" not in discovery
     ):
         raise SystemExit(
             "Operation discovery must pause while the current result queue is active"

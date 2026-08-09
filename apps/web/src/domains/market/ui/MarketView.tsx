@@ -36,7 +36,10 @@ import { Button } from "../../../shared/ui/Button.tsx";
 import { Card } from "../../../shared/ui/Card.tsx";
 import { CatalogImage } from "../../../shared/ui/CatalogImage.tsx";
 import { PageState } from "../../../shared/ui/PageState.tsx";
-import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
+import {
+  useOperationBlocked,
+  useOperationCommands,
+} from "../../../workflows/operation-recovery/context.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/context.ts";
 import { type MarketSoldEvent, useMarketSoldInbox } from "../soldInbox.ts";
 import { MarketTabs, type MarketTab } from "./MarketTabs.tsx";
@@ -76,7 +79,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
     dismiss: dismissSoldEvent,
   } = useMarketSoldInbox(pageActive, pageActive);
   const catalog = useCatalogQuery(soldEvents.length > 0);
-  const { isBlocked, preload, run } = useOperationRegistry();
+  const { preload, run } = useOperationCommands();
   const { requestTopup } = useNavigationIntent();
   const [feedback, setFeedback] = useState<string | null>(null);
   const [priceFilter, setPriceFilter] = useState<number | null>(null);
@@ -94,12 +97,13 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
     () => new Set(),
   );
   const soldEffectTimers = useRef<Set<number>>(new Set());
-  const listingInProgress = isBlocked("market.create_listing");
-  const purchaseInProgress = isBlocked("market.purchase");
+  const listingInProgress = useOperationBlocked("market.create_listing");
+  const purchaseInProgress = useOperationBlocked("market.purchase");
+  const delistingInProgress = useOperationBlocked(
+    "market.cancel_template_listings",
+  );
   const blocked =
-    purchaseInProgress ||
-    listingInProgress ||
-    isBlocked("market.cancel_template_listings");
+    purchaseInProgress || listingInProgress || delistingInProgress;
   const purchaseTemplates = (listings.data?.templates ?? [])
     .map((item) => {
       const current =

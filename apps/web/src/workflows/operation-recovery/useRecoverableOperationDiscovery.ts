@@ -14,7 +14,10 @@ import {
   subscribeTelegramActivity,
   telegram,
 } from "../../platform/telegram/index.ts";
-import { useOperationRegistry } from "./context.ts";
+import {
+  useOperationHydrator,
+  useOperationRecoveryQueueActive,
+} from "./context.ts";
 
 const discoveryDelays = [1_000, 2_000, 3_000, 5_000, 30_000] as const;
 
@@ -23,7 +26,8 @@ export function useRecoverableOperationDiscovery(
 ): void {
   const session = useSession();
   const surfaceActive = useRecoverySurfaceActive();
-  const { hydrate, recoveryQueueActive } = useOperationRegistry();
+  const hydrate = useOperationHydrator();
+  const recoveryQueueActive = useOperationRecoveryQueueActive();
   const hydrateRecovered = useEffectEvent(hydrate);
   const generation = session?.generation;
   const authorityCursor = useRef<{

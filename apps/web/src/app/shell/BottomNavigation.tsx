@@ -12,7 +12,7 @@ import {
   useAppNavigate,
 } from "../../platform/navigation/index.tsx";
 import { usePageModulePreparation } from "../../shared/navigation/pageModulePreparation.ts";
-import { useOperationRegistry } from "../../workflows/operation-recovery/context.ts";
+import { useOperationNavigationLocked } from "../../workflows/operation-recovery/context.ts";
 
 const navigation = [
   { path: "/market", label: "交易", icon: ShoppingBasket },
@@ -26,7 +26,7 @@ export function BottomNavigation(): ReactNode {
   const location = useAppLocation();
   const navigate = useAppNavigate();
   const preparePage = usePageModulePreparation();
-  const { navigationLocked } = useOperationRegistry();
+  const navigationLocked = useOperationNavigationLocked();
   return (
     <nav
       className="bottom-nav"

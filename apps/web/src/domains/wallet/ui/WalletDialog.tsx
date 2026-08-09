@@ -5,7 +5,8 @@ import { useTonConnectUI, useTonWallet } from "@tonconnect/ui-react";
 import {
   dormantApiRequest,
   useDormantApiQuery,
-  useDormantOperationRegistry,
+  useDormantOperationBlocked,
+  useDormantOperationCommands,
 } from "../../../dormant/api.ts";
 import { AppModal } from "../../../shared/ui/AppModal.tsx";
 import { Badge } from "../../../shared/ui/Badge.tsx";
@@ -20,8 +21,10 @@ export function WalletDialog({ close }: { close(): void }): ReactNode {
   const pending = useRef<Challenge | null>(null);
   const [phase, setPhase] = useState<"idle" | "opening" | "verifying">("idle");
   const [error, setError] = useState("");
-  const { isBlocked, run } = useDormantOperationRegistry();
-  const blocked = isBlocked("wallet.verify") || isBlocked("wallet.disconnect");
+  const { run } = useDormantOperationCommands();
+  const verifyBlocked = useDormantOperationBlocked("wallet.verify");
+  const disconnectBlocked = useDormantOperationBlocked("wallet.disconnect");
+  const blocked = verifyBlocked || disconnectBlocked;
 
   useEffect(() => {
     if (!wallet || !pending.current || phase !== "opening") return;

@@ -3,7 +3,10 @@ import { useState, type ReactNode } from "react";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { useCatalogQuery } from "../../../platform/query/useCatalogQuery.ts";
 import { Button } from "../../../shared/ui/Button.tsx";
-import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
+import {
+  useOperationBlocked,
+  useOperationCommands,
+} from "../../../workflows/operation-recovery/context.ts";
 import { evolutionRoute, type EvolutionRarity } from "../config.ts";
 import { EvolutionConfirmationDialog } from "./EvolutionConfirmationDialog.tsx";
 
@@ -23,7 +26,7 @@ export function EvolutionAction({
   imageReady: boolean;
   disabled: boolean;
 }): ReactNode {
-  const { isBlocked, preload, run } = useOperationRegistry();
+  const { preload, run } = useOperationCommands();
   const [confirming, setConfirming] = useState(false);
   const summary = useApiQuery("identity.summary");
   const catalog = useCatalogQuery(confirming);
@@ -33,7 +36,7 @@ export function EvolutionAction({
         (template) => template.id === route.target.template_id,
       )
     : undefined;
-  const evolving = isBlocked("inventory.evolve");
+  const evolving = useOperationBlocked("inventory.evolve");
   const reason = evolutionDisabledReason({
     item,
     imageReady,

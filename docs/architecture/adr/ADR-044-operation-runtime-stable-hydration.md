@@ -9,7 +9,7 @@
 
 ## 决策
 
-消费 `identity.initial.recovery.blocking_operations` 与统一恢复发现结果的两个 effect 使用 React `useEffectEvent` 调用最新 `hydrate`。该入口快照固定存于当前 session generation 的内存外部状态，不由 React Query 刷新。`hydrate` 继续由 Facade 在 Runtime 未加载时排队、Runtime 就绪后直接委托，但函数身份不再属于两个 effect 的重新执行条件。Runtime bridge 可以继续发布导航锁、恢复队列和展示 epoch 的最新派生值；这些发布引起的 Context value 变化不得重新触发相同 snapshot 的水合。
+消费 `identity.initial.recovery.blocking_operations` 与统一恢复发现结果的两个 effect 使用 React `useEffectEvent` 调用最新 `hydrate`。该入口快照固定存于当前 session generation 的内存外部状态，不由 React Query 刷新。`hydrate` 继续由 Facade 在 Runtime 未加载时排队、Runtime 就绪后直接委托，但函数身份不再属于两个 effect 的重新执行条件。完整 Runtime value bridge 已由 [ADR-051](ADR-051-operation-registry-selective-subscription.md) 替代；Runtime 只发布按 route 阻塞、导航锁、恢复队列和展示 epoch 拆分的选择性信号，水合提交使用单调内存 epoch 交接，任何信号发布都不得重新触发相同 snapshot 的水合。
 
 架构门禁永久检查两个恢复 effect 均通过 `useEffectEvent` 调用 `hydrate`，并拒绝把 `hydrate` 恢复到 effect dependency。该门禁与 ADR-040 的首屏同步闭包和禁止模块门禁同时执行，不能通过提前加载重型 Runtime 规避稳定性问题。
 
@@ -17,7 +17,7 @@
 
 - `pending`、`unknown`、终态、权威序号、原 operation ID、轮询节奏、刷新范围、幂等键和数据库裁决均不改变。
 - 首屏仍只加载轻量 Facade；重型 Runtime 仍只在玩家意图或真实恢复需要后请求。
-- Runtime 状态发布仍须更新导航锁、恢复队列和 wheel presentation epoch，不允许用冻结 Context value 消除循环。
+- Runtime 状态发布仍须通过选择性信号更新导航锁、恢复队列和 wheel presentation epoch，不允许冻结信号或跳过真实变化来消除循环。
 - 不新增浏览器持久化、结果恢复、业务提交、数据库字段、RPC 或 migration。
 
 ## 验收

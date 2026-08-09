@@ -9,7 +9,8 @@ import {
 import { CatalogImage } from "../../../shared/ui/CatalogImage.tsx";
 import {
   useDormantApiQuery,
-  useDormantOperationRegistry,
+  useDormantOperationBlocked,
+  useDormantOperationCommands,
 } from "../../../dormant/api.ts";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { useTelegramBackButton } from "../../../platform/telegram/index.ts";
@@ -35,11 +36,11 @@ export function MintView(): ReactNode {
   const item = inventory.data;
   const [tonConnect] = useTonConnectUI();
   const tonWallet = useTonWallet();
-  const { isBlocked, run } = useDormantOperationRegistry();
-  const blocked =
-    isBlocked("mint.reserve") ||
-    isBlocked("mint.cancel") ||
-    isBlocked("mint.submit");
+  const { run } = useDormantOperationCommands();
+  const reserveBlocked = useDormantOperationBlocked("mint.reserve");
+  const cancelBlocked = useDormantOperationBlocked("mint.cancel");
+  const submitBlocked = useDormantOperationBlocked("mint.submit");
+  const blocked = reserveBlocked || cancelBlocked || submitBlocked;
   const [imageReady, setImageReady] = useState(false);
 
   const mint = async () => {
