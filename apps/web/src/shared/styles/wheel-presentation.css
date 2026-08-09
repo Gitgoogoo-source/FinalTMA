@@ -189,3 +189,42 @@
     0 13px 25px rgba(255, 112, 0, 0.23),
     inset 0 1px 0 rgba(255, 255, 255, 0.52);
 }
+
+@keyframes wheel-result-rise {
+  from {
+    opacity: 0;
+    transform: translateY(34px);
+  }
+}
+
+@media (max-width: 360px) {
+  .app-shell .wheel-result-modal {
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+  .app-shell .wheel-result-grid {
+    gap: 4px;
+  }
+  .app-shell .wheel-reward-card {
+    padding-right: 2px;
+    padding-left: 2px;
+  }
+}
+
+@media (max-height: 700px) {
+  .app-shell .wheel-result-modal {
+    gap: 7px;
+    padding-top: 62px;
+    padding-bottom: calc(var(--safe-bottom) + 8px);
+  }
+  .app-shell .wheel-result-gift {
+    top: -132px;
+    width: 232px;
+  }
+  .app-shell .wheel-result-heading h2 {
+    font-size: 23px;
+  }
+  .app-shell .wheel-result-confirm.button {
+    min-height: 46px;
+  }
+}
