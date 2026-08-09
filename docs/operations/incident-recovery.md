@@ -27,7 +27,7 @@
 - 创建响应丢失：查询原 operation；`battle-share` 只领取原 `create_operation_id`，恢复同一 room 和同一 bearer token。Telegram 明确失败时执行原 abort RPC；结果未知保持 60 秒恢复窗口。
 - 接受或动作响应丢失：查询原 operation 和 viewer-specific room snapshot；已经锁定的 stake、reservation 或 action 不重做。
 - Ably 故障：确认数据库 `state_version` 继续推进并启用 REST 1—2 秒回正；修复发布链路后只重投原 outbox，重复 `event_id/state_version` 不改变业务。
-- `battle-tick-v1` 停止：保持 Battle 新建/接受关闭，先查询 `battle.tick_health()`、`cron.job`、`cron.job_run_details` 和 `pg_stat_activity`，按 `jobid/runid` 区分配置错误、scheduler 停滞和真实运行失败。job 定义正确但无新 run 时，在确认目标环境与零活动房后执行一次独立的 `pg_reload_conf()`，再保存同一 jobid 至少两个连续自然周期；禁止手工调用 tick 冒充恢复。恢复后按数据库 waiting、lobby presence、lobby 总时限、开战倒计时和回合 deadline 追赶；同一截止时刻先终结 lobby，再考虑开战，禁止按浏览器剩余时间补写状态或动作。`BATTLE_TICK_UNHEALTHY` 在健康恢复后自动关闭，`BATTLE_TICK_RUN_FAILED` 必须人工核查后关闭；原始 run 明细保留 7 天，开放 violation 不随清理删除。
+- `battle-tick-v1` 停止：保持 Battle 新建/接受关闭，先查询 `battle.tick_health()`、`cron.job`、`cron.job_run_details` 和 `pg_stat_activity`，按来源 `jobid/runid`、检测时当前 jobid 与 `source_is_current` 区分当前配置错误、scheduler 停滞、当前 job 失败和已退出 job 的历史失败。job 定义正确但无新 run 时，在确认目标环境与零活动房后执行一次独立的 `pg_reload_conf()`，再保存同一 jobid 至少两个连续自然周期；禁止手工调用 tick 冒充恢复。恢复后按数据库 waiting、lobby presence、lobby 总时限、开战倒计时和回合 deadline 追赶；同一截止时刻先终结 lobby，再考虑开战，禁止按浏览器剩余时间补写状态或动作。`BATTLE_TICK_UNHEALTHY` 在当前健康恢复后自动关闭；`BATTLE_TICK_RUN_FAILED` 在没有新失败、当前 job 健康、最近两个自然完成周期成功、最近五分钟零失败且距最后检测至少五分钟时自动关闭。关闭只追加恢复证据并保留首次和最近失败；不得人工删除、覆盖或关闭告警来获得零开放 violation。原始 run 明细保留 7 天。
 - pg_net 或 integration 故障：核对 Vault callback、`BATTLE_OUTBOX_SECRET`、领取租约和重试时间；请求 body 只作唤醒信号，不能携带或裁决 Battle 状态。
 - 永久不变量错误：使用既定安全 RPC 把 room 置为 `voided`、双方原额退款、释放 reservation 并写 violation；不得手工判胜、修改私有 seed 或删除审计。
 - 终局结果恢复：identity bootstrap 与 Battle bootstrap 只返回本人最新未确认结果；acknowledge 丢失时重试原 room，不创建 history/replay/audit 响应。

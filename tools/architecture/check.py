@@ -75,6 +75,7 @@ REQUIRED_PATHS = (
     "docs/architecture/adr/ADR-048-battle-dynamic-preload-entry-deduplication.md",
     "docs/architecture/adr/ADR-050-catalog-post-rebuild-readiness-gate.md",
     "docs/architecture/adr/ADR-051-operation-registry-selective-subscription.md",
+    "docs/architecture/adr/ADR-053-battle-tick-alert-lifecycle.md",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
     "docs/architecture/adr/ADR-025-battle-active-switch-atomicity.md",

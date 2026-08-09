@@ -131,3 +131,7 @@ TMA 首屏同步闭包固定为入口、默认开盒页、首屏契约及各自�
 - [Battle 分层运行时加载](adr/ADR-047-battle-staged-runtime-loading.md)
 - [Battle 动态预加载入口去重](adr/ADR-048-battle-dynamic-preload-entry-deduplication.md)
 - [身份首屏状态与日常摘要读模型分离](adr/ADR-049-identity-initial-state-and-summary-read-model.md)
+- [Catalog 空库重建后的发布恢复与失效即失败门禁](adr/ADR-050-catalog-post-rebuild-readiness-gate.md)
+- [操作注册中心稳定命令与选择性信号订阅](adr/ADR-051-operation-registry-selective-subscription.md)
+- [转盘有界终态与结果层视口锚定](adr/ADR-052-wheel-animation-bounded-terminal-convergence.md)
+- [Battle Tick 告警自动闭环](adr/ADR-053-battle-tick-alert-lifecycle.md)

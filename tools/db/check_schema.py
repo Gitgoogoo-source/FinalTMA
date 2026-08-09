@@ -594,6 +594,38 @@ def verify_battle_contract() -> None:
     missing = [fragment for fragment in required if fragment not in battle_sql]
     if missing:
         raise SystemExit(f"Battle database contract is incomplete: {missing}")
+    tick_monitor = battle_sql.partition(
+        "create or replace function battle.monitor_tick_health"
+    )[2].partition(
+        "create or replace function battle.cleanup_operational_data"
+    )[0]
+    tick_monitor_required = (
+        "v_current_jobid := nullif(v_health->>'jobid', '')::bigint",
+        "'source_is_current', v_failure.jobid = v_current_jobid",
+        "when details ? 'first_failure' then details",
+        "else details || jsonb_build_object('first_failure', details)",
+        "'latest_failure', v_failure_details",
+        "'last_detected_at', p_scan_to",
+        "p_scan_to >= v_last_detected_at + interval '5 minutes'",
+        "v_recent_completed_count = 2",
+        "v_recent_success_count = 2",
+        "v_recent_failure_count = 0",
+        "resolved_at = v_resolved_at",
+        "'reason', 'current_job_stable'",
+        "'clean_window_seconds', 300",
+    )
+    missing_tick_monitor = [
+        fragment for fragment in tick_monitor_required if fragment not in tick_monitor
+    ]
+    if missing_tick_monitor:
+        raise SystemExit(
+            "Battle tick alert lifecycle is incomplete: "
+            f"{missing_tick_monitor}"
+        )
+    if "v_count := v_count + v_updated" in tick_monitor:
+        raise SystemExit(
+            "Updating an existing Battle tick alert cannot count as a new violation"
+        )
     lobby_invariant = battle_sql.partition(
         "create or replace function battle.lobby_invariant_error"
     )[2].partition(

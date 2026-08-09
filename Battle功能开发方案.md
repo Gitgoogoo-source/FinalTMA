@@ -572,8 +572,8 @@ flowchart LR
 - 停用或重建前先 `cron.unschedule('battle-tick-v1')`，再在独立语句执行 `pg_reload_conf()`；保存原 `jobid` 连续两个调度周期没有新增 run 的证据后才允许删除 Battle schema，避免旧 scheduler 缓存继续执行已停用 job。
 - 从空库重放时，baseline 只创建 Battle 函数和表；`product_data_v1` 在 active ruleset 及全部规则参数写入后才创建唯一 `battle-tick-v1`，禁止在规则数据尚未提交时启动 tick。
 - 三条 migration 的提交事务完成后，数据库 owner 必须在独立语句执行一次 `pg_reload_conf()`，随后只以 `cron.job_run_details` 中同一 `jobid` 的至少两个连续自然周期作为恢复成功证据；手工调用 `battle.process_due` 不属于调度健康证据。
-- `battle.tick_health()` 固定核对唯一 job、schedule、command、database、worker、scheduler 数量及最近 5 秒成功记录。五分钟 `monitor-invariants` 把配置错误、调度停滞写为 `BATTLE_TICK_UNHEALTHY`，把真实失败写为 `BATTLE_TICK_RUN_FAILED`；失败摘要和 SHA-256、jobid、runid、开始/结束时间进入现有私有 violation 运维链路。
-- `cron.job_run_details` 中该 command 的成功与失败记录固定保留 7 天，由既有每日 `cleanup-idempotency` 最多清理 100000 条更早记录；不增加第二个 Supabase cron job，未关闭的失败 violation 不随运行记录清理。
+- `battle.tick_health()` 固定核对唯一 job、schedule、command、database、worker、scheduler 数量及最近 5 秒成功记录。五分钟 `monitor-invariants` 把配置错误、调度停滞写为 `BATTLE_TICK_UNHEALTHY`，把真实失败写为 `BATTLE_TICK_RUN_FAILED`；失败摘要和 SHA-256、来源 jobid/runid、检测时当前 jobid、开始/结束时间进入现有私有 violation 运维链路。扫描窗口发现失败时保留首次失败并更新最近失败；没有新失败且当前 job 健康、最近两个自然完成周期成功、最近五分钟零失败、距最后检测至少五分钟时自动关闭运行失败告警。
+- `cron.job_run_details` 中该 command 的成功与失败记录固定保留 7 天，由既有每日 `cleanup-idempotency` 最多清理 100000 条更早记录；不增加第二个 Supabase cron job。告警关闭只写 `resolved_at` 与恢复证据，不删除首次或最近失败历史；关闭后的新失败创建新的开放 violation。
 
 当前真实开发 Supabase 在 2026-07-27 已列出 `pg_cron 1.6.4`、`pg_net 0.20.4`，Vault `0.3.1` 已安装；实现时仍通过从空库执行完整 migration 确认扩展和 job 真实可用。
 
@@ -905,7 +905,7 @@ git diff --check
 - 确认 `anon/authenticated` 无访问权限。
 - 确认 `pg_cron` 每秒 job、`pg_net` callback、Vault 和 outbox 真实工作。
 - migration 提交后独立执行 `pg_reload_conf()`，确认 `(battle.tick_health()->>'healthy')::boolean = true`，并保存同一 jobid 至少两个连续自然成功周期的 runid、起止时间、状态和返回摘要。
-- 确认 `monitor-invariants` 能静态覆盖 `BATTLE_TICK_UNHEALTHY` 与 `BATTLE_TICK_RUN_FAILED`，`cleanup-idempotency` 固定保留 7 天 tick 运行记录；不得主动制造失败样本。
+- 确认 `monitor-invariants` 静态覆盖 `BATTLE_TICK_UNHEALTHY` 与 `BATTLE_TICK_RUN_FAILED` 的打开、更新和自动关闭；使用真实历史失败验证原告警自动关闭且原行和错误哈希保留，只允许在回滚事务内重放该历史扫描窗口验证关闭后重新打开，不得主动制造新的 tick 失败。`cleanup-idempotency` 固定保留 7 天 tick 运行记录。
 - 确认本地声明式 Schema 与远端结构无差异。
 
 ### 15.3 真实 Telegram

@@ -5846,9 +5846,21 @@ as $$
 declare
   v_health jsonb := battle.tick_health();
   v_failure cron.job_run_details%rowtype;
+  v_failure_details jsonb;
+  v_current_jobid bigint;
+  v_last_detected_at timestamptz;
+  v_recent_completed_count integer := 0;
+  v_recent_success_count integer := 0;
+  v_recent_failure_count integer := 0;
+  v_latest_success_runid bigint;
+  v_latest_success_end_time timestamptz;
+  v_resolved_at timestamptz;
   v_count integer := 0;
   v_added integer := 0;
+  v_updated integer := 0;
 begin
+  v_current_jobid := nullif(v_health->>'jobid', '')::bigint;
+
   if not coalesce((v_health->>'healthy')::boolean, false) then
     insert into operations.invariant_violations (code, subject, details)
     values ('BATTLE_TICK_UNHEALTHY', 'battle-tick-v1', v_health)
@@ -5873,29 +5885,121 @@ begin
   limit 1;
 
   if v_failure.runid is not null then
-    insert into operations.invariant_violations (code, subject, details)
-    values (
-      'BATTLE_TICK_RUN_FAILED',
-      'battle-tick-v1',
-      jsonb_build_object(
-        'jobid', v_failure.jobid,
-        'runid', v_failure.runid,
-        'status', v_failure.status,
-        'error_summary', left(coalesce(v_failure.return_message, ''), 240),
-        'error_sha256', encode(
-          extensions.digest(
-            convert_to(coalesce(v_failure.return_message, ''), 'UTF8'),
-            'sha256'
-          ),
-          'hex'
+    v_failure_details := jsonb_build_object(
+      'jobid', v_failure.jobid,
+      'runid', v_failure.runid,
+      'status', v_failure.status,
+      'error_summary', left(coalesce(v_failure.return_message, ''), 240),
+      'error_sha256', encode(
+        extensions.digest(
+          convert_to(coalesce(v_failure.return_message, ''), 'UTF8'),
+          'sha256'
         ),
-        'start_time', v_failure.start_time,
-        'end_time', v_failure.end_time
-      )
+        'hex'
+      ),
+      'start_time', v_failure.start_time,
+      'end_time', v_failure.end_time,
+      'current_jobid', v_current_jobid,
+      'source_is_current', v_failure.jobid = v_current_jobid
+    );
+
+    update operations.invariant_violations
+    set details = (
+      case
+        when details ? 'first_failure' then details
+        else details || jsonb_build_object('first_failure', details)
+      end
+    ) || jsonb_build_object(
+      'latest_failure', v_failure_details,
+      'last_detected_at', p_scan_to
     )
-    on conflict do nothing;
-    get diagnostics v_added = row_count;
-    v_count := v_count + v_added;
+    where code = 'BATTLE_TICK_RUN_FAILED'
+      and subject = 'battle-tick-v1'
+      and resolved_at is null;
+    get diagnostics v_updated = row_count;
+
+    if v_updated = 0 then
+      insert into operations.invariant_violations (code, subject, details)
+      values (
+        'BATTLE_TICK_RUN_FAILED',
+        'battle-tick-v1',
+        v_failure_details || jsonb_build_object(
+          'first_failure', v_failure_details,
+          'latest_failure', v_failure_details,
+          'last_detected_at', p_scan_to
+        )
+      )
+      on conflict do nothing;
+      get diagnostics v_added = row_count;
+      v_count := v_count + v_added;
+    end if;
+  else
+    select coalesce(
+      nullif(details->>'last_detected_at', '')::timestamptz,
+      nullif(details->'latest_failure'->>'end_time', '')::timestamptz,
+      nullif(details->>'end_time', '')::timestamptz,
+      detected_at
+    )
+    into v_last_detected_at
+    from operations.invariant_violations
+    where code = 'BATTLE_TICK_RUN_FAILED'
+      and subject = 'battle-tick-v1'
+      and resolved_at is null
+    order by detected_at
+    limit 1;
+
+    if v_last_detected_at is not null and v_current_jobid is not null then
+      select
+        count(*)::integer,
+        count(*) filter (where recent.status = 'succeeded')::integer,
+        max(recent.runid) filter (where recent.status = 'succeeded'),
+        max(recent.end_time) filter (where recent.status = 'succeeded')
+      into
+        v_recent_completed_count,
+        v_recent_success_count,
+        v_latest_success_runid,
+        v_latest_success_end_time
+      from (
+        select runid, status, end_time
+        from cron.job_run_details
+        where jobid = v_current_jobid
+          and end_time is not null
+        order by runid desc
+        limit 2
+      ) recent;
+
+      select count(*)::integer
+      into v_recent_failure_count
+      from cron.job_run_details
+      where jobid = v_current_jobid
+        and status = 'failed'
+        and end_time >= p_scan_to - interval '5 minutes'
+        and end_time < p_scan_to;
+
+      if coalesce((v_health->>'healthy')::boolean, false)
+        and p_scan_to >= v_last_detected_at + interval '5 minutes'
+        and v_recent_completed_count = 2
+        and v_recent_success_count = 2
+        and v_recent_failure_count = 0
+      then
+        v_resolved_at := clock_timestamp();
+        update operations.invariant_violations
+        set resolved_at = v_resolved_at,
+            details = details || jsonb_build_object(
+              'resolution', jsonb_build_object(
+                'reason', 'current_job_stable',
+                'jobid', v_current_jobid,
+                'latest_success_runid', v_latest_success_runid,
+                'latest_success_end_time', v_latest_success_end_time,
+                'clean_window_seconds', 300,
+                'resolved_at', v_resolved_at
+              )
+            )
+        where code = 'BATTLE_TICK_RUN_FAILED'
+          and subject = 'battle-tick-v1'
+          and resolved_at is null;
+      end if;
+    end if;
   end if;
   return v_count;
 end;
