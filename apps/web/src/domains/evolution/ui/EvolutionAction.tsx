@@ -25,7 +25,7 @@ export function EvolutionAction({
 }): ReactNode {
   const { isBlocked, preload, run } = useOperationRegistry();
   const [confirming, setConfirming] = useState(false);
-  const bootstrap = useApiQuery("identity.bootstrap");
+  const summary = useApiQuery("identity.summary");
   const catalog = useCatalogQuery(confirming);
   const route = evolutionRoute(item.template_id);
   const target = route
@@ -69,7 +69,7 @@ export function EvolutionAction({
           source={item}
           route={route}
           targetImageUrl={target?.image_thumbnail_url}
-          availableFgems={bootstrap.data?.assets.fgems.available}
+          availableFgems={summary.data?.assets.fgems.available}
           onCancel={() => setConfirming(false)}
           onConfirm={(quantity) => void confirm(quantity)}
         />

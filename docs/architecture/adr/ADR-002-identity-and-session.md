@@ -11,3 +11,5 @@ Telegram 是唯一身份来源，不使用 Supabase Auth。只有认证交换端
 `api.session_user` 默认拒绝 `pending` 会话并返回 `ENTRY_HANDOFF_PENDING`。仅 `referral.bind` 可创建邀请绑定操作；`operations.get` 仅可读取当前用户原 `referral.bind` 操作。绑定成功和全部确定拒绝在同一事务内固化候选、操作终态与当前会话完成时间；数据库异常、网络结果未知和未决操作保持 `pending`。已完成操作的幂等回放为当前会话补齐完成时间。
 
 每次登录撤销同账号旧会话。会话绝对有效 15 分钟，不延长、无 Refresh Token、无退出接口。自然过期仅自动交换一次；恢复得到 `pending` 会话时回到邀请确认流程，不加载首屏。被替换或撤销的会话不自动恢复。
+
+直接入口、Battle 入口或已经完成推荐交接的认证，在 `api.identity_authenticate` 事务提交后由同一 Function 调用 `api.identity_initial`，把可空 `initial_state` 与短期令牌一起返回；初始状态读取不进入认证事务。初始读取的临时失败只把 `initial_state` 降级为空，前端保留 session 并命令式重试 `identity.initial`；会话、封禁和入口交接的稳定错误不得降级。`pending` 推荐入口固定返回空初始状态，绑定形成确定终态后再读取一次新的 `identity.initial`。首屏摘要写入 `identity.summary` 查询缓存，恢复种子只保存于当前 session generation 内存，规则由 [ADR-049](ADR-049-identity-initial-state-and-summary-read-model.md) 固定。

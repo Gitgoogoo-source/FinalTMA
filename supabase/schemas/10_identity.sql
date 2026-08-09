@@ -431,7 +431,7 @@ begin
 end;
 $$;
 
-create or replace function api.identity_bootstrap(p_session_id uuid)
+create or replace function api.identity_summary(p_session_id uuid)
 returns jsonb
 language plpgsql
 security definer
@@ -451,48 +451,74 @@ begin
       'status', u.status,
       'referral_code', u.referral_code
     ),
-    'assets', economy.assets(v_user_id),
-    'entitlements', jsonb_build_object(
-      'free_normal_box', (select count(*) from economy.entitlements where user_id = v_user_id and kind = 'free_normal_box' and status = 'unused'),
-      'free_rare_box', (select count(*) from economy.entitlements where user_id = v_user_id and kind = 'free_rare_box' and status = 'unused')
-    ),
-    'catalog_version', 'v1',
-    'authority_cursor', coalesce((
-      select sequence.last_sequence::text
-      from operations.user_authority_sequences sequence
-      where sequence.user_id = v_user_id
-    ), '0'),
-    'blocking_operations', coalesce((
-      select jsonb_agg(operations.operation_json(o) order by o.created_at)
-      from operations.operations o
-      where o.user_id = v_user_id
-        and o.use_case <> 'gacha.open'
-        and (
-        o.status in ('pending', 'unknown')
-        or (
-          o.use_case = 'inventory.evolve'
-          and o.status in ('succeeded', 'failed')
-          and o.result_acknowledged_at is null
-        )
-      )
-    ), '[]'::jsonb),
-    'payment_recovery_orders', coalesce((
-      select jsonb_agg(payments.order_json(p) order by p.created_at desc)
-      from payments.orders p
-      where p.user_id = v_user_id and (
-        p.status in ('processing', 'paid', 'payment_identity_conflict')
-        or (p.kind = 'vip' and p.status = 'pending')
-      )
-    ), '[]'::jsonb),
-    'pending_mints', coalesce((
-      select jsonb_agg(onchain.mint_json(m) order by m.created_at desc)
-      from onchain.mints m
-      where m.user_id = v_user_id and m.status in ('reserved', 'submitted', 'unknown')
-    ), '[]'::jsonb),
-    'battle_participation', battle.participation_json(v_user_id),
-    'server_time', now()
+    'assets', economy.assets(v_user_id)
   ) into v_result
   from identity.users u where u.id = v_user_id;
+  return v_result;
+end;
+$$;
+
+create or replace function api.identity_initial(p_session_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := api.session_user(p_session_id);
+  v_result jsonb;
+begin
+  select jsonb_build_object(
+    'summary', jsonb_build_object(
+      'user', jsonb_build_object(
+        'id', u.id,
+        'telegram_id', u.telegram_id::text,
+        'username', u.username,
+        'first_name', u.first_name,
+        'last_name', u.last_name,
+        'status', u.status,
+        'referral_code', u.referral_code
+      ),
+      'assets', economy.assets(v_user_id)
+    ),
+    'recovery', jsonb_build_object(
+      'authority_cursor', coalesce((
+        select sequence.last_sequence::text
+        from operations.user_authority_sequences sequence
+        where sequence.user_id = v_user_id
+      ), '0'),
+      'blocking_operations', coalesce((
+        select jsonb_agg(operations.operation_json(o) order by o.created_at, o.id)
+        from operations.operations o
+        where o.user_id = v_user_id
+          and o.use_case <> 'gacha.open'
+          and (
+            o.status in ('pending', 'unknown')
+            or (
+              o.use_case = 'inventory.evolve'
+              and o.status in ('succeeded', 'failed')
+              and o.result_acknowledged_at is null
+            )
+          )
+      ), '[]'::jsonb),
+      'payment_recovery_orders', coalesce((
+        select jsonb_agg(payments.order_json(p) order by p.created_at desc)
+        from payments.orders p
+        where p.user_id = v_user_id and (
+          p.status in ('processing', 'paid', 'payment_identity_conflict')
+          or (p.kind = 'vip' and p.status = 'pending')
+        )
+      ), '[]'::jsonb),
+      'pending_mints', coalesce((
+        select jsonb_agg(onchain.mint_json(m) order by m.created_at desc)
+        from onchain.mints m
+        where m.user_id = v_user_id and m.status in ('reserved', 'submitted', 'unknown')
+      ), '[]'::jsonb),
+      'battle_participation', battle.participation_json(v_user_id)
+    )
+  ) into v_result
+  from identity.users u
+  where u.id = v_user_id;
   return v_result;
 end;
 $$;

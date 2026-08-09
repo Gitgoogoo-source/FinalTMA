@@ -5,11 +5,11 @@
 
 ## 背景
 
-轻量 `OperationRegistryProvider` 按 ADR-040 常驻首屏，重型 `OperationRegistryRuntimeProvider` 只在玩家意图或发现真实待恢复 operation 时动态挂载。真实 iPhone Telegram WebView 验收发现：`pending` 或 `unknown` 转盘 operation 重进会正确请求重型 Runtime，但 Runtime 每次发布新的 Context value 都会改变 Facade `hydrate` 的函数身份；消费 `identity.bootstrap.blocking_operations` 的 effect 因依赖该函数而再次注入同一 operation，内层状态再发布新 value，最终触发 React maximum update depth。
+轻量 `OperationRegistryProvider` 按 ADR-040 常驻首屏，重型 `OperationRegistryRuntimeProvider` 只在玩家意图或发现真实待恢复 operation 时动态挂载。真实 iPhone Telegram WebView 验收发现：`pending` 或 `unknown` 转盘 operation 重进会正确请求重型 Runtime，但 Runtime 每次发布新的 Context value 都会改变 Facade `hydrate` 的函数身份；消费入口恢复快照中 `blocking_operations` 的 effect 因依赖该函数而再次注入同一 operation，内层状态再发布新 value，最终触发 React maximum update depth。
 
 ## 决策
 
-消费 `identity.bootstrap.blocking_operations` 与统一恢复发现结果的两个 effect 使用 React `useEffectEvent` 调用最新 `hydrate`。`hydrate` 继续由 Facade 在 Runtime 未加载时排队、Runtime 就绪后直接委托，但函数身份不再属于两个 effect 的重新执行条件。Runtime bridge 可以继续发布导航锁、恢复队列和展示 epoch 的最新派生值；这些发布引起的 Context value 变化不得重新触发相同 snapshot 的水合。
+消费 `identity.initial.recovery.blocking_operations` 与统一恢复发现结果的两个 effect 使用 React `useEffectEvent` 调用最新 `hydrate`。该入口快照固定存于当前 session generation 的内存外部状态，不由 React Query 刷新。`hydrate` 继续由 Facade 在 Runtime 未加载时排队、Runtime 就绪后直接委托，但函数身份不再属于两个 effect 的重新执行条件。Runtime bridge 可以继续发布导航锁、恢复队列和展示 epoch 的最新派生值；这些发布引起的 Context value 变化不得重新触发相同 snapshot 的水合。
 
 架构门禁永久检查两个恢复 effect 均通过 `useEffectEvent` 调用 `hydrate`，并拒绝把 `hydrate` 恢复到 effect dependency。该门禁与 ADR-040 的首屏同步闭包和禁止模块门禁同时执行，不能通过提前加载重型 Runtime 规避稳定性问题。
 

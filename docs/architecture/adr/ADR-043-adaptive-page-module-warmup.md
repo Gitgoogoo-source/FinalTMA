@@ -11,7 +11,7 @@
 
 路由层维护唯一 `PreloadablePagePath = MainPagePath | "/album"` 页面模块注册表。所有 `React.lazy`、玩家导航意图和后台调度只调用 `loadPageModule(path)`；同一路径复用同一个进行中或已成功 Promise。动态 import 失败时只删除对应失败 Promise，允许后续明确玩家意图重新加载。
 
-默认开盒页仅在当前 session generation 页面活动、`identity.bootstrap`、`gacha.bootstrap` 与目录快照均已完成读取、开盒规则完整并且当前所选箱子主图已成功解码时调用 `markFirstScreenReady(generation)`。`AppRouter` 只在 `/` 收到同 generation 信号后异步加载后台调度器；首屏任一条件失败、会话已更换或直接进入 `/game` 时不启动自动预热。
+默认开盒页仅在当前 session generation 页面活动、认证返回或回退 `identity.initial` 已把摘要写入 `identity.summary`、`gacha.bootstrap` 与目录快照均已完成读取、开盒规则完整并且当前所选箱子主图已成功解码时调用 `markFirstScreenReady(generation)`。`AppRouter` 只在 `/` 收到同 generation 信号后异步加载后台调度器；首屏任一条件失败、会话已更换或直接进入 `/game` 时不启动自动预热。日常摘要后续刷新不重新触发首屏恢复快照。
 
 自动调度必须同时满足以下全部条件：`document.readyState === "complete"`、`document.visibilityState === "visible"`、浏览器在线、Telegram 未收到 `deactivated`、Network Information 明确提供 `saveData === false` 且 `effectiveType === "4g"`。Network Information 不存在或任一字段不完整均属于未知网络，禁止自动预热；该判断只影响性能优化，不影响页面功能与玩家主动导航。调度监听 `load`、`online`、`offline`、`visibilitychange`、Network Information `change` 及 Telegram `activated/deactivated`。条件失效时取消尚未开始的 idle 或 timer；已经开始的动态 import 不能中止，允许当前模块完成，但条件恢复前不得开始下一个。
 

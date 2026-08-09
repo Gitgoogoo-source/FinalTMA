@@ -69,13 +69,13 @@ const authorityCancellationRoutes = [
 
 const terminalCancellationRoutes = [
   ...authorityCancellationRoutes,
-  "identity.bootstrap",
+  "identity.summary",
   "inventory.list",
 ] as const satisfies readonly RouteId[];
 
 const terminalRequests = [
   { routeId: "battle.bootstrap", input: {} },
-  { routeId: "identity.bootstrap", input: {} },
+  { routeId: "identity.summary", input: {} },
   { routeId: "inventory.list", input: {} },
 ] as const satisfies readonly ApiQueryRequest[];
 

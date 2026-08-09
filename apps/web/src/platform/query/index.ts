@@ -19,7 +19,7 @@ import {
 import { apiRequest } from "../api/client.ts";
 import {
   getSession,
-  registerBootstrapCacheSeeder,
+  registerIdentitySummaryCacheSeeder,
   registerSessionCacheClearer,
 } from "../session/store.ts";
 import { usePageQueryActive } from "./pageQueryActivity.tsx";
@@ -85,9 +85,9 @@ registerSessionCacheClearer(() => {
   void queryClient.cancelQueries();
   queryClient.clear();
 });
-registerBootstrapCacheSeeder((generation, data) => {
+registerIdentitySummaryCacheSeeder((generation, data) => {
   assertCurrentSession(generation, true);
-  queryClient.setQueryData([generation, "v1", "identity.bootstrap", {}], data);
+  queryClient.setQueryData([generation, "v1", "identity.summary", {}], data);
 });
 
 export function routeQueryKey<Id extends RouteId>(
@@ -300,13 +300,14 @@ export async function refreshUserState(): Promise<void> {
       refetchType: "active",
       predicate: (query) =>
         query.queryKey[0] === generation &&
+        query.queryKey[2] !== "identity.initial" &&
         !isApiQuerySuppressed(generation, query.queryKey[2] as RouteId),
     },
     { cancelRefetch: false },
   );
 }
 
-const topAssetRouteIds = ["identity.bootstrap", "vip.get"] as const;
+const topAssetRouteIds = ["identity.summary", "vip.get"] as const;
 
 export async function refreshTopAssetSummary(): Promise<boolean> {
   const generation = getSession()?.generation;
@@ -348,12 +349,8 @@ export async function refreshForegroundState(pathname: string): Promise<void> {
       return;
     handledPrefixes = authority.handledPrefixes;
   }
-  const prefixes = new Set([
-    "identity",
-    "vip",
-    "wallet",
-    ...foregroundPrefixes(pathname),
-  ]);
+  const routeIds = new Set<RouteId>(["identity.summary", "vip.get"]);
+  const prefixes = new Set(["wallet", ...foregroundPrefixes(pathname)]);
   for (const prefix of handledPrefixes) prefixes.delete(prefix);
   await queryClient.invalidateQueries(
     {
@@ -364,7 +361,7 @@ export async function refreshForegroundState(pathname: string): Promise<void> {
         return (
           typeof id === "string" &&
           !isApiQuerySuppressed(generation, id as RouteId) &&
-          prefixes.has(id.split(".")[0] ?? "")
+          (routeIds.has(id as RouteId) || prefixes.has(id.split(".")[0] ?? ""))
         );
       },
     },
@@ -400,25 +397,36 @@ export function registerForegroundAuthorityRefresh(
   };
 }
 
-const scopePrefixes: Record<
+type ScopeMatcher = {
+  routeIds: readonly RouteId[];
+  prefixes: readonly string[];
+};
+
+const scopeMatchers: Record<
   Exclude<RefreshScope, "none" | "all">,
-  readonly string[]
+  ScopeMatcher
 > = {
-  session: ["identity", "vip", "wallet"],
-  assets: [
-    "identity",
-    "gacha",
-    "wheel",
-    "vip",
-    "tasks",
-    "topup",
-    "market",
-    "album",
-  ],
-  inventory: ["identity", "inventory", "market", "expedition", "mint", "album"],
-  payments: ["identity", "topup", "vip"],
-  mint: ["identity", "mint", "wallet", "inventory"],
-  battle: ["battle"],
+  session: {
+    routeIds: ["identity.summary", "vip.get"],
+    prefixes: ["wallet"],
+  },
+  assets: {
+    routeIds: ["identity.summary"],
+    prefixes: ["gacha", "wheel", "vip", "tasks", "topup", "market", "album"],
+  },
+  inventory: {
+    routeIds: ["identity.summary"],
+    prefixes: ["inventory", "market", "expedition", "mint", "album"],
+  },
+  payments: {
+    routeIds: ["identity.summary"],
+    prefixes: ["topup", "vip"],
+  },
+  mint: {
+    routeIds: ["identity.summary"],
+    prefixes: ["mint", "wallet", "inventory"],
+  },
+  battle: { routeIds: [], prefixes: ["battle"] },
 };
 
 export async function refreshRouteScopes(
@@ -434,11 +442,11 @@ export async function refreshScopes(
   options: { throwOnError?: boolean } = {},
 ): Promise<void> {
   if (scopes.includes("all")) return refreshUserState();
-  const prefixes = new Set(
-    scopes.flatMap((scope) =>
-      scope === "none" || scope === "all" ? [] : scopePrefixes[scope],
-    ),
+  const matchers = scopes.flatMap((scope) =>
+    scope === "none" || scope === "all" ? [] : [scopeMatchers[scope]],
   );
+  const routeIds = new Set(matchers.flatMap((matcher) => matcher.routeIds));
+  const prefixes = new Set(matchers.flatMap((matcher) => matcher.prefixes));
   await queryClient.invalidateQueries(
     {
       refetchType: "active",
@@ -449,7 +457,7 @@ export async function refreshScopes(
         return (
           typeof id === "string" &&
           !isApiQuerySuppressed(generation, id as RouteId) &&
-          prefixes.has(id.split(".")[0] ?? "")
+          (routeIds.has(id as RouteId) || prefixes.has(id.split(".")[0] ?? ""))
         );
       },
     },

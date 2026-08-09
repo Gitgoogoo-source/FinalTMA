@@ -2,6 +2,10 @@ import { rpc } from "../../platform/db/index.ts";
 import { getEnv } from "../../platform/env/index.ts";
 import { errorDefinition } from "@pokepets/api-contracts/common";
 import {
+  parseRouteOutput,
+  type RouteOutput,
+} from "@pokepets/api-contracts/app";
+import {
   hashToken,
   identityFingerprint,
   issueToken,
@@ -85,6 +89,17 @@ export const identityHandlers = {
       !result.entry_kind
     )
       throw new ApiError(500, "INTERNAL_ERROR", "登录结果不完整", true);
+    let initialState: RouteOutput<"identity.initial"> | null = null;
+    if (result.entry_handoff_state === "complete") {
+      try {
+        const initial = await rpc<unknown>("identity_initial", {
+          p_session_id: issued.sessionId,
+        });
+        initialState = parseRouteOutput("identity.initial", initial);
+      } catch (cause) {
+        if (isStableInitialStateFailure(cause)) throw cause;
+      }
+    }
     return {
       data: {
         account_status: "normal" as const,
@@ -95,11 +110,17 @@ export const identityHandlers = {
         entry_handoff_state: result.entry_handoff_state,
         entry_handoff_code: result.entry_handoff_code ?? null,
         entry_handoff_result: result.entry_handoff_result ?? null,
+        initial_state: initialState,
       },
     };
   },
-  "identity.bootstrap": async (context) => ({
-    data: await rpc("identity_bootstrap", {
+  "identity.initial": async (context) => ({
+    data: await rpc("identity_initial", {
+      p_session_id: requireSession(context).session_id,
+    }),
+  }),
+  "identity.summary": async (context) => ({
+    data: await rpc("identity_summary", {
       p_session_id: requireSession(context).session_id,
     }),
   }),
@@ -163,6 +184,18 @@ type IdentityAuthenticationResult =
         | "REFERRAL_SELF_BIND"
         | null;
     };
+
+const stableInitialStateErrors = new Set([
+  "SESSION_REQUIRED",
+  "SESSION_EXPIRED",
+  "SESSION_REPLACED",
+  "ACCOUNT_RESTRICTED",
+  "ENTRY_HANDOFF_PENDING",
+]);
+
+function isStableInitialStateFailure(cause: unknown): boolean {
+  return cause instanceof ApiError && stableInitialStateErrors.has(cause.code);
+}
 
 function loginResultError(
   code:

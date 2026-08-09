@@ -4,7 +4,7 @@
 
 路由、输入、输出、错误、认证和幂等元数据由 `packages/api-contracts` 中的领域 Zod schema 唯一定义。OpenAPI 和 Web 类型客户端从同一 registry 生成。服务端和前端都执行运行时解析。
 
-服务端 `/app` registry 只包含当前活动 App 路由。浏览器固定通过 `/app-client` 的 `loadClientRoute()` 按首屏或领域异步取得同一份 route 定义，并在请求输入、成功响应和 operation 恢复结果进入 UI 前执行 Zod 解析；表现组件只接收已解析的判别结果。身份、目录、开盒、VIP、充值与 operation/payment recovery 组成唯一首屏契约块，市场、库存、任务、Battle、转盘、图鉴等契约随所属页面或恢复 `use_case` 加载。
+服务端 `/app` registry 只包含当前活动 App 路由。浏览器固定通过 `/app-client` 的 `loadClientRoute()` 按首屏或领域异步取得同一份 route 定义，并在请求输入、成功响应和 operation 恢复结果进入 UI 前执行 Zod 解析；表现组件只接收已解析的判别结果。`identity.authenticate`、`identity.initial`、`identity.summary`、目录、开盒、VIP、充值与 operation/payment recovery 组成唯一首屏契约块，市场、库存、任务、Battle、转盘、图鉴等契约随所属页面或恢复 `use_case` 加载。认证正常输出的 `initial_state` 可空；`identity.initial` 固定返回 `{ summary, recovery }`，`identity.summary` 固定只返回 `{ user, assets }`，两者不得重新合并或保留旧兼容路由。
 
 稳定错误码集合与错误文案/恢复策略分别拥有运行时模块，基础 envelope 和 Schema 不得因错误定义注册表加载全部领域文案。Wallet 与 Mint route 只由 `/dormant-app` 导出，活动 `/app`、Web loader、App handler map、`/server` 和 OpenAPI 均不包含这些路由；休眠源码直接调用活动网关时在浏览器契约加载阶段明确失败，不发送业务请求，服务端直接请求仍返回 `API_ROUTE_NOT_FOUND`。
 

@@ -33,3 +33,5 @@ pnpm assets:check:development
 ```
 
 `pnpm build` 不编译 TON 合约，并依据 `APP_ENV` 在 Web 构建后执行对应资产门禁；真实开发与未来生产使用同一组 210 张正式母版生成的 420 张运行时藏品图。Telegram 分享图和 TON Connect 图标仍由全局 production 门禁独立检查，完整规则见[发布手册](docs/operations/release.md)。项目不包含本地功能测试；功能验收只在独立真实开发环境按[验收清单](docs/operations/acceptance.md)执行。
+
+身份启动与日常资产读取分别使用 `identity.initial` 和 `identity.summary`；前者只形成当前 session generation 的入口恢复快照，后者是普通刷新唯一使用的身份摘要。完整边界见 [ADR-049](docs/architecture/adr/ADR-049-identity-initial-state-and-summary-read-model.md)。

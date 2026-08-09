@@ -33,7 +33,11 @@ import {
   seedApiQuery,
   useApiQuery,
 } from "../../../platform/query/index.ts";
-import { getSession, useSession } from "../../../platform/session/store.ts";
+import {
+  getSession,
+  useIdentityRecovery,
+  useSession,
+} from "../../../platform/session/store.ts";
 import {
   sharePreparedMessage,
   subscribePreparedMessageShareEvents,
@@ -125,10 +129,11 @@ export function BattleView(): ReactNode {
   } = useBattleTerminalRefresh(sessionGeneration, pageActive);
   const { requestTopup } = useNavigationIntent();
   const identity = useApiQuery(
-    "identity.bootstrap",
+    "identity.summary",
     {},
     pageActive && activeTerminal === null,
   );
+  const identityRecovery = useIdentityRecovery();
   const bootstrap = useApiQuery(
     "battle.bootstrap",
     {},
@@ -136,7 +141,7 @@ export function BattleView(): ReactNode {
   );
   const participation =
     bootstrap.data?.participation ??
-    (bootstrap.data ? null : (identity.data?.battle_participation ?? null));
+    (bootstrap.data ? null : (identityRecovery?.battle_participation ?? null));
   const bootstrapRoomTerminal = Boolean(
     bootstrap.data?.room && isBattleAssetTerminal(bootstrap.data.room.status),
   );

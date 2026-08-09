@@ -13,11 +13,11 @@ export function TopAssetBar({
 }: {
   openDialog(dialog: GlobalDialog): void;
 }): ReactNode {
-  const bootstrap = useApiQuery("identity.bootstrap");
+  const summary = useApiQuery("identity.summary");
   const vip = useApiQuery("vip.get");
-  const kcoin = bootstrap.data?.assets.kcoin;
-  const fgems = bootstrap.data?.assets.fgems;
-  const user = bootstrap.data?.user;
+  const kcoin = summary.data?.assets.kcoin;
+  const fgems = summary.data?.assets.fgems;
+  const user = summary.data?.user;
   const displayName = [user?.first_name, user?.last_name]
     .filter(Boolean)
     .join(" ");
@@ -44,9 +44,7 @@ export function TopAssetBar({
         >
           <Coins />
           <span className="asset-copy">
-            <strong>
-              {formatAsset(kcoin?.available, bootstrap.isLoading)}
-            </strong>
+            <strong>{formatAsset(kcoin?.available, summary.isLoading)}</strong>
             <small>K-coin</small>
           </span>
         </button>
@@ -58,9 +56,7 @@ export function TopAssetBar({
         >
           <Gem />
           <span className="asset-copy">
-            <strong>
-              {formatAsset(fgems?.available, bootstrap.isLoading)}
-            </strong>
+            <strong>{formatAsset(fgems?.available, summary.isLoading)}</strong>
             <small>Fgems</small>
           </span>
         </div>

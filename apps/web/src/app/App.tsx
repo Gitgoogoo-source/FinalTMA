@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 
-import { retryRecoveredBootstrap } from "../platform/api/client.ts";
+import { retryRecoveredInitialState } from "../platform/api/client.ts";
 import { useSession } from "../platform/session/store.ts";
 import { useBootstrap } from "../workflows/session-bootstrap/index.ts";
 import { AccountGate } from "./guards/AccountGate.tsx";
@@ -27,14 +27,14 @@ export function App(): ReactNode {
         message="请稍候，冒险伙伴即将会合"
       />
     );
-  if (session?.bootstrapFailed) return <RecoveredBootstrapFailure />;
+  if (session?.initialStateFailed) return <RecoveredInitialStateFailure />;
   if (!bootstrap.failed && bootstrap.phase !== "ready")
     return (
       <StartupScreen
         title={
           bootstrap.phase === "settling_referral"
             ? "正在确认同行关系"
-            : bootstrap.phase === "loading_bootstrap"
+            : bootstrap.phase === "loading_initial_state"
               ? "正在准备冒险"
               : "正在进入游戏"
         }
@@ -46,7 +46,7 @@ export function App(): ReactNode {
       <StartupScreen
         failed
         title={
-          bootstrap.phase === "bootstrap_failed"
+          bootstrap.phase === "initial_state_failed"
             ? "冒险准备失败"
             : bootstrap.phase === "settling_referral"
               ? "同行关系尚未确认"
@@ -86,7 +86,7 @@ function EntryNotice({ message }: { message: string }): ReactNode {
   return visible ? <div className="entry-notice">{message}</div> : null;
 }
 
-function RecoveredBootstrapFailure(): ReactNode {
+function RecoveredInitialStateFailure(): ReactNode {
   const [submitting, setSubmitting] = useState(false);
   return (
     <StartupScreen
@@ -97,7 +97,7 @@ function RecoveredBootstrapFailure(): ReactNode {
       retryDisabled={submitting}
       onRetry={() => {
         setSubmitting(true);
-        void retryRecoveredBootstrap()
+        void retryRecoveredInitialState()
           .catch(() => undefined)
           .finally(() => setSubmitting(false));
       }}

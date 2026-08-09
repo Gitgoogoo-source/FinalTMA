@@ -153,7 +153,7 @@ function WheelPanelRuntime({
   wheelPresentationEpoch: number;
 }): ReactNode {
   const query = useApiQuery("wheel.get");
-  const identity = useApiQuery("identity.bootstrap");
+  const identity = useApiQuery("identity.summary");
   const { isBlocked, preload, present, run } = useOperationRegistry();
   const { requestTopup } = useNavigationIntent();
   const blocked = isBlocked("wheel.spin");

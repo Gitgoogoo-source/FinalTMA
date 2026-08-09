@@ -14,6 +14,8 @@ Data API 只暴露 `api` schema。安全迁移撤销 `PUBLIC`、`anon`、`authen
 
 Functions 中间件严格证明令牌版本、规范 Base64URL 和 HMAC，只提取 `session_id`，不调用数据库也不裁决可变状态。每个玩家业务 RPC 在业务工作前通过 `api.session_user` 按会话存在、撤销/过期、账号状态、入口交接状态顺序最终裁决；除 `referral.bind` 与受限的 `operations.get` 外都拒绝 `pending` 交接并固定返回 `ENTRY_HANDOFF_PENDING`。篡改令牌不能进入业务 RPC；浏览器构造请求、修改入口参数或跳过启动工作流不能绕过数据库裁决。
 
+完成入口交接的正常认证在 `api.identity_authenticate` 事务提交后调用 `api.identity_initial`；该读取不得延长登录锁。只有临时数据库/内部失败可把认证响应中的 `initial_state` 降级为空，`SESSION_REQUIRED`、`SESSION_EXPIRED`、`SESSION_REPLACED`、`ACCOUNT_RESTRICTED` 与 `ENTRY_HANDOFF_PENDING` 必须保持稳定错误。`api.identity_initial` 与 `api.identity_summary` 都先调用 `api.session_user`，且只向 `service_role` 明确授权；前者的恢复字段只保存于当前 session generation 内存，后者是唯一可进入 React Query 和普通刷新范围的身份读模型。
+
 浏览器唯一允许的 Supabase 直连是匿名 GET `pet-runtime` 公开桶中的宠物 WebP 完整 URL；Web 构建不包含 Supabase SDK、anon key 或 service-role key。根路径与全部前端深链统一下发 CSP：`script-src` 只放行同源脚本和 Telegram 官方 Mini App SDK，`img-src` 只额外放行 `https://*.supabase.co` 图片，`connect-src` 只额外放行 Ably，不允许 Supabase Data API 连接。真实 Telegram 用户头像不进入数据库、API 或 Web，所有用户身份位置按 [ADR-045](adr/ADR-045-telegram-identity-initial-and-profile-photo-minimization.md) 只显示名称字首，不为 `t.me`、Telegram CDN、头像代理或新 Storage 桶扩展图片边界。私有 `art-masters`、Storage 上传/覆盖/删除/列举以及全部 Postgres、RPC、Auth 和其他 Data API 只允许受控服务端或发布工具使用 service role。资源 RPC 不进入玩家路由，公开对象清理端点只接受 Vercel 注入的 `CRON_SECRET`。
 
 登录入口只分类为 `direct`、`referral`、`battle`。Battle bearer token 原值只在 Function 内存中存在，数据库和 session 只保存 SHA-256；Battle token 不写日志、错误详情、分析事件或浏览器持久存储。invite preview 只能由当前 session 的 Battle token hash 解析；participant snapshot 只能由 room 参与者读取；创建者本人不能接受自己的 token。

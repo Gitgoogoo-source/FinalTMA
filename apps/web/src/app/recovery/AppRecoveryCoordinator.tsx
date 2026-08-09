@@ -1,6 +1,7 @@
 import { useCallback, type ReactNode } from "react";
 
 import { useApiQuery } from "../../platform/query/index.ts";
+import { useIdentityRecovery } from "../../platform/session/store.ts";
 import { useNavigationIntent } from "../../workflows/payment-recovery/context.ts";
 import { useNavigationIntentResume } from "../../workflows/payment-recovery/useNavigationIntentResume.ts";
 import { useStarsPaymentRecovery } from "../../workflows/payment-recovery/useStarsPaymentRecovery.ts";
@@ -15,12 +16,11 @@ export function AppRecoveryCoordinator({
   openDialog(dialog: GlobalDialog): void;
   closeDialogs(): void;
 }): ReactNode {
-  const bootstrap = useApiQuery("identity.bootstrap");
+  const recovery = useIdentityRecovery();
   const pendingPayments = useApiQuery("topup.bootstrap");
   const { clearTopupRequest } = useNavigationIntent();
-  const recoveryPayments = bootstrap.data?.payment_recovery_orders.length
-    ? bootstrap.data.payment_recovery_orders
-    : pendingPayments.data?.orders;
+  const recoveryPayments =
+    pendingPayments.data?.orders ?? recovery?.payment_recovery_orders;
   const openPaymentRecovery = useCallback(
     (kind: "kcoin_topup" | "vip") =>
       openDialog(kind === "vip" ? "vip" : "topup"),
@@ -30,8 +30,8 @@ export function AppRecoveryCoordinator({
     clearTopupRequest();
     closeDialogs();
   }, [clearTopupRequest, closeDialogs]);
-  useBlockingOperationRecovery(bootstrap.data?.blocking_operations);
-  useRecoverableOperationDiscovery(bootstrap.data?.authority_cursor);
+  useBlockingOperationRecovery(recovery?.blocking_operations);
+  useRecoverableOperationDiscovery(recovery?.authority_cursor);
   useStarsPaymentRecovery(recoveryPayments, openPaymentRecovery);
   useNavigationIntentResume(pendingPayments.data?.orders, resumeNavigation);
   return null;

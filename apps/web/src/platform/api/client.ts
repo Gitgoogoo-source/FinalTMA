@@ -11,7 +11,7 @@ import {
   clearSensitiveState,
   getSession,
   replaceSession,
-  seedSessionBootstrap,
+  seedSessionInitialState,
   transitionToBanned,
 } from "../session/store.ts";
 import { getWebPublicConfig } from "../env/index.ts";
@@ -45,7 +45,7 @@ type Options = {
 let recoveryAttempted = false;
 let recovery: Promise<void> | null = null;
 
-class SessionBootstrapFailure extends Error {
+class SessionInitialStateFailure extends Error {
   constructor(readonly failure: ApiFailure) {
     super(failure.message);
   }
@@ -96,7 +96,7 @@ export async function apiRequest<Id extends RouteId>(
       await recoverSession();
       return apiRequest(routeId, input, { ...options, recoverSession: false });
     } catch (cause) {
-      if (cause instanceof SessionBootstrapFailure) throw cause.failure;
+      if (cause instanceof SessionInitialStateFailure) throw cause.failure;
       if (
         !(
           cause instanceof ApiFailure &&
@@ -141,15 +141,11 @@ export async function apiKeepaliveRequest<Id extends RouteId>(
   });
 }
 
-export async function retryRecoveredBootstrap(): Promise<void> {
+export async function retryRecoveredInitialState(): Promise<void> {
   const session = getSession();
   if (!session || session.accountStatus !== "normal") return;
-  replaceSession({ ...session, recovering: true, bootstrapFailed: false });
-  const result = await send(
-    "identity.bootstrap",
-    {},
-    { recoverSession: false },
-  );
+  replaceSession({ ...session, recovering: true, initialStateFailed: false });
+  const result = await send("identity.initial", {}, { recoverSession: false });
   if (result instanceof ApiFailure) {
     if (result.code === "ACCOUNT_RESTRICTED") {
       transitionToBanned();
@@ -160,14 +156,18 @@ export async function retryRecoveredBootstrap(): Promise<void> {
     ) {
       clearSession();
     } else {
-      replaceSession({ ...session, recovering: false, bootstrapFailed: true });
+      replaceSession({
+        ...session,
+        recovering: false,
+        initialStateFailed: true,
+      });
     }
     throw result;
   }
   assertCurrentNormalSession(session.generation);
   clearSensitiveState();
-  replaceSession({ ...session, recovering: false, bootstrapFailed: false });
-  seedSessionBootstrap(session.generation, result.data);
+  replaceSession({ ...session, recovering: false, initialStateFailed: false });
+  seedSessionInitialState(session.generation, result.data);
 }
 
 async function send<Id extends RouteId>(
@@ -343,24 +343,31 @@ async function recoverSession(): Promise<void> {
         true,
         null,
       );
-    const bootstrap = await send(
-      "identity.bootstrap",
-      {},
-      { recoverSession: false },
-    );
-    if (bootstrap instanceof ApiFailure) {
-      if (bootstrap.code === "ACCOUNT_RESTRICTED") {
+    const initialState = result.data.initial_state
+      ? { data: result.data.initial_state }
+      : await send("identity.initial", {}, { recoverSession: false });
+    if (initialState instanceof ApiFailure) {
+      if (initialState.code === "ACCOUNT_RESTRICTED") {
         transitionToBanned();
-        throw bootstrap;
+        throw initialState;
       }
+      if (
+        ["SESSION_EXPIRED", "SESSION_REPLACED", "SESSION_REQUIRED"].includes(
+          initialState.code,
+        )
+      ) {
+        clearSession();
+        throw initialState;
+      }
+      if (initialState.code === "ENTRY_HANDOFF_PENDING") throw initialState;
       clearSensitiveState();
-      replaceSession({ ...next, recovering: false, bootstrapFailed: true });
-      throw new SessionBootstrapFailure(bootstrap);
+      replaceSession({ ...next, recovering: false, initialStateFailed: true });
+      throw new SessionInitialStateFailure(initialState);
     }
     assertCurrentNormalSession(next.generation);
     clearSensitiveState();
-    replaceSession({ ...next, recovering: false, bootstrapFailed: false });
-    seedSessionBootstrap(next.generation, bootstrap.data);
+    replaceSession({ ...next, recovering: false, initialStateFailed: false });
+    seedSessionInitialState(next.generation, initialState.data);
   })().finally(() => {
     recovery = null;
   });

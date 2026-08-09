@@ -210,6 +210,858 @@
                                 },
                                 { "type": "null" }
                               ]
+                            },
+                            "initial_state": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "summary": {
+                                      "type": "object",
+                                      "properties": {
+                                        "user": {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "string",
+                                              "format": "uuid",
+                                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                            },
+                                            "telegram_id": {
+                                              "type": "string",
+                                              "pattern": "^\\d+$"
+                                            },
+                                            "username": {
+                                              "anyOf": [
+                                                { "type": "string" },
+                                                { "type": "null" }
+                                              ]
+                                            },
+                                            "first_name": { "type": "string" },
+                                            "last_name": {
+                                              "anyOf": [
+                                                { "type": "string" },
+                                                { "type": "null" }
+                                              ]
+                                            },
+                                            "status": {
+                                              "type": "string",
+                                              "enum": ["normal", "banned"]
+                                            },
+                                            "referral_code": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "telegram_id",
+                                            "username",
+                                            "first_name",
+                                            "last_name",
+                                            "status",
+                                            "referral_code"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        "assets": {
+                                          "type": "object",
+                                          "properties": {
+                                            "kcoin": {
+                                              "type": "object",
+                                              "properties": {
+                                                "currency": {
+                                                  "type": "string",
+                                                  "enum": ["KCOIN", "FGEMS"]
+                                                },
+                                                "available": {
+                                                  "type": "integer",
+                                                  "minimum": 0,
+                                                  "maximum": 9007199254740991
+                                                },
+                                                "locked": {
+                                                  "type": "integer",
+                                                  "minimum": 0,
+                                                  "maximum": 9007199254740991
+                                                }
+                                              },
+                                              "required": [
+                                                "currency",
+                                                "available",
+                                                "locked"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            "fgems": {
+                                              "type": "object",
+                                              "properties": {
+                                                "currency": {
+                                                  "type": "string",
+                                                  "enum": ["KCOIN", "FGEMS"]
+                                                },
+                                                "available": {
+                                                  "type": "integer",
+                                                  "minimum": 0,
+                                                  "maximum": 9007199254740991
+                                                },
+                                                "locked": {
+                                                  "type": "integer",
+                                                  "minimum": 0,
+                                                  "maximum": 9007199254740991
+                                                }
+                                              },
+                                              "required": [
+                                                "currency",
+                                                "available",
+                                                "locked"
+                                              ],
+                                              "additionalProperties": false
+                                            }
+                                          },
+                                          "required": ["kcoin", "fgems"],
+                                          "additionalProperties": false
+                                        }
+                                      },
+                                      "required": ["user", "assets"],
+                                      "additionalProperties": false
+                                    },
+                                    "recovery": {
+                                      "type": "object",
+                                      "properties": {
+                                        "authority_cursor": {
+                                          "type": "string",
+                                          "pattern": "^(0|[1-9]\\d*)$"
+                                        },
+                                        "blocking_operations": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "object",
+                                            "properties": {
+                                              "operation_id": {
+                                                "type": "string",
+                                                "format": "uuid",
+                                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                              },
+                                              "use_case": { "type": "string" },
+                                              "status": {
+                                                "type": "string",
+                                                "enum": [
+                                                  "pending",
+                                                  "succeeded",
+                                                  "failed",
+                                                  "unknown"
+                                                ]
+                                              },
+                                              "result": {
+                                                "anyOf": [
+                                                  {
+                                                    "$ref": "#/$defs/__schema0"
+                                                  },
+                                                  { "type": "null" }
+                                                ]
+                                              },
+                                              "error_code": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "string",
+                                                    "enum": [
+                                                      "ACCOUNT_RESTRICTED",
+                                                      "ALBUM_CHAIN_INCOMPLETE",
+                                                      "ALBUM_REWARD_ALREADY_CLAIMED",
+                                                      "API_ROUTE_NOT_FOUND",
+                                                      "BATTLE_NOT_YOUR_TURN",
+                                                      "BATTLE_ACTION_INVALID",
+                                                      "BATTLE_ACTION_PHASE_INVALID",
+                                                      "BATTLE_ALREADY_PARTICIPATING",
+                                                      "BATTLE_INVITE_INVALID",
+                                                      "BATTLE_NOT_PARTICIPANT",
+                                                      "BATTLE_ROOM_ALREADY_ACCEPTED",
+                                                      "BATTLE_ROOM_CANCELLED",
+                                                      "BATTLE_ROOM_EXPIRED",
+                                                      "BATTLE_ROOM_NOT_FOUND",
+                                                      "BATTLE_RULESET_UNAVAILABLE",
+                                                      "BATTLE_SELF_ACCEPT_FORBIDDEN",
+                                                      "BATTLE_SHARE_FAILED",
+                                                      "BATTLE_SHARE_PREPARING",
+                                                      "BATTLE_STATE_CONFLICT",
+                                                      "BATTLE_SWITCH_TARGET_INVALID",
+                                                      "BATTLE_TEAM_INVALID",
+                                                      "BATTLE_TEAM_TEMPLATE_DUPLICATE",
+                                                      "BATTLE_TIER_INVALID",
+                                                      "BATTLE_VOIDED",
+                                                      "BOX_TIER_INVALID",
+                                                      "CATALOG_INVALID",
+                                                      "CATALOG_UNAVAILABLE",
+                                                      "CHECKIN_ALREADY_CLAIMED",
+                                                      "CONTENT_TYPE_INVALID",
+                                                      "CRON_UNAUTHORIZED",
+                                                      "DATABASE_RPC_FAILED",
+                                                      "DRAW_COUNT_INVALID",
+                                                      "ENTRY_HANDOFF_PENDING",
+                                                      "EVOLUTION_NOT_AVAILABLE",
+                                                      "EXPEDITION_ALREADY_ACTIVE",
+                                                      "EXPEDITION_ITEMS_INVALID",
+                                                      "EXPEDITION_LIMIT_REACHED",
+                                                      "EXPEDITION_NOT_FOUND",
+                                                      "EXPEDITION_NOT_READY",
+                                                      "EXPEDITION_TIER_INVALID",
+                                                      "FREE_ENTITLEMENT_UNAVAILABLE",
+                                                      "IDEMPOTENCY_KEY_INVALID",
+                                                      "IDEMPOTENCY_KEY_NOT_ALLOWED",
+                                                      "IDEMPOTENCY_KEY_REQUIRED",
+                                                      "IDEMPOTENCY_KEY_REUSED",
+                                                      "INSUFFICIENT_BALANCE",
+                                                      "INSUFFICIENT_INVENTORY",
+                                                      "INTERNAL_ERROR",
+                                                      "INVENTORY_ITEM_NOT_FOUND",
+                                                      "INVENTORY_RESERVED",
+                                                      "JOB_NOT_FOUND",
+                                                      "MARKET_ACTIVE_TEMPLATE_LIMIT",
+                                                      "MARKET_STOCK_INSUFFICIENT",
+                                                      "METHOD_NOT_ALLOWED",
+                                                      "MINT_ALREADY_ACTIVE",
+                                                      "MINT_IN_PROGRESS",
+                                                      "MINT_RESULT_INCOMPLETE",
+                                                      "MINT_NOT_CANCELLABLE",
+                                                      "MINT_NOT_FOUND",
+                                                      "MINT_NOT_SUBMITTABLE",
+                                                      "NFT_METADATA_NOT_FOUND",
+                                                      "OPERATION_FAILED",
+                                                      "OPERATION_NOT_ACKNOWLEDGEABLE",
+                                                      "OPERATION_NOT_FOUND",
+                                                      "OPERATION_RESULT_EXPIRED",
+                                                      "OPERATION_RESULT_INVALID",
+                                                      "PAYMENT_ALREADY_PENDING",
+                                                      "PAYMENT_ALREADY_PROCESSING",
+                                                      "PAYMENT_CANCELLED",
+                                                      "PAYMENT_EXPIRED",
+                                                      "PAYMENT_MISMATCH",
+                                                      "PAYMENT_NOT_DELIVERABLE",
+                                                      "PAYMENT_NOT_FOUND",
+                                                      "RATE_LIMITED",
+                                                      "REFERRAL_ALREADY_BOUND",
+                                                      "REFERRAL_ALREADY_RECHARGED",
+                                                      "REFERRAL_CANDIDATE_EXPIRED",
+                                                      "REFERRAL_CODE_INVALID",
+                                                      "REFERRAL_INELIGIBLE",
+                                                      "REFERRAL_INVALID",
+                                                      "REFERRAL_INVITER_UNAVAILABLE",
+                                                      "REFERRAL_OLD_USER",
+                                                      "REFERRAL_SELF_BIND",
+                                                      "REQUEST_BODY_NOT_ALLOWED",
+                                                      "REQUEST_INVALID",
+                                                      "REQUEST_TOO_LARGE",
+                                                      "RESPONSE_INVALID",
+                                                      "SESSION_EXPIRED",
+                                                      "SESSION_REPLACED",
+                                                      "SESSION_REQUIRED",
+                                                      "TASK_ALREADY_CLAIMED",
+                                                      "TASK_NOT_COMPLETE",
+                                                      "TASK_NOT_FOUND",
+                                                      "TELEGRAM_API_FAILED",
+                                                      "TELEGRAM_INIT_DATA_EXPIRED",
+                                                      "TELEGRAM_INIT_DATA_INVALID",
+                                                      "TELEGRAM_INIT_DATA_TIME_INVALID",
+                                                      "TELEGRAM_START_PARAM_INVALID",
+                                                      "TELEGRAM_REENTRY_REQUIRED",
+                                                      "TELEGRAM_UPDATE_INVALID",
+                                                      "TEMPLATE_NOT_FOUND",
+                                                      "TOPUP_AMOUNT_INVALID",
+                                                      "TOPUP_NOT_REQUIRED",
+                                                      "TRANSACTION_ALREADY_USED",
+                                                      "VIP_ALREADY_CLAIMED",
+                                                      "VIP_BENEFIT_INVALID",
+                                                      "VIP_INACTIVE",
+                                                      "VIP_RENEWAL_LIMIT",
+                                                      "WALLET_ADDRESS_IN_USE",
+                                                      "WALLET_CHALLENGE_INVALID",
+                                                      "WALLET_NOT_CONNECTED",
+                                                      "WALLET_NOT_VERIFIED",
+                                                      "WALLET_PROOF_INVALID",
+                                                      "WEBHOOK_UNAUTHORIZED",
+                                                      "WHEEL_COUNT_INVALID",
+                                                      "WHEEL_DAILY_LIMIT"
+                                                    ]
+                                                  },
+                                                  { "type": "null" }
+                                                ]
+                                              },
+                                              "acknowledged_at": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                                  },
+                                                  { "type": "null" }
+                                                ]
+                                              },
+                                              "created_at": {
+                                                "type": "string",
+                                                "format": "date-time",
+                                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                              },
+                                              "updated_at": {
+                                                "type": "string",
+                                                "format": "date-time",
+                                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                              }
+                                            },
+                                            "required": [
+                                              "operation_id",
+                                              "use_case",
+                                              "status",
+                                              "result",
+                                              "error_code",
+                                              "acknowledged_at",
+                                              "created_at",
+                                              "updated_at"
+                                            ],
+                                            "additionalProperties": false
+                                          }
+                                        },
+                                        "payment_recovery_orders": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "object",
+                                            "properties": {
+                                              "id": {
+                                                "type": "string",
+                                                "format": "uuid",
+                                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                              },
+                                              "kind": {
+                                                "type": "string",
+                                                "enum": ["kcoin_topup", "vip"]
+                                              },
+                                              "status": {
+                                                "type": "string",
+                                                "enum": [
+                                                  "pending",
+                                                  "processing",
+                                                  "paid",
+                                                  "delivered",
+                                                  "failed",
+                                                  "cancelled",
+                                                  "expired",
+                                                  "refunded",
+                                                  "rejected",
+                                                  "payment_identity_conflict"
+                                                ]
+                                              },
+                                              "stars_amount": {
+                                                "type": "integer",
+                                                "exclusiveMinimum": 0,
+                                                "maximum": 9007199254740991
+                                              },
+                                              "kcoin_amount": {
+                                                "type": "integer",
+                                                "minimum": 0,
+                                                "maximum": 9007199254740991
+                                              },
+                                              "invoice_url": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "string",
+                                                    "format": "uri"
+                                                  },
+                                                  { "type": "null" }
+                                                ]
+                                              },
+                                              "expires_at": {
+                                                "type": "string",
+                                                "format": "date-time",
+                                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                              },
+                                              "checkout_started_at": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                                  },
+                                                  { "type": "null" }
+                                                ]
+                                              },
+                                              "paid_at": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                                  },
+                                                  { "type": "null" }
+                                                ]
+                                              },
+                                              "delivered_at": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                                  },
+                                                  { "type": "null" }
+                                                ]
+                                              },
+                                              "failed_at": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                                  },
+                                                  { "type": "null" }
+                                                ]
+                                              },
+                                              "cancelled_at": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                                  },
+                                                  { "type": "null" }
+                                                ]
+                                              },
+                                              "intent": {
+                                                "anyOf": [
+                                                  {
+                                                    "oneOf": [
+                                                      {
+                                                        "type": "object",
+                                                        "properties": {
+                                                          "kind": {
+                                                            "type": "string",
+                                                            "const": "gacha"
+                                                          },
+                                                          "tier": {
+                                                            "type": "string",
+                                                            "enum": [
+                                                              "normal",
+                                                              "rare",
+                                                              "legendary"
+                                                            ]
+                                                          },
+                                                          "draw_count": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "number",
+                                                                "const": 1
+                                                              },
+                                                              {
+                                                                "type": "number",
+                                                                "const": 10
+                                                              }
+                                                            ]
+                                                          }
+                                                        },
+                                                        "required": [
+                                                          "kind",
+                                                          "tier",
+                                                          "draw_count"
+                                                        ],
+                                                        "additionalProperties": false
+                                                      },
+                                                      {
+                                                        "type": "object",
+                                                        "properties": {
+                                                          "kind": {
+                                                            "type": "string",
+                                                            "const": "market"
+                                                          },
+                                                          "template_id": {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                          },
+                                                          "quantity": {
+                                                            "type": "integer",
+                                                            "exclusiveMinimum": 0,
+                                                            "maximum": 9007199254740991
+                                                          }
+                                                        },
+                                                        "required": [
+                                                          "kind",
+                                                          "template_id",
+                                                          "quantity"
+                                                        ],
+                                                        "additionalProperties": false
+                                                      },
+                                                      {
+                                                        "type": "object",
+                                                        "properties": {
+                                                          "kind": {
+                                                            "type": "string",
+                                                            "const": "wheel"
+                                                          },
+                                                          "count": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "number",
+                                                                "const": 1
+                                                              },
+                                                              {
+                                                                "type": "number",
+                                                                "const": 10
+                                                              }
+                                                            ]
+                                                          }
+                                                        },
+                                                        "required": [
+                                                          "kind",
+                                                          "count"
+                                                        ],
+                                                        "additionalProperties": false
+                                                      },
+                                                      {
+                                                        "type": "object",
+                                                        "properties": {
+                                                          "kind": {
+                                                            "type": "string",
+                                                            "const": "battle_create"
+                                                          },
+                                                          "tier": {
+                                                            "type": "string",
+                                                            "enum": [
+                                                              "tier-20",
+                                                              "tier-100",
+                                                              "tier-500"
+                                                            ]
+                                                          },
+                                                          "template_ids": {
+                                                            "type": "array",
+                                                            "prefixItems": [
+                                                              {
+                                                                "type": "string",
+                                                                "minLength": 1,
+                                                                "maxLength": 128
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "minLength": 1,
+                                                                "maxLength": 128
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "minLength": 1,
+                                                                "maxLength": 128
+                                                              }
+                                                            ],
+                                                            "minItems": 3,
+                                                            "maxItems": 3,
+                                                            "uniqueItems": true
+                                                          }
+                                                        },
+                                                        "required": [
+                                                          "kind",
+                                                          "tier",
+                                                          "template_ids"
+                                                        ],
+                                                        "additionalProperties": false
+                                                      },
+                                                      {
+                                                        "type": "object",
+                                                        "properties": {
+                                                          "kind": {
+                                                            "type": "string",
+                                                            "const": "battle_accept"
+                                                          },
+                                                          "room_id": {
+                                                            "type": "string",
+                                                            "format": "uuid",
+                                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                          },
+                                                          "template_ids": {
+                                                            "type": "array",
+                                                            "prefixItems": [
+                                                              {
+                                                                "type": "string",
+                                                                "minLength": 1,
+                                                                "maxLength": 128
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "minLength": 1,
+                                                                "maxLength": 128
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "minLength": 1,
+                                                                "maxLength": 128
+                                                              }
+                                                            ],
+                                                            "minItems": 3,
+                                                            "maxItems": 3,
+                                                            "uniqueItems": true
+                                                          }
+                                                        },
+                                                        "required": [
+                                                          "kind",
+                                                          "room_id",
+                                                          "template_ids"
+                                                        ],
+                                                        "additionalProperties": false
+                                                      },
+                                                      {
+                                                        "type": "object",
+                                                        "properties": {
+                                                          "kind": {
+                                                            "type": "string",
+                                                            "const": "battle_matchmaking"
+                                                          },
+                                                          "tier": {
+                                                            "type": "string",
+                                                            "enum": [
+                                                              "tier-20",
+                                                              "tier-100",
+                                                              "tier-500"
+                                                            ]
+                                                          },
+                                                          "template_ids": {
+                                                            "type": "array",
+                                                            "prefixItems": [
+                                                              {
+                                                                "type": "string",
+                                                                "minLength": 1,
+                                                                "maxLength": 128
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "minLength": 1,
+                                                                "maxLength": 128
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "minLength": 1,
+                                                                "maxLength": 128
+                                                              }
+                                                            ],
+                                                            "minItems": 3,
+                                                            "maxItems": 3,
+                                                            "uniqueItems": true
+                                                          }
+                                                        },
+                                                        "required": [
+                                                          "kind",
+                                                          "tier",
+                                                          "template_ids"
+                                                        ],
+                                                        "additionalProperties": false
+                                                      }
+                                                    ]
+                                                  },
+                                                  { "type": "null" }
+                                                ]
+                                              }
+                                            },
+                                            "required": [
+                                              "id",
+                                              "kind",
+                                              "status",
+                                              "stars_amount",
+                                              "kcoin_amount",
+                                              "invoice_url",
+                                              "expires_at",
+                                              "checkout_started_at",
+                                              "paid_at",
+                                              "delivered_at",
+                                              "failed_at",
+                                              "cancelled_at",
+                                              "intent"
+                                            ],
+                                            "additionalProperties": false
+                                          }
+                                        },
+                                        "pending_mints": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "object",
+                                            "properties": {
+                                              "id": {
+                                                "type": "string",
+                                                "format": "uuid",
+                                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                              },
+                                              "template_id": {
+                                                "type": "string"
+                                              },
+                                              "status": {
+                                                "type": "string",
+                                                "enum": [
+                                                  "reserved",
+                                                  "submitted",
+                                                  "unknown",
+                                                  "succeeded",
+                                                  "failed",
+                                                  "cancelled"
+                                                ]
+                                              },
+                                              "nft_number": {
+                                                "type": "integer",
+                                                "minimum": 0,
+                                                "maximum": 9007199254740991
+                                              },
+                                              "transaction_hash": {
+                                                "anyOf": [
+                                                  { "type": "string" },
+                                                  { "type": "null" }
+                                                ]
+                                              },
+                                              "permit_expires_at": {
+                                                "type": "string",
+                                                "format": "date-time",
+                                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                              },
+                                              "submitted_at": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                                  },
+                                                  { "type": "null" }
+                                                ]
+                                              },
+                                              "completed_at": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                                  },
+                                                  { "type": "null" }
+                                                ]
+                                              }
+                                            },
+                                            "required": [
+                                              "id",
+                                              "template_id",
+                                              "status",
+                                              "nft_number",
+                                              "transaction_hash",
+                                              "permit_expires_at",
+                                              "submitted_at",
+                                              "completed_at"
+                                            ],
+                                            "additionalProperties": false
+                                          }
+                                        },
+                                        "battle_participation": {
+                                          "anyOf": [
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "room_id": {
+                                                  "type": "string",
+                                                  "format": "uuid",
+                                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                },
+                                                "participant_id": {
+                                                  "type": "string",
+                                                  "format": "uuid",
+                                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                },
+                                                "side": {
+                                                  "type": "string",
+                                                  "enum": [
+                                                    "creator",
+                                                    "opponent"
+                                                  ]
+                                                },
+                                                "room_mode": {
+                                                  "type": "string",
+                                                  "enum": [
+                                                    "friend_invite",
+                                                    "public_match"
+                                                  ]
+                                                },
+                                                "status": {
+                                                  "type": "string",
+                                                  "enum": [
+                                                    "preparing_share",
+                                                    "waiting",
+                                                    "lobby_waiting",
+                                                    "lobby_countdown",
+                                                    "active_turn",
+                                                    "finished",
+                                                    "draw",
+                                                    "cancelled",
+                                                    "expired",
+                                                    "voided"
+                                                  ]
+                                                },
+                                                "state_version": {
+                                                  "type": "integer",
+                                                  "exclusiveMinimum": 0,
+                                                  "maximum": 9007199254740991
+                                                },
+                                                "entry_fee": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "number",
+                                                      "const": 20
+                                                    },
+                                                    {
+                                                      "type": "number",
+                                                      "const": 100
+                                                    },
+                                                    {
+                                                      "type": "number",
+                                                      "const": 500
+                                                    }
+                                                  ]
+                                                },
+                                                "expires_at": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "string",
+                                                      "format": "date-time",
+                                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                                    },
+                                                    { "type": "null" }
+                                                  ]
+                                                },
+                                                "phase_deadline": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "string",
+                                                      "format": "date-time",
+                                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                                    },
+                                                    { "type": "null" }
+                                                  ]
+                                                }
+                                              },
+                                              "required": [
+                                                "room_id",
+                                                "participant_id",
+                                                "side",
+                                                "room_mode",
+                                                "status",
+                                                "state_version",
+                                                "entry_fee",
+                                                "expires_at",
+                                                "phase_deadline"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            { "type": "null" }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "authority_cursor",
+                                        "blocking_operations",
+                                        "payment_recovery_orders",
+                                        "pending_mints",
+                                        "battle_participation"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "required": ["summary", "recovery"],
+                                  "additionalProperties": false
+                                },
+                                { "type": "null" }
+                              ]
                             }
                           },
                           "required": [
@@ -220,7 +1072,8 @@
                             "entry_handoff_state",
                             "entry_kind",
                             "entry_handoff_code",
-                            "entry_handoff_result"
+                            "entry_handoff_result",
+                            "initial_state"
                           ],
                           "additionalProperties": false
                         },
@@ -254,7 +1107,28 @@
                     }
                   },
                   "required": ["data", "request_id", "operation_id"],
-                  "additionalProperties": false
+                  "additionalProperties": false,
+                  "$defs": {
+                    "__schema0": {
+                      "anyOf": [
+                        { "type": "string" },
+                        { "type": "number" },
+                        { "type": "boolean" },
+                        { "type": "null" },
+                        {
+                          "type": "array",
+                          "items": { "$ref": "#/$defs/__schema0" }
+                        },
+                        {
+                          "type": "object",
+                          "propertyNames": { "type": "string" },
+                          "additionalProperties": {
+                            "$ref": "#/$defs/__schema0"
+                          }
+                        }
+                      ]
+                    }
+                  }
                 }
               }
             }
@@ -268,7 +1142,15 @@
             }
           },
           "401": {
-            "description": "Errors: TELEGRAM_INIT_DATA_INVALID, TELEGRAM_INIT_DATA_EXPIRED, TELEGRAM_INIT_DATA_TIME_INVALID",
+            "description": "Errors: TELEGRAM_INIT_DATA_INVALID, TELEGRAM_INIT_DATA_EXPIRED, TELEGRAM_INIT_DATA_TIME_INVALID, SESSION_REQUIRED, SESSION_EXPIRED, SESSION_REPLACED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "403": {
+            "description": "Errors: ACCOUNT_RESTRICTED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -276,7 +1158,7 @@
             }
           },
           "409": {
-            "description": "Errors: IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: IDEMPOTENCY_KEY_REUSED, ENTRY_HANDOFF_PENDING",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -341,7 +1223,12 @@
           "TELEGRAM_INIT_DATA_TIME_INVALID",
           "TELEGRAM_START_PARAM_INVALID",
           "RATE_LIMITED",
-          "IDEMPOTENCY_KEY_REUSED"
+          "IDEMPOTENCY_KEY_REUSED",
+          "SESSION_REQUIRED",
+          "SESSION_EXPIRED",
+          "SESSION_REPLACED",
+          "ACCOUNT_RESTRICTED",
+          "ENTRY_HANDOFF_PENDING"
         ],
         "x-error-definitions": {
           "DATABASE_RPC_FAILED": {
@@ -441,6 +1328,41 @@
             "retryable": false,
             "refreshScope": "all",
             "recoveryAction": "query_operation"
+          },
+          "SESSION_REQUIRED": {
+            "status": 401,
+            "message": "请从 Telegram 重新进入应用",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "SESSION_EXPIRED": {
+            "status": 401,
+            "message": "会话已过期",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "SESSION_REPLACED": {
+            "status": 401,
+            "message": "会话已被替换",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "ACCOUNT_RESTRICTED": {
+            "status": 403,
+            "message": "账户当前不可执行此操作",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           }
         },
         "x-refresh-scopes": ["session"],
@@ -467,9 +1389,1027 @@
         }
       }
     },
-    "/api/me/bootstrap": {
+    "/api/me/initial": {
       "get": {
-        "operationId": "identity_bootstrap",
+        "operationId": "identity_initial",
+        "tags": ["identity"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "summary": {
+                          "type": "object",
+                          "properties": {
+                            "user": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "telegram_id": {
+                                  "type": "string",
+                                  "pattern": "^\\d+$"
+                                },
+                                "username": {
+                                  "anyOf": [
+                                    { "type": "string" },
+                                    { "type": "null" }
+                                  ]
+                                },
+                                "first_name": { "type": "string" },
+                                "last_name": {
+                                  "anyOf": [
+                                    { "type": "string" },
+                                    { "type": "null" }
+                                  ]
+                                },
+                                "status": {
+                                  "type": "string",
+                                  "enum": ["normal", "banned"]
+                                },
+                                "referral_code": { "type": "string" }
+                              },
+                              "required": [
+                                "id",
+                                "telegram_id",
+                                "username",
+                                "first_name",
+                                "last_name",
+                                "status",
+                                "referral_code"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "assets": {
+                              "type": "object",
+                              "properties": {
+                                "kcoin": {
+                                  "type": "object",
+                                  "properties": {
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": ["KCOIN", "FGEMS"]
+                                    },
+                                    "available": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "locked": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "currency",
+                                    "available",
+                                    "locked"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "fgems": {
+                                  "type": "object",
+                                  "properties": {
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": ["KCOIN", "FGEMS"]
+                                    },
+                                    "available": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "locked": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "currency",
+                                    "available",
+                                    "locked"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": ["kcoin", "fgems"],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": ["user", "assets"],
+                          "additionalProperties": false
+                        },
+                        "recovery": {
+                          "type": "object",
+                          "properties": {
+                            "authority_cursor": {
+                              "type": "string",
+                              "pattern": "^(0|[1-9]\\d*)$"
+                            },
+                            "blocking_operations": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "operation_id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  },
+                                  "use_case": { "type": "string" },
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "pending",
+                                      "succeeded",
+                                      "failed",
+                                      "unknown"
+                                    ]
+                                  },
+                                  "result": {
+                                    "anyOf": [
+                                      { "$ref": "#/$defs/__schema0" },
+                                      { "type": "null" }
+                                    ]
+                                  },
+                                  "error_code": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "ACCOUNT_RESTRICTED",
+                                          "ALBUM_CHAIN_INCOMPLETE",
+                                          "ALBUM_REWARD_ALREADY_CLAIMED",
+                                          "API_ROUTE_NOT_FOUND",
+                                          "BATTLE_NOT_YOUR_TURN",
+                                          "BATTLE_ACTION_INVALID",
+                                          "BATTLE_ACTION_PHASE_INVALID",
+                                          "BATTLE_ALREADY_PARTICIPATING",
+                                          "BATTLE_INVITE_INVALID",
+                                          "BATTLE_NOT_PARTICIPANT",
+                                          "BATTLE_ROOM_ALREADY_ACCEPTED",
+                                          "BATTLE_ROOM_CANCELLED",
+                                          "BATTLE_ROOM_EXPIRED",
+                                          "BATTLE_ROOM_NOT_FOUND",
+                                          "BATTLE_RULESET_UNAVAILABLE",
+                                          "BATTLE_SELF_ACCEPT_FORBIDDEN",
+                                          "BATTLE_SHARE_FAILED",
+                                          "BATTLE_SHARE_PREPARING",
+                                          "BATTLE_STATE_CONFLICT",
+                                          "BATTLE_SWITCH_TARGET_INVALID",
+                                          "BATTLE_TEAM_INVALID",
+                                          "BATTLE_TEAM_TEMPLATE_DUPLICATE",
+                                          "BATTLE_TIER_INVALID",
+                                          "BATTLE_VOIDED",
+                                          "BOX_TIER_INVALID",
+                                          "CATALOG_INVALID",
+                                          "CATALOG_UNAVAILABLE",
+                                          "CHECKIN_ALREADY_CLAIMED",
+                                          "CONTENT_TYPE_INVALID",
+                                          "CRON_UNAUTHORIZED",
+                                          "DATABASE_RPC_FAILED",
+                                          "DRAW_COUNT_INVALID",
+                                          "ENTRY_HANDOFF_PENDING",
+                                          "EVOLUTION_NOT_AVAILABLE",
+                                          "EXPEDITION_ALREADY_ACTIVE",
+                                          "EXPEDITION_ITEMS_INVALID",
+                                          "EXPEDITION_LIMIT_REACHED",
+                                          "EXPEDITION_NOT_FOUND",
+                                          "EXPEDITION_NOT_READY",
+                                          "EXPEDITION_TIER_INVALID",
+                                          "FREE_ENTITLEMENT_UNAVAILABLE",
+                                          "IDEMPOTENCY_KEY_INVALID",
+                                          "IDEMPOTENCY_KEY_NOT_ALLOWED",
+                                          "IDEMPOTENCY_KEY_REQUIRED",
+                                          "IDEMPOTENCY_KEY_REUSED",
+                                          "INSUFFICIENT_BALANCE",
+                                          "INSUFFICIENT_INVENTORY",
+                                          "INTERNAL_ERROR",
+                                          "INVENTORY_ITEM_NOT_FOUND",
+                                          "INVENTORY_RESERVED",
+                                          "JOB_NOT_FOUND",
+                                          "MARKET_ACTIVE_TEMPLATE_LIMIT",
+                                          "MARKET_STOCK_INSUFFICIENT",
+                                          "METHOD_NOT_ALLOWED",
+                                          "MINT_ALREADY_ACTIVE",
+                                          "MINT_IN_PROGRESS",
+                                          "MINT_RESULT_INCOMPLETE",
+                                          "MINT_NOT_CANCELLABLE",
+                                          "MINT_NOT_FOUND",
+                                          "MINT_NOT_SUBMITTABLE",
+                                          "NFT_METADATA_NOT_FOUND",
+                                          "OPERATION_FAILED",
+                                          "OPERATION_NOT_ACKNOWLEDGEABLE",
+                                          "OPERATION_NOT_FOUND",
+                                          "OPERATION_RESULT_EXPIRED",
+                                          "OPERATION_RESULT_INVALID",
+                                          "PAYMENT_ALREADY_PENDING",
+                                          "PAYMENT_ALREADY_PROCESSING",
+                                          "PAYMENT_CANCELLED",
+                                          "PAYMENT_EXPIRED",
+                                          "PAYMENT_MISMATCH",
+                                          "PAYMENT_NOT_DELIVERABLE",
+                                          "PAYMENT_NOT_FOUND",
+                                          "RATE_LIMITED",
+                                          "REFERRAL_ALREADY_BOUND",
+                                          "REFERRAL_ALREADY_RECHARGED",
+                                          "REFERRAL_CANDIDATE_EXPIRED",
+                                          "REFERRAL_CODE_INVALID",
+                                          "REFERRAL_INELIGIBLE",
+                                          "REFERRAL_INVALID",
+                                          "REFERRAL_INVITER_UNAVAILABLE",
+                                          "REFERRAL_OLD_USER",
+                                          "REFERRAL_SELF_BIND",
+                                          "REQUEST_BODY_NOT_ALLOWED",
+                                          "REQUEST_INVALID",
+                                          "REQUEST_TOO_LARGE",
+                                          "RESPONSE_INVALID",
+                                          "SESSION_EXPIRED",
+                                          "SESSION_REPLACED",
+                                          "SESSION_REQUIRED",
+                                          "TASK_ALREADY_CLAIMED",
+                                          "TASK_NOT_COMPLETE",
+                                          "TASK_NOT_FOUND",
+                                          "TELEGRAM_API_FAILED",
+                                          "TELEGRAM_INIT_DATA_EXPIRED",
+                                          "TELEGRAM_INIT_DATA_INVALID",
+                                          "TELEGRAM_INIT_DATA_TIME_INVALID",
+                                          "TELEGRAM_START_PARAM_INVALID",
+                                          "TELEGRAM_REENTRY_REQUIRED",
+                                          "TELEGRAM_UPDATE_INVALID",
+                                          "TEMPLATE_NOT_FOUND",
+                                          "TOPUP_AMOUNT_INVALID",
+                                          "TOPUP_NOT_REQUIRED",
+                                          "TRANSACTION_ALREADY_USED",
+                                          "VIP_ALREADY_CLAIMED",
+                                          "VIP_BENEFIT_INVALID",
+                                          "VIP_INACTIVE",
+                                          "VIP_RENEWAL_LIMIT",
+                                          "WALLET_ADDRESS_IN_USE",
+                                          "WALLET_CHALLENGE_INVALID",
+                                          "WALLET_NOT_CONNECTED",
+                                          "WALLET_NOT_VERIFIED",
+                                          "WALLET_PROOF_INVALID",
+                                          "WEBHOOK_UNAUTHORIZED",
+                                          "WHEEL_COUNT_INVALID",
+                                          "WHEEL_DAILY_LIMIT"
+                                        ]
+                                      },
+                                      { "type": "null" }
+                                    ]
+                                  },
+                                  "acknowledged_at": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                      },
+                                      { "type": "null" }
+                                    ]
+                                  },
+                                  "created_at": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                  },
+                                  "updated_at": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                  }
+                                },
+                                "required": [
+                                  "operation_id",
+                                  "use_case",
+                                  "status",
+                                  "result",
+                                  "error_code",
+                                  "acknowledged_at",
+                                  "created_at",
+                                  "updated_at"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "payment_recovery_orders": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": ["kcoin_topup", "vip"]
+                                  },
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "pending",
+                                      "processing",
+                                      "paid",
+                                      "delivered",
+                                      "failed",
+                                      "cancelled",
+                                      "expired",
+                                      "refunded",
+                                      "rejected",
+                                      "payment_identity_conflict"
+                                    ]
+                                  },
+                                  "stars_amount": {
+                                    "type": "integer",
+                                    "exclusiveMinimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "kcoin_amount": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "invoice_url": {
+                                    "anyOf": [
+                                      { "type": "string", "format": "uri" },
+                                      { "type": "null" }
+                                    ]
+                                  },
+                                  "expires_at": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                  },
+                                  "checkout_started_at": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                      },
+                                      { "type": "null" }
+                                    ]
+                                  },
+                                  "paid_at": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                      },
+                                      { "type": "null" }
+                                    ]
+                                  },
+                                  "delivered_at": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                      },
+                                      { "type": "null" }
+                                    ]
+                                  },
+                                  "failed_at": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                      },
+                                      { "type": "null" }
+                                    ]
+                                  },
+                                  "cancelled_at": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                      },
+                                      { "type": "null" }
+                                    ]
+                                  },
+                                  "intent": {
+                                    "anyOf": [
+                                      {
+                                        "oneOf": [
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "kind": {
+                                                "type": "string",
+                                                "const": "gacha"
+                                              },
+                                              "tier": {
+                                                "type": "string",
+                                                "enum": [
+                                                  "normal",
+                                                  "rare",
+                                                  "legendary"
+                                                ]
+                                              },
+                                              "draw_count": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "number",
+                                                    "const": 1
+                                                  },
+                                                  {
+                                                    "type": "number",
+                                                    "const": 10
+                                                  }
+                                                ]
+                                              }
+                                            },
+                                            "required": [
+                                              "kind",
+                                              "tier",
+                                              "draw_count"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "kind": {
+                                                "type": "string",
+                                                "const": "market"
+                                              },
+                                              "template_id": {
+                                                "type": "string",
+                                                "minLength": 1
+                                              },
+                                              "quantity": {
+                                                "type": "integer",
+                                                "exclusiveMinimum": 0,
+                                                "maximum": 9007199254740991
+                                              }
+                                            },
+                                            "required": [
+                                              "kind",
+                                              "template_id",
+                                              "quantity"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "kind": {
+                                                "type": "string",
+                                                "const": "wheel"
+                                              },
+                                              "count": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "number",
+                                                    "const": 1
+                                                  },
+                                                  {
+                                                    "type": "number",
+                                                    "const": 10
+                                                  }
+                                                ]
+                                              }
+                                            },
+                                            "required": ["kind", "count"],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "kind": {
+                                                "type": "string",
+                                                "const": "battle_create"
+                                              },
+                                              "tier": {
+                                                "type": "string",
+                                                "enum": [
+                                                  "tier-20",
+                                                  "tier-100",
+                                                  "tier-500"
+                                                ]
+                                              },
+                                              "template_ids": {
+                                                "type": "array",
+                                                "prefixItems": [
+                                                  {
+                                                    "type": "string",
+                                                    "minLength": 1,
+                                                    "maxLength": 128
+                                                  },
+                                                  {
+                                                    "type": "string",
+                                                    "minLength": 1,
+                                                    "maxLength": 128
+                                                  },
+                                                  {
+                                                    "type": "string",
+                                                    "minLength": 1,
+                                                    "maxLength": 128
+                                                  }
+                                                ],
+                                                "minItems": 3,
+                                                "maxItems": 3,
+                                                "uniqueItems": true
+                                              }
+                                            },
+                                            "required": [
+                                              "kind",
+                                              "tier",
+                                              "template_ids"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "kind": {
+                                                "type": "string",
+                                                "const": "battle_accept"
+                                              },
+                                              "room_id": {
+                                                "type": "string",
+                                                "format": "uuid",
+                                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                              },
+                                              "template_ids": {
+                                                "type": "array",
+                                                "prefixItems": [
+                                                  {
+                                                    "type": "string",
+                                                    "minLength": 1,
+                                                    "maxLength": 128
+                                                  },
+                                                  {
+                                                    "type": "string",
+                                                    "minLength": 1,
+                                                    "maxLength": 128
+                                                  },
+                                                  {
+                                                    "type": "string",
+                                                    "minLength": 1,
+                                                    "maxLength": 128
+                                                  }
+                                                ],
+                                                "minItems": 3,
+                                                "maxItems": 3,
+                                                "uniqueItems": true
+                                              }
+                                            },
+                                            "required": [
+                                              "kind",
+                                              "room_id",
+                                              "template_ids"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "kind": {
+                                                "type": "string",
+                                                "const": "battle_matchmaking"
+                                              },
+                                              "tier": {
+                                                "type": "string",
+                                                "enum": [
+                                                  "tier-20",
+                                                  "tier-100",
+                                                  "tier-500"
+                                                ]
+                                              },
+                                              "template_ids": {
+                                                "type": "array",
+                                                "prefixItems": [
+                                                  {
+                                                    "type": "string",
+                                                    "minLength": 1,
+                                                    "maxLength": 128
+                                                  },
+                                                  {
+                                                    "type": "string",
+                                                    "minLength": 1,
+                                                    "maxLength": 128
+                                                  },
+                                                  {
+                                                    "type": "string",
+                                                    "minLength": 1,
+                                                    "maxLength": 128
+                                                  }
+                                                ],
+                                                "minItems": 3,
+                                                "maxItems": 3,
+                                                "uniqueItems": true
+                                              }
+                                            },
+                                            "required": [
+                                              "kind",
+                                              "tier",
+                                              "template_ids"
+                                            ],
+                                            "additionalProperties": false
+                                          }
+                                        ]
+                                      },
+                                      { "type": "null" }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "kind",
+                                  "status",
+                                  "stars_amount",
+                                  "kcoin_amount",
+                                  "invoice_url",
+                                  "expires_at",
+                                  "checkout_started_at",
+                                  "paid_at",
+                                  "delivered_at",
+                                  "failed_at",
+                                  "cancelled_at",
+                                  "intent"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "pending_mints": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  },
+                                  "template_id": { "type": "string" },
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "reserved",
+                                      "submitted",
+                                      "unknown",
+                                      "succeeded",
+                                      "failed",
+                                      "cancelled"
+                                    ]
+                                  },
+                                  "nft_number": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "transaction_hash": {
+                                    "anyOf": [
+                                      { "type": "string" },
+                                      { "type": "null" }
+                                    ]
+                                  },
+                                  "permit_expires_at": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                  },
+                                  "submitted_at": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                      },
+                                      { "type": "null" }
+                                    ]
+                                  },
+                                  "completed_at": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                      },
+                                      { "type": "null" }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "template_id",
+                                  "status",
+                                  "nft_number",
+                                  "transaction_hash",
+                                  "permit_expires_at",
+                                  "submitted_at",
+                                  "completed_at"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "battle_participation": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "room_id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "participant_id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "side": {
+                                      "type": "string",
+                                      "enum": ["creator", "opponent"]
+                                    },
+                                    "room_mode": {
+                                      "type": "string",
+                                      "enum": ["friend_invite", "public_match"]
+                                    },
+                                    "status": {
+                                      "type": "string",
+                                      "enum": [
+                                        "preparing_share",
+                                        "waiting",
+                                        "lobby_waiting",
+                                        "lobby_countdown",
+                                        "active_turn",
+                                        "finished",
+                                        "draw",
+                                        "cancelled",
+                                        "expired",
+                                        "voided"
+                                      ]
+                                    },
+                                    "state_version": {
+                                      "type": "integer",
+                                      "exclusiveMinimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "entry_fee": {
+                                      "anyOf": [
+                                        { "type": "number", "const": 20 },
+                                        { "type": "number", "const": 100 },
+                                        { "type": "number", "const": 500 }
+                                      ]
+                                    },
+                                    "expires_at": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "format": "date-time",
+                                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                        },
+                                        { "type": "null" }
+                                      ]
+                                    },
+                                    "phase_deadline": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "format": "date-time",
+                                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                        },
+                                        { "type": "null" }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "room_id",
+                                    "participant_id",
+                                    "side",
+                                    "room_mode",
+                                    "status",
+                                    "state_version",
+                                    "entry_fee",
+                                    "expires_at",
+                                    "phase_deadline"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                { "type": "null" }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "authority_cursor",
+                            "blocking_operations",
+                            "payment_recovery_orders",
+                            "pending_mints",
+                            "battle_participation"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": ["summary", "recovery"],
+                      "additionalProperties": false
+                    },
+                    "request_id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "operation_id": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        { "type": "null" }
+                      ]
+                    }
+                  },
+                  "required": ["data", "request_id", "operation_id"],
+                  "additionalProperties": false,
+                  "$defs": {
+                    "__schema0": {
+                      "anyOf": [
+                        { "type": "string" },
+                        { "type": "number" },
+                        { "type": "boolean" },
+                        { "type": "null" },
+                        {
+                          "type": "array",
+                          "items": { "$ref": "#/$defs/__schema0" }
+                        },
+                        {
+                          "type": "object",
+                          "propertyNames": { "type": "string" },
+                          "additionalProperties": {
+                            "$ref": "#/$defs/__schema0"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errors: REQUEST_INVALID, REQUEST_BODY_NOT_ALLOWED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "401": {
+            "description": "Errors: SESSION_EXPIRED, SESSION_REPLACED, SESSION_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "403": {
+            "description": "Errors: ACCOUNT_RESTRICTED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "500": {
+            "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "502": {
+            "description": "Errors: RESPONSE_INVALID",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          }
+        },
+        "x-idempotency-required": false,
+        "x-idempotency-forbidden": false,
+        "x-allow-pending-entry-handoff": false,
+        "x-error-codes": [
+          "DATABASE_RPC_FAILED",
+          "INTERNAL_ERROR",
+          "REQUEST_INVALID",
+          "RESPONSE_INVALID",
+          "REQUEST_BODY_NOT_ALLOWED",
+          "ACCOUNT_RESTRICTED",
+          "SESSION_EXPIRED",
+          "SESSION_REPLACED",
+          "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING"
+        ],
+        "x-error-definitions": {
+          "DATABASE_RPC_FAILED": {
+            "status": 500,
+            "message": "数据库操作失败",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "query_operation"
+          },
+          "INTERNAL_ERROR": {
+            "status": 500,
+            "message": "服务暂时不可用",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "query_operation"
+          },
+          "REQUEST_INVALID": {
+            "status": 400,
+            "message": "请求参数无效",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RESPONSE_INVALID": {
+            "status": 502,
+            "message": "服务响应格式无效",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
+          },
+          "REQUEST_BODY_NOT_ALLOWED": {
+            "status": 400,
+            "message": "GET 请求不能携带请求体",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "ACCOUNT_RESTRICTED": {
+            "status": 403,
+            "message": "账户当前不可执行此操作",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
+          },
+          "SESSION_EXPIRED": {
+            "status": 401,
+            "message": "会话已过期",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "SESSION_REPLACED": {
+            "status": 401,
+            "message": "会话已被替换",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "SESSION_REQUIRED": {
+            "status": 401,
+            "message": "请从 Telegram 重新进入应用",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
+          }
+        },
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
+      }
+    },
+    "/api/me/summary": {
+      "get": {
+        "operationId": "identity_summary",
         "tags": ["identity"],
         "security": [{ "bearerAuth": [] }],
         "parameters": [],
@@ -575,725 +2515,9 @@
                           },
                           "required": ["kcoin", "fgems"],
                           "additionalProperties": false
-                        },
-                        "entitlements": {
-                          "type": "object",
-                          "properties": {
-                            "free_normal_box": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 9007199254740991
-                            },
-                            "free_rare_box": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 9007199254740991
-                            }
-                          },
-                          "required": ["free_normal_box", "free_rare_box"],
-                          "additionalProperties": false
-                        },
-                        "catalog_version": { "type": "string", "const": "v1" },
-                        "authority_cursor": {
-                          "type": "string",
-                          "pattern": "^(0|[1-9]\\d*)$"
-                        },
-                        "blocking_operations": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "operation_id": {
-                                "type": "string",
-                                "format": "uuid",
-                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                              },
-                              "use_case": { "type": "string" },
-                              "status": {
-                                "type": "string",
-                                "enum": [
-                                  "pending",
-                                  "succeeded",
-                                  "failed",
-                                  "unknown"
-                                ]
-                              },
-                              "result": {
-                                "anyOf": [
-                                  { "$ref": "#/$defs/__schema0" },
-                                  { "type": "null" }
-                                ]
-                              },
-                              "error_code": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "enum": [
-                                      "ACCOUNT_RESTRICTED",
-                                      "ALBUM_CHAIN_INCOMPLETE",
-                                      "ALBUM_REWARD_ALREADY_CLAIMED",
-                                      "API_ROUTE_NOT_FOUND",
-                                      "BATTLE_NOT_YOUR_TURN",
-                                      "BATTLE_ACTION_INVALID",
-                                      "BATTLE_ACTION_PHASE_INVALID",
-                                      "BATTLE_ALREADY_PARTICIPATING",
-                                      "BATTLE_INVITE_INVALID",
-                                      "BATTLE_NOT_PARTICIPANT",
-                                      "BATTLE_ROOM_ALREADY_ACCEPTED",
-                                      "BATTLE_ROOM_CANCELLED",
-                                      "BATTLE_ROOM_EXPIRED",
-                                      "BATTLE_ROOM_NOT_FOUND",
-                                      "BATTLE_RULESET_UNAVAILABLE",
-                                      "BATTLE_SELF_ACCEPT_FORBIDDEN",
-                                      "BATTLE_SHARE_FAILED",
-                                      "BATTLE_SHARE_PREPARING",
-                                      "BATTLE_STATE_CONFLICT",
-                                      "BATTLE_SWITCH_TARGET_INVALID",
-                                      "BATTLE_TEAM_INVALID",
-                                      "BATTLE_TEAM_TEMPLATE_DUPLICATE",
-                                      "BATTLE_TIER_INVALID",
-                                      "BATTLE_VOIDED",
-                                      "BOX_TIER_INVALID",
-                                      "CATALOG_INVALID",
-                                      "CATALOG_UNAVAILABLE",
-                                      "CHECKIN_ALREADY_CLAIMED",
-                                      "CONTENT_TYPE_INVALID",
-                                      "CRON_UNAUTHORIZED",
-                                      "DATABASE_RPC_FAILED",
-                                      "DRAW_COUNT_INVALID",
-                                      "ENTRY_HANDOFF_PENDING",
-                                      "EVOLUTION_NOT_AVAILABLE",
-                                      "EXPEDITION_ALREADY_ACTIVE",
-                                      "EXPEDITION_ITEMS_INVALID",
-                                      "EXPEDITION_LIMIT_REACHED",
-                                      "EXPEDITION_NOT_FOUND",
-                                      "EXPEDITION_NOT_READY",
-                                      "EXPEDITION_TIER_INVALID",
-                                      "FREE_ENTITLEMENT_UNAVAILABLE",
-                                      "IDEMPOTENCY_KEY_INVALID",
-                                      "IDEMPOTENCY_KEY_NOT_ALLOWED",
-                                      "IDEMPOTENCY_KEY_REQUIRED",
-                                      "IDEMPOTENCY_KEY_REUSED",
-                                      "INSUFFICIENT_BALANCE",
-                                      "INSUFFICIENT_INVENTORY",
-                                      "INTERNAL_ERROR",
-                                      "INVENTORY_ITEM_NOT_FOUND",
-                                      "INVENTORY_RESERVED",
-                                      "JOB_NOT_FOUND",
-                                      "MARKET_ACTIVE_TEMPLATE_LIMIT",
-                                      "MARKET_STOCK_INSUFFICIENT",
-                                      "METHOD_NOT_ALLOWED",
-                                      "MINT_ALREADY_ACTIVE",
-                                      "MINT_IN_PROGRESS",
-                                      "MINT_RESULT_INCOMPLETE",
-                                      "MINT_NOT_CANCELLABLE",
-                                      "MINT_NOT_FOUND",
-                                      "MINT_NOT_SUBMITTABLE",
-                                      "NFT_METADATA_NOT_FOUND",
-                                      "OPERATION_FAILED",
-                                      "OPERATION_NOT_ACKNOWLEDGEABLE",
-                                      "OPERATION_NOT_FOUND",
-                                      "OPERATION_RESULT_EXPIRED",
-                                      "OPERATION_RESULT_INVALID",
-                                      "PAYMENT_ALREADY_PENDING",
-                                      "PAYMENT_ALREADY_PROCESSING",
-                                      "PAYMENT_CANCELLED",
-                                      "PAYMENT_EXPIRED",
-                                      "PAYMENT_MISMATCH",
-                                      "PAYMENT_NOT_DELIVERABLE",
-                                      "PAYMENT_NOT_FOUND",
-                                      "RATE_LIMITED",
-                                      "REFERRAL_ALREADY_BOUND",
-                                      "REFERRAL_ALREADY_RECHARGED",
-                                      "REFERRAL_CANDIDATE_EXPIRED",
-                                      "REFERRAL_CODE_INVALID",
-                                      "REFERRAL_INELIGIBLE",
-                                      "REFERRAL_INVALID",
-                                      "REFERRAL_INVITER_UNAVAILABLE",
-                                      "REFERRAL_OLD_USER",
-                                      "REFERRAL_SELF_BIND",
-                                      "REQUEST_BODY_NOT_ALLOWED",
-                                      "REQUEST_INVALID",
-                                      "REQUEST_TOO_LARGE",
-                                      "RESPONSE_INVALID",
-                                      "SESSION_EXPIRED",
-                                      "SESSION_REPLACED",
-                                      "SESSION_REQUIRED",
-                                      "TASK_ALREADY_CLAIMED",
-                                      "TASK_NOT_COMPLETE",
-                                      "TASK_NOT_FOUND",
-                                      "TELEGRAM_API_FAILED",
-                                      "TELEGRAM_INIT_DATA_EXPIRED",
-                                      "TELEGRAM_INIT_DATA_INVALID",
-                                      "TELEGRAM_INIT_DATA_TIME_INVALID",
-                                      "TELEGRAM_START_PARAM_INVALID",
-                                      "TELEGRAM_REENTRY_REQUIRED",
-                                      "TELEGRAM_UPDATE_INVALID",
-                                      "TEMPLATE_NOT_FOUND",
-                                      "TOPUP_AMOUNT_INVALID",
-                                      "TOPUP_NOT_REQUIRED",
-                                      "TRANSACTION_ALREADY_USED",
-                                      "VIP_ALREADY_CLAIMED",
-                                      "VIP_BENEFIT_INVALID",
-                                      "VIP_INACTIVE",
-                                      "VIP_RENEWAL_LIMIT",
-                                      "WALLET_ADDRESS_IN_USE",
-                                      "WALLET_CHALLENGE_INVALID",
-                                      "WALLET_NOT_CONNECTED",
-                                      "WALLET_NOT_VERIFIED",
-                                      "WALLET_PROOF_INVALID",
-                                      "WEBHOOK_UNAUTHORIZED",
-                                      "WHEEL_COUNT_INVALID",
-                                      "WHEEL_DAILY_LIMIT"
-                                    ]
-                                  },
-                                  { "type": "null" }
-                                ]
-                              },
-                              "acknowledged_at": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "format": "date-time",
-                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                                  },
-                                  { "type": "null" }
-                                ]
-                              },
-                              "created_at": {
-                                "type": "string",
-                                "format": "date-time",
-                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                              },
-                              "updated_at": {
-                                "type": "string",
-                                "format": "date-time",
-                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                              }
-                            },
-                            "required": [
-                              "operation_id",
-                              "use_case",
-                              "status",
-                              "result",
-                              "error_code",
-                              "acknowledged_at",
-                              "created_at",
-                              "updated_at"
-                            ],
-                            "additionalProperties": false
-                          }
-                        },
-                        "payment_recovery_orders": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "id": {
-                                "type": "string",
-                                "format": "uuid",
-                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                              },
-                              "kind": {
-                                "type": "string",
-                                "enum": ["kcoin_topup", "vip"]
-                              },
-                              "status": {
-                                "type": "string",
-                                "enum": [
-                                  "pending",
-                                  "processing",
-                                  "paid",
-                                  "delivered",
-                                  "failed",
-                                  "cancelled",
-                                  "expired",
-                                  "refunded",
-                                  "rejected",
-                                  "payment_identity_conflict"
-                                ]
-                              },
-                              "stars_amount": {
-                                "type": "integer",
-                                "exclusiveMinimum": 0,
-                                "maximum": 9007199254740991
-                              },
-                              "kcoin_amount": {
-                                "type": "integer",
-                                "minimum": 0,
-                                "maximum": 9007199254740991
-                              },
-                              "invoice_url": {
-                                "anyOf": [
-                                  { "type": "string", "format": "uri" },
-                                  { "type": "null" }
-                                ]
-                              },
-                              "expires_at": {
-                                "type": "string",
-                                "format": "date-time",
-                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                              },
-                              "checkout_started_at": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "format": "date-time",
-                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                                  },
-                                  { "type": "null" }
-                                ]
-                              },
-                              "paid_at": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "format": "date-time",
-                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                                  },
-                                  { "type": "null" }
-                                ]
-                              },
-                              "delivered_at": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "format": "date-time",
-                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                                  },
-                                  { "type": "null" }
-                                ]
-                              },
-                              "failed_at": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "format": "date-time",
-                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                                  },
-                                  { "type": "null" }
-                                ]
-                              },
-                              "cancelled_at": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "format": "date-time",
-                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                                  },
-                                  { "type": "null" }
-                                ]
-                              },
-                              "intent": {
-                                "anyOf": [
-                                  {
-                                    "oneOf": [
-                                      {
-                                        "type": "object",
-                                        "properties": {
-                                          "kind": {
-                                            "type": "string",
-                                            "const": "gacha"
-                                          },
-                                          "tier": {
-                                            "type": "string",
-                                            "enum": [
-                                              "normal",
-                                              "rare",
-                                              "legendary"
-                                            ]
-                                          },
-                                          "draw_count": {
-                                            "anyOf": [
-                                              { "type": "number", "const": 1 },
-                                              { "type": "number", "const": 10 }
-                                            ]
-                                          }
-                                        },
-                                        "required": [
-                                          "kind",
-                                          "tier",
-                                          "draw_count"
-                                        ],
-                                        "additionalProperties": false
-                                      },
-                                      {
-                                        "type": "object",
-                                        "properties": {
-                                          "kind": {
-                                            "type": "string",
-                                            "const": "market"
-                                          },
-                                          "template_id": {
-                                            "type": "string",
-                                            "minLength": 1
-                                          },
-                                          "quantity": {
-                                            "type": "integer",
-                                            "exclusiveMinimum": 0,
-                                            "maximum": 9007199254740991
-                                          }
-                                        },
-                                        "required": [
-                                          "kind",
-                                          "template_id",
-                                          "quantity"
-                                        ],
-                                        "additionalProperties": false
-                                      },
-                                      {
-                                        "type": "object",
-                                        "properties": {
-                                          "kind": {
-                                            "type": "string",
-                                            "const": "wheel"
-                                          },
-                                          "count": {
-                                            "anyOf": [
-                                              { "type": "number", "const": 1 },
-                                              { "type": "number", "const": 10 }
-                                            ]
-                                          }
-                                        },
-                                        "required": ["kind", "count"],
-                                        "additionalProperties": false
-                                      },
-                                      {
-                                        "type": "object",
-                                        "properties": {
-                                          "kind": {
-                                            "type": "string",
-                                            "const": "battle_create"
-                                          },
-                                          "tier": {
-                                            "type": "string",
-                                            "enum": [
-                                              "tier-20",
-                                              "tier-100",
-                                              "tier-500"
-                                            ]
-                                          },
-                                          "template_ids": {
-                                            "type": "array",
-                                            "prefixItems": [
-                                              {
-                                                "type": "string",
-                                                "minLength": 1,
-                                                "maxLength": 128
-                                              },
-                                              {
-                                                "type": "string",
-                                                "minLength": 1,
-                                                "maxLength": 128
-                                              },
-                                              {
-                                                "type": "string",
-                                                "minLength": 1,
-                                                "maxLength": 128
-                                              }
-                                            ],
-                                            "minItems": 3,
-                                            "maxItems": 3,
-                                            "uniqueItems": true
-                                          }
-                                        },
-                                        "required": [
-                                          "kind",
-                                          "tier",
-                                          "template_ids"
-                                        ],
-                                        "additionalProperties": false
-                                      },
-                                      {
-                                        "type": "object",
-                                        "properties": {
-                                          "kind": {
-                                            "type": "string",
-                                            "const": "battle_accept"
-                                          },
-                                          "room_id": {
-                                            "type": "string",
-                                            "format": "uuid",
-                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                                          },
-                                          "template_ids": {
-                                            "type": "array",
-                                            "prefixItems": [
-                                              {
-                                                "type": "string",
-                                                "minLength": 1,
-                                                "maxLength": 128
-                                              },
-                                              {
-                                                "type": "string",
-                                                "minLength": 1,
-                                                "maxLength": 128
-                                              },
-                                              {
-                                                "type": "string",
-                                                "minLength": 1,
-                                                "maxLength": 128
-                                              }
-                                            ],
-                                            "minItems": 3,
-                                            "maxItems": 3,
-                                            "uniqueItems": true
-                                          }
-                                        },
-                                        "required": [
-                                          "kind",
-                                          "room_id",
-                                          "template_ids"
-                                        ],
-                                        "additionalProperties": false
-                                      },
-                                      {
-                                        "type": "object",
-                                        "properties": {
-                                          "kind": {
-                                            "type": "string",
-                                            "const": "battle_matchmaking"
-                                          },
-                                          "tier": {
-                                            "type": "string",
-                                            "enum": [
-                                              "tier-20",
-                                              "tier-100",
-                                              "tier-500"
-                                            ]
-                                          },
-                                          "template_ids": {
-                                            "type": "array",
-                                            "prefixItems": [
-                                              {
-                                                "type": "string",
-                                                "minLength": 1,
-                                                "maxLength": 128
-                                              },
-                                              {
-                                                "type": "string",
-                                                "minLength": 1,
-                                                "maxLength": 128
-                                              },
-                                              {
-                                                "type": "string",
-                                                "minLength": 1,
-                                                "maxLength": 128
-                                              }
-                                            ],
-                                            "minItems": 3,
-                                            "maxItems": 3,
-                                            "uniqueItems": true
-                                          }
-                                        },
-                                        "required": [
-                                          "kind",
-                                          "tier",
-                                          "template_ids"
-                                        ],
-                                        "additionalProperties": false
-                                      }
-                                    ]
-                                  },
-                                  { "type": "null" }
-                                ]
-                              }
-                            },
-                            "required": [
-                              "id",
-                              "kind",
-                              "status",
-                              "stars_amount",
-                              "kcoin_amount",
-                              "invoice_url",
-                              "expires_at",
-                              "checkout_started_at",
-                              "paid_at",
-                              "delivered_at",
-                              "failed_at",
-                              "cancelled_at",
-                              "intent"
-                            ],
-                            "additionalProperties": false
-                          }
-                        },
-                        "pending_mints": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "id": {
-                                "type": "string",
-                                "format": "uuid",
-                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                              },
-                              "template_id": { "type": "string" },
-                              "status": {
-                                "type": "string",
-                                "enum": [
-                                  "reserved",
-                                  "submitted",
-                                  "unknown",
-                                  "succeeded",
-                                  "failed",
-                                  "cancelled"
-                                ]
-                              },
-                              "nft_number": {
-                                "type": "integer",
-                                "minimum": 0,
-                                "maximum": 9007199254740991
-                              },
-                              "transaction_hash": {
-                                "anyOf": [
-                                  { "type": "string" },
-                                  { "type": "null" }
-                                ]
-                              },
-                              "permit_expires_at": {
-                                "type": "string",
-                                "format": "date-time",
-                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                              },
-                              "submitted_at": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "format": "date-time",
-                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                                  },
-                                  { "type": "null" }
-                                ]
-                              },
-                              "completed_at": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "format": "date-time",
-                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                                  },
-                                  { "type": "null" }
-                                ]
-                              }
-                            },
-                            "required": [
-                              "id",
-                              "template_id",
-                              "status",
-                              "nft_number",
-                              "transaction_hash",
-                              "permit_expires_at",
-                              "submitted_at",
-                              "completed_at"
-                            ],
-                            "additionalProperties": false
-                          }
-                        },
-                        "battle_participation": {
-                          "anyOf": [
-                            {
-                              "type": "object",
-                              "properties": {
-                                "room_id": {
-                                  "type": "string",
-                                  "format": "uuid",
-                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                                },
-                                "participant_id": {
-                                  "type": "string",
-                                  "format": "uuid",
-                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                                },
-                                "side": {
-                                  "type": "string",
-                                  "enum": ["creator", "opponent"]
-                                },
-                                "room_mode": {
-                                  "type": "string",
-                                  "enum": ["friend_invite", "public_match"]
-                                },
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "preparing_share",
-                                    "waiting",
-                                    "lobby_waiting",
-                                    "lobby_countdown",
-                                    "active_turn",
-                                    "finished",
-                                    "draw",
-                                    "cancelled",
-                                    "expired",
-                                    "voided"
-                                  ]
-                                },
-                                "state_version": {
-                                  "type": "integer",
-                                  "exclusiveMinimum": 0,
-                                  "maximum": 9007199254740991
-                                },
-                                "entry_fee": {
-                                  "anyOf": [
-                                    { "type": "number", "const": 20 },
-                                    { "type": "number", "const": 100 },
-                                    { "type": "number", "const": 500 }
-                                  ]
-                                },
-                                "expires_at": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string",
-                                      "format": "date-time",
-                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                                    },
-                                    { "type": "null" }
-                                  ]
-                                },
-                                "phase_deadline": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string",
-                                      "format": "date-time",
-                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                                    },
-                                    { "type": "null" }
-                                  ]
-                                }
-                              },
-                              "required": [
-                                "room_id",
-                                "participant_id",
-                                "side",
-                                "room_mode",
-                                "status",
-                                "state_version",
-                                "entry_fee",
-                                "expires_at",
-                                "phase_deadline"
-                              ],
-                              "additionalProperties": false
-                            },
-                            { "type": "null" }
-                          ]
-                        },
-                        "server_time": {
-                          "type": "string",
-                          "format": "date-time",
-                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
                         }
                       },
-                      "required": [
-                        "user",
-                        "assets",
-                        "entitlements",
-                        "catalog_version",
-                        "authority_cursor",
-                        "blocking_operations",
-                        "payment_recovery_orders",
-                        "pending_mints",
-                        "battle_participation",
-                        "server_time"
-                      ],
+                      "required": ["user", "assets"],
                       "additionalProperties": false
                     },
                     "request_id": {
@@ -1313,28 +2537,7 @@
                     }
                   },
                   "required": ["data", "request_id", "operation_id"],
-                  "additionalProperties": false,
-                  "$defs": {
-                    "__schema0": {
-                      "anyOf": [
-                        { "type": "string" },
-                        { "type": "number" },
-                        { "type": "boolean" },
-                        { "type": "null" },
-                        {
-                          "type": "array",
-                          "items": { "$ref": "#/$defs/__schema0" }
-                        },
-                        {
-                          "type": "object",
-                          "propertyNames": { "type": "string" },
-                          "additionalProperties": {
-                            "$ref": "#/$defs/__schema0"
-                          }
-                        }
-                      ]
-                    }
-                  }
+                  "additionalProperties": false
                 }
               }
             }

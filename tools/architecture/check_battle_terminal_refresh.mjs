@@ -52,7 +52,7 @@ const paths = {
 const protectedRoutes = new Set([
   "battle.room",
   "battle.bootstrap",
-  "identity.bootstrap",
+  "identity.summary",
   "inventory.list",
 ]);
 const terminalStatuses = new Set([
@@ -64,7 +64,7 @@ const terminalStatuses = new Set([
 ]);
 const terminalBatchRoutes = new Set([
   "battle.bootstrap",
-  "identity.bootstrap",
+  "identity.summary",
   "inventory.list",
 ]);
 const authorityCancellationRoutes = new Set([
@@ -352,7 +352,7 @@ function checkCoordinator(source) {
       ),
       terminalBatchRoutes,
     ),
-    "terminal batch must contain exactly Battle bootstrap, identity bootstrap, and inventory",
+    "terminal batch must contain exactly Battle bootstrap, identity summary, and inventory",
   );
   must(
     sameArray(
@@ -382,7 +382,7 @@ function checkCoordinator(source) {
     ) &&
       sameSet(
         new Set(arrayStrings(terminalCancellation)),
-        new Set(["identity.bootstrap", "inventory.list"]),
+        new Set(["identity.summary", "inventory.list"]),
       ),
     "terminal latch cancellation must extend authority tails with identity and inventory",
   );
@@ -833,7 +833,7 @@ function checkView(source) {
     (call) => stringArgument(call, 0) === "battle.bootstrap",
   );
   const identityObserver = calls(view, "useApiQuery").find(
-    (call) => stringArgument(call, 0) === "identity.bootstrap",
+    (call) => stringArgument(call, 0) === "identity.summary",
   );
   const inviteObserver = calls(view, "useApiQuery").find(
     (call) => stringArgument(call, 0) === "battle.current_invite",
@@ -1250,7 +1250,7 @@ function checkAppShell(source) {
 function checkObserverConsumers(topAsset, inventory) {
   must(
     calls(topLevelFunction(topAsset, "TopAssetBar"), "useApiQuery").some(
-      (call) => stringArgument(call, 0) === "identity.bootstrap",
+      (call) => stringArgument(call, 0) === "identity.summary",
     ) &&
       calls(topLevelFunction(inventory, "InventoryView"), "useApiQuery").some(
         (call) => stringArgument(call, 0) === "inventory.list",
@@ -1296,7 +1296,7 @@ function checkResultContract(
         !source.getFullText().includes("current_result") &&
         !source.getFullText().includes("battle_result") &&
         !source.getFullText().includes("BATTLE_RESULT_NOT_ACKNOWLEDGEABLE"),
-      `Battle bootstrap, identity bootstrap, and handlers must not expose result recovery or acknowledgement: ${source.fileName}`,
+      `Battle bootstrap, identity initial/summary, and handlers must not expose result recovery or acknowledgement: ${source.fileName}`,
     );
   const resultScreen = topLevelFunction(screens, "BattleResult");
   const preparingScreen = topLevelFunction(screens, "BattlePreparingShare");
@@ -2001,7 +2001,7 @@ function runSelfTests() {
             stringProperty(unwrap(element), "routeId") === "inventory.list",
         );
         const route = objectProperty(unwrap(inventory), "routeId");
-        return replaceNode(text, route.initializer, '"identity.bootstrap"');
+        return replaceNode(text, route.initializer, '"identity.summary"');
       },
     ),
     fixture(
@@ -2409,7 +2409,7 @@ function runSelfTests() {
       (source, text) => {
         const view = topLevelFunction(source, "BattleView");
         const identityObserver = calls(view, "useApiQuery").find(
-          (call) => stringArgument(call, 0) === "identity.bootstrap",
+          (call) => stringArgument(call, 0) === "identity.summary",
         );
         return replaceNode(text, identityObserver.arguments[2], "pageActive");
       },

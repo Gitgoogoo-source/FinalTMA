@@ -23,6 +23,27 @@ const healthOutput = z
     time: timestampSchema,
   })
   .strict();
+export const identitySummarySchema = z
+  .object({
+    user: userSchema,
+    assets: assetsSchema,
+  })
+  .strict();
+export const identityRecoverySchema = z
+  .object({
+    authority_cursor: nonNegativeBigintStringSchema,
+    blocking_operations: z.array(operationSummarySchema),
+    payment_recovery_orders: z.array(paymentSchema),
+    pending_mints: z.array(mintSchema),
+    battle_participation: battleParticipationSchema.nullable(),
+  })
+  .strict();
+export const identityInitialSchema = z
+  .object({
+    summary: identitySummarySchema,
+    recovery: identityRecoverySchema,
+  })
+  .strict();
 const normalAuthOutput = z
   .object({
     account_status: z.literal("normal"),
@@ -48,6 +69,7 @@ const normalAuthOutput = z
         "REFERRAL_SELF_BIND",
       ])
       .nullable(),
+    initial_state: identityInitialSchema.nullable(),
   })
   .strict();
 const bannedAuthOutput = z
@@ -57,26 +79,6 @@ const authOutput = z.discriminatedUnion("account_status", [
   normalAuthOutput,
   bannedAuthOutput,
 ]);
-const bootstrapOutput = z
-  .object({
-    user: userSchema,
-    assets: assetsSchema,
-    entitlements: z
-      .object({
-        free_normal_box: z.number().int().min(0),
-        free_rare_box: z.number().int().min(0),
-      })
-      .strict(),
-    catalog_version: z.literal("v1"),
-    authority_cursor: nonNegativeBigintStringSchema,
-    blocking_operations: z.array(operationSummarySchema),
-    payment_recovery_orders: z.array(paymentSchema),
-    pending_mints: z.array(mintSchema),
-    battle_participation: battleParticipationSchema.nullable(),
-    server_time: timestampSchema,
-  })
-  .strict();
-
 const healthRoute = defineRoute({
   id: "health.get",
   method: "GET",
@@ -105,18 +107,40 @@ const authenticateRoute = defineRoute({
     "TELEGRAM_START_PARAM_INVALID",
     "RATE_LIMITED",
     "IDEMPOTENCY_KEY_REUSED",
+    "SESSION_REQUIRED",
+    "SESSION_EXPIRED",
+    "SESSION_REPLACED",
+    "ACCOUNT_RESTRICTED",
+    "ENTRY_HANDOFF_PENDING",
     "INTERNAL_ERROR",
   ],
 });
-const bootstrapRoute = defineRoute({
-  id: "identity.bootstrap",
+const initialRoute = defineRoute({
+  id: "identity.initial",
   method: "GET",
-  path: "/api/me/bootstrap",
+  path: "/api/me/initial",
   gateway: "app",
   auth: true,
   idempotent: false,
   input: emptyObjectSchema,
-  output: bootstrapOutput,
+  output: identityInitialSchema,
+  errors: [
+    "SESSION_REQUIRED",
+    "SESSION_EXPIRED",
+    "SESSION_REPLACED",
+    "ACCOUNT_RESTRICTED",
+    "INTERNAL_ERROR",
+  ],
+});
+const summaryRoute = defineRoute({
+  id: "identity.summary",
+  method: "GET",
+  path: "/api/me/summary",
+  gateway: "app",
+  auth: true,
+  idempotent: false,
+  input: emptyObjectSchema,
+  output: identitySummarySchema,
   errors: [
     "SESSION_REQUIRED",
     "SESSION_EXPIRED",
@@ -128,7 +152,8 @@ const bootstrapRoute = defineRoute({
 
 export const identityFirstScreenRoutes = [
   authenticateRoute,
-  bootstrapRoute,
+  initialRoute,
+  summaryRoute,
 ] as const;
 
 export const identityRoutes = [

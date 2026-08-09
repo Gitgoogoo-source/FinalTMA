@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 
 import {
   apiRequest,
@@ -7,11 +8,12 @@ import {
   resetSessionRecovery,
 } from "../../platform/api/client.ts";
 import { replaceAppLocation } from "../../platform/navigation/index.tsx";
-import { fetchApiQuery, prefetchApiQuery } from "../../platform/query/index.ts";
+import { prefetchApiQuery } from "../../platform/query/index.ts";
 import {
   clearSensitiveState,
   getSession,
   replaceSession,
+  seedSessionInitialState,
   transitionToBanned,
   useSession,
   type EntryHandoffResult,
@@ -24,13 +26,13 @@ export type BootstrapPhase =
   | "validating_telegram"
   | "authenticating"
   | "settling_referral"
-  | "loading_bootstrap"
-  | "bootstrap_failed"
+  | "loading_initial_state"
+  | "initial_state_failed"
   | "ready"
   | "reentry_required"
   | "banned";
 
-type RetryTarget = "login" | "referral" | "bootstrap";
+type RetryTarget = "login" | "referral" | "initial_state";
 type BootstrapState = {
   phase: BootstrapPhase;
   message: string;
@@ -45,6 +47,7 @@ type LoginContext = {
   entryHandoffState: "pending" | "complete";
   entryHandoffCode: string | null;
   entryHandoffResult: EntryHandoffResult | null;
+  initialState: RouteOutput<"identity.initial"> | null;
   notice: string | null;
 };
 
@@ -148,6 +151,7 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
             entryHandoffState: login.data.entry_handoff_state,
             entryHandoffCode: login.data.entry_handoff_code,
             entryHandoffResult: login.data.entry_handoff_result,
+            initialState: login.data.initial_state,
             notice: referralNotice(login.data.entry_handoff_result),
           };
         }
@@ -164,7 +168,7 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
         }
 
         if (
-          target !== "bootstrap" &&
+          target !== "initial_state" &&
           context.entryHandoffState === "pending" &&
           context.entryHandoffCode
         ) {
@@ -199,6 +203,7 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
           context.notice = settlement.notice;
           context.entryHandoffState = "complete";
           context.entryHandoffResult = settlement.result;
+          context.initialState = null;
           const settledSession = getSession();
           if (
             settledSession?.generation === context.session.generation &&
@@ -214,20 +219,30 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
           }
         }
 
-        retryTarget.current = "bootstrap";
-        stage = "bootstrap";
+        retryTarget.current = "initial_state";
+        stage = "initial_state";
         setState({
           ...initialState,
-          phase: "loading_bootstrap",
-          message: "正在加载当前账号数据",
+          phase: "loading_initial_state",
+          message: "正在准备冒险",
           session: getSession(),
           notice: context.notice,
         });
-        await fetchApiQuery("identity.bootstrap");
+        const initial =
+          context.initialState ??
+          (
+            await apiRequest(
+              "identity.initial",
+              {},
+              { signal: controller.signal },
+            )
+          ).data;
         if (!active()) return;
         const currentSession = getSession();
         if (!currentSession || currentSession.accountStatus !== "normal")
           return;
+        seedSessionInitialState(currentSession.generation, initial);
+        context.initialState = null;
         prefetchSummaries(currentSession.generation);
         setState({
           ...initialState,
@@ -256,6 +271,7 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
             entryHandoffState: "pending",
             entryHandoffCode: session.entryHandoffCode,
             entryHandoffResult: null,
+            initialState: null,
             notice: null,
           };
           retryTarget.current = "referral";
@@ -270,14 +286,14 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
           });
           return;
         }
-        if (stage === "bootstrap" && session?.accountStatus === "normal") {
-          if (session.bootstrapFailed)
-            replaceSession({ ...session, bootstrapFailed: false });
-          retryTarget.current = "bootstrap";
+        if (stage === "initial_state" && session?.accountStatus === "normal") {
+          if (session.initialStateFailed)
+            replaceSession({ ...session, initialStateFailed: false });
+          retryTarget.current = "initial_state";
           setState({
             ...initialState,
-            phase: "bootstrap_failed",
-            message: "数据加载失败，请重试。",
+            phase: "initial_state_failed",
+            message: "冒险准备失败，请重试。",
             session,
             canRetry: true,
             failed: true,
@@ -363,6 +379,7 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
         entryHandoffState: "pending",
         entryHandoffCode: pendingSession.entryHandoffCode,
         entryHandoffResult: null,
+        initialState: null,
         notice: null,
       };
       referralOperation.current = newIdempotencyKey();
@@ -388,8 +405,8 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
       message:
         retryTarget.current === "referral"
           ? "正在确认邀请关系"
-          : retryTarget.current === "bootstrap"
-            ? "正在加载当前账号数据"
+          : retryTarget.current === "initial_state"
+            ? "正在准备冒险"
             : "正在登录，请稍候",
     }));
     setVersion((value) => value + 1);

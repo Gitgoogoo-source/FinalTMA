@@ -50,9 +50,17 @@ where authority_sequence is not null;
 create index operations_payload_cleanup_idx
 on operations.operations (completed_at, id)
 where status in ('succeeded', 'failed') and payload_purged_at is null;
-create index operations_result_recovery_idx on operations.operations (user_id, created_at, id)
-where (use_case = 'wheel.spin' and status in ('pending', 'unknown'))
-   or (use_case = 'inventory.evolve' and result_acknowledged_at is null);
+create index operations_user_recovery_idx
+on operations.operations (user_id, created_at, id)
+where use_case <> 'gacha.open'
+  and (
+    status in ('pending', 'unknown')
+    or (
+      use_case = 'inventory.evolve'
+      and status in ('succeeded', 'failed')
+      and result_acknowledged_at is null
+    )
+  );
 
 create or replace function operations.assign_authority_sequence()
 returns trigger

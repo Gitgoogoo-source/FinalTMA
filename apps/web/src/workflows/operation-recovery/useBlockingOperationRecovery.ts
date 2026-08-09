@@ -8,7 +8,7 @@ import {
 import { useOperationRegistry } from "./context.ts";
 
 type BlockingOperation =
-  RouteOutput<"identity.bootstrap">["blocking_operations"][number];
+  RouteOutput<"identity.initial">["recovery"]["blocking_operations"][number];
 
 export function useBlockingOperationRecovery(
   operations: readonly BlockingOperation[] | undefined,

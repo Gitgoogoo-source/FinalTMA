@@ -193,6 +193,7 @@ def main() -> None:
     verify_market_transactional_supply_read_model()
     verify_api_boundaries()
     verify_session_credential_boundary()
+    verify_identity_read_model_boundary()
     verify_contract_boundaries()
     verify_documentation()
     verify_package_exports()
@@ -913,7 +914,7 @@ def verify_operation_recovery_discovery() -> None:
     ).read_text(encoding="utf-8")
     provider = OPERATION_REGISTRY_RUNTIME_PROVIDER.read_text(encoding="utf-8")
     if (
-        "useRecoverableOperationDiscovery(bootstrap.data?.authority_cursor);"
+        "useRecoverableOperationDiscovery(recovery?.authority_cursor);"
         not in coordinator
         or "recoveryQueueActive: boolean;" not in context
         or "wheelPresentationEpoch: number;" not in context
@@ -1954,7 +1955,7 @@ def verify_session_credential_boundary() -> None:
     )
     authenticate_block = identity_routes.partition(
         '"identity.authenticate": async (context) => {'
-    )[2].partition('"identity.bootstrap": async (context) =>')[0]
+    )[2].partition('"identity.initial": async (context) =>')[0]
 
     required_session_terms = (
         "export type SessionCredential",
@@ -1986,15 +1987,161 @@ def verify_session_credential_boundary() -> None:
         "p_init_data_key_hash:",
         "p_session_id: issued.sessionId",
         "result.session_id !== issued.sessionId",
+        '"identity_initial"',
+        "initial_state: initialState",
     )
     missing = [term for term in required_login_terms if term not in authenticate_block]
-    if missing or authenticate_block.count("await rpc") != 2:
+    if missing or authenticate_block.count("await rpc") != 3:
         raise SystemExit(
-            "Telegram authentication must make exactly two database RPC calls: "
+            "Telegram authentication must declare source, authenticate, and post-commit initial-state RPCs: "
             f"missing={missing}, rpc_calls={authenticate_block.count('await rpc')}"
         )
     if "identity_consume_login_rate_limit" in identity_routes:
         raise SystemExit("Legacy three-call login limiter must remain removed")
+
+
+def verify_identity_read_model_boundary() -> None:
+    contract = (CONTRACT_ROOT / "domains/identity/routes.ts").read_text(
+        encoding="utf-8"
+    )
+    handlers = (API_ROOT / "domains/identity/routes.ts").read_text(
+        encoding="utf-8"
+    )
+    session_store = (WEB_ROOT / "platform/session/store.ts").read_text(
+        encoding="utf-8"
+    )
+    query = (WEB_ROOT / "platform/query/index.ts").read_text(encoding="utf-8")
+    recovery_coordinator = (
+        WEB_ROOT / "app/recovery/AppRecoveryCoordinator.tsx"
+    ).read_text(encoding="utf-8")
+    schema = (ROOT / "supabase/schemas/10_identity.sql").read_text(
+        encoding="utf-8"
+    )
+    operations = (ROOT / "supabase/schemas/30_operations.sql").read_text(
+        encoding="utf-8"
+    )
+    security = (
+        ROOT / "supabase/migrations/20260719104614_api_security.sql"
+    ).read_text(encoding="utf-8")
+
+    active_sources = "\n".join(
+        path.read_text(encoding="utf-8")
+        for root in (WEB_ROOT, API_ROOT, CONTRACT_ROOT)
+        for path in typescript_files(root)
+    ) + "\n" + "\n".join(
+        (
+            schema,
+            security,
+            (ROOT / "supabase/migrations/20260719104533_baseline.sql").read_text(
+                encoding="utf-8"
+            ),
+            (ROOT / "packages/api-contracts/openapi/openapi.json").read_text(
+                encoding="utf-8"
+            ),
+        )
+    )
+    legacy = [
+        term
+        for term in ("identity.bootstrap", "identity_bootstrap")
+        if term in active_sources
+    ]
+    if legacy:
+        raise SystemExit(f"Legacy identity bootstrap remains in active sources: {legacy}")
+
+    required_contract = (
+        'initial_state: identityInitialSchema.nullable()',
+        'id: "identity.initial"',
+        'path: "/api/me/initial"',
+        'id: "identity.summary"',
+        'path: "/api/me/summary"',
+        "summary: identitySummarySchema",
+        "recovery: identityRecoverySchema",
+    )
+    missing_contract = [term for term in required_contract if term not in contract]
+    if missing_contract:
+        raise SystemExit(
+            f"Identity initial/summary contract is incomplete: {missing_contract}"
+        )
+
+    required_session_store = (
+        "seedSessionInitialState",
+        "identitySummaryCacheSeeder(generation, data.summary)",
+        "recoverySnapshot = { generation, data: data.recovery }",
+        "useIdentityRecovery",
+        "clearIdentityRecovery()",
+    )
+    missing_session_store = [
+        term for term in required_session_store if term not in session_store
+    ]
+    if missing_session_store:
+        raise SystemExit(
+            f"Generation-scoped identity recovery store is incomplete: {missing_session_store}"
+        )
+    if (
+        "pendingPayments.data?.orders ?? recovery?.payment_recovery_orders"
+        not in recovery_coordinator
+    ):
+        raise SystemExit(
+            "Current payment recovery query must replace the one-shot identity recovery seed"
+        )
+
+    initial_query_bypasses = []
+    for path in typescript_files(WEB_ROOT):
+        source = path.read_text(encoding="utf-8")
+        if re.search(
+            r'(?:useApiQuery|fetchApiQuery|prefetchApiQuery)\(\s*["\']identity\.initial["\']',
+            source,
+        ):
+            initial_query_bypasses.append(relative(path))
+    if initial_query_bypasses:
+        raise SystemExit(
+            "identity.initial cannot enter React Query refresh ownership: "
+            f"{initial_query_bypasses}"
+        )
+
+    required_query = (
+        '[generation, "v1", "identity.summary", {}]',
+        'const topAssetRouteIds = ["identity.summary", "vip.get"]',
+        'query.queryKey[2] !== "identity.initial"',
+        'routeIds: ["identity.summary"]',
+    )
+    missing_query = [term for term in required_query if term not in query]
+    if missing_query or '"identity",' in query[query.index("const scopeMatchers"):query.index("export async function refreshRouteScopes")]:
+        raise SystemExit(
+            "Identity summary refresh ownership is not exact: "
+            f"missing={missing_query}"
+        )
+
+    required_database = (
+        "create or replace function api.identity_summary(p_session_id uuid)",
+        "create or replace function api.identity_initial(p_session_id uuid)",
+        "v_user_id uuid := api.session_user(p_session_id);",
+        "'summary', jsonb_build_object(",
+        "'recovery', jsonb_build_object(",
+    )
+    missing_database = [term for term in required_database if term not in schema]
+    required_operations = (
+        "create index operations_user_recovery_idx",
+        "where use_case <> 'gacha.open'",
+        "status in ('pending', 'unknown')",
+        "and result_acknowledged_at is null",
+    )
+    missing_operations = [
+        term for term in required_operations if term not in operations
+    ]
+    if missing_database or missing_operations:
+        raise SystemExit(
+            "Identity read-model database boundary is incomplete: "
+            f"identity={missing_database}, operations={missing_operations}"
+        )
+    if (
+        "'identity_initial'" not in security
+        or "'identity_summary'" not in security
+        or "identity_bootstrap" in security
+        or '"identity.initial": async (context)' not in handlers
+        or '"identity.summary": async (context)' not in handlers
+    ):
+        raise SystemExit("Identity read-model handlers or API privilege allowlist are incomplete")
 
 
 def verify_contract_boundaries() -> None:
@@ -2162,6 +2309,29 @@ def verify_documentation() -> None:
         raise SystemExit(
             "Local session proof ADR is incomplete: "
             f"{missing_session_proof_terms}"
+        )
+    identity_read_model_adr = (
+        ROOT
+        / "docs/architecture/adr/ADR-049-identity-initial-state-and-summary-read-model.md"
+    ).read_text(encoding="utf-8")
+    required_identity_read_model_terms = (
+        "`identity.initial`",
+        "`identity.summary`",
+        "`initial_state`",
+        "generation-scoped",
+        "operations_user_recovery_idx",
+        "同一维护窗口",
+        "不得降级",
+    )
+    missing_identity_read_model_terms = [
+        value
+        for value in required_identity_read_model_terms
+        if value not in identity_read_model_adr
+    ]
+    if missing_identity_read_model_terms:
+        raise SystemExit(
+            "Identity initial/summary ADR is incomplete: "
+            f"{missing_identity_read_model_terms}"
         )
     fixture_adr = (
         ROOT / "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md"

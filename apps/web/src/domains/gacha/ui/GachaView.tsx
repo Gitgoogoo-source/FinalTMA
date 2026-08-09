@@ -76,7 +76,7 @@ const pityLoadError = new Error("保底进度加载失败，请重试");
 export function GachaView(): ReactNode {
   const boxes = useApiQuery("gacha.bootstrap");
   const catalog = useCatalogQuery();
-  const identity = useApiQuery("identity.bootstrap");
+  const identity = useApiQuery("identity.summary");
   const session = useSession();
   const { isBlocked, preload, run } = useOperationRegistry();
   const { requestTopup } = useNavigationIntent();

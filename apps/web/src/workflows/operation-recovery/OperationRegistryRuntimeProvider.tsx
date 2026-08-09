@@ -1105,7 +1105,7 @@ export function OperationRegistryRuntimeProvider({
       try {
         const [bootstrap, identity] = await Promise.all([
           apiRequest("gacha.bootstrap", {}),
-          fetchApiQuery("identity.bootstrap"),
+          fetchApiQuery("identity.summary"),
         ]);
         if (
           !isCurrentNormalSession(generation) ||

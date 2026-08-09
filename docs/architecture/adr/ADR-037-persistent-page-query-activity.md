@@ -14,6 +14,8 @@ React Query 的 `staleTime` 固定继续为 20 秒。隐藏页面重新可见时
 
 `invalidateApiQueries`、`refreshUserState` 与 `refreshScopes` 固定把所有匹配的当前 generation 查询标记为失效，并使用 `refetchType: "active"`。当前可见页面和持久页面外的活动查询立即重新读取，其失败继续按调用方既有规则传播；隐藏页面查询不读取、不参与等待，但保留失效状态，返回页面后再回正。统一 operation authority cursor 在当前可见页面和全局活动查询完成、隐藏查询已被标记失效后可以推进；隐藏查询不得阻塞当前操作结果或导致同一终态被反复发现。数据库、RPC、API 权限、业务事务、幂等键和资产裁决不变，玩家基于旧缓存发起的动作仍由服务端重新验证并以数据库结果为准。
 
+身份域的可刷新查询固定只有 `identity.summary`。顶部人工刷新只读取它与 `vip.get`；前台恢复和 `assets`、`inventory`、`payments`、`mint` 刷新范围使用精确 route ID 命中 `identity.summary`，不得使用整个 `identity` 前缀。`identity.initial` 是入口恢复快照，不注册 React Query，不参与 `refreshUserState`、`refreshScopes`、前台恢复、页面重新激活、Battle 终局或 Mint 恢复。
+
 Battle 的查询启用、Realtime、presence lease、heartbeat、offline 与权威轮询继续同时受 Battle 自身页面活动规则控制，不以通用缓存提示替代 Battle 的静默回正。市场 SOLD 收件箱继续同时受交易页可见性、Telegram 活动状态、文档可见性和网络状态控制；交易页隐藏后停止轮询，重新可见时立即读取。已经使用领域内非阻塞缓存提示的管理页和开盒页保留其既有文案与恢复动作，不叠加第二个提示。
 
 页面组件状态和查询缓存仍只存在于 JavaScript 内存，不新增 `localStorage`、`sessionStorage`、IndexedDB 或服务端缓存。市场 SOLD 收件箱按 ADR-029 保持唯一既有本地持久化例外。

@@ -10,6 +10,7 @@ import {
 
 import { useAppNavigate } from "../../../platform/navigation/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
+import { useIdentityRecovery } from "../../../platform/session/store.ts";
 import { useTelegramBackButton } from "../../../platform/telegram/index.ts";
 import { usePageModulePreparation } from "../../../shared/navigation/pageModulePreparation.ts";
 import { Badge } from "../../../shared/ui/Badge.tsx";
@@ -32,8 +33,8 @@ const filters: readonly { id: AlbumFilter; label: string }[] = [
 
 export function AlbumView(): ReactNode {
   const query = useApiQuery("album.get");
-  const bootstrap = useApiQuery("identity.bootstrap");
-  useBlockingOperationRecovery(bootstrap.data?.blocking_operations);
+  const recovery = useIdentityRecovery();
+  useBlockingOperationRecovery(recovery?.blocking_operations);
   const navigate = useAppNavigate();
   const preparePage = usePageModulePreparation();
   const back = useCallback(() => navigate(-1), [navigate]);

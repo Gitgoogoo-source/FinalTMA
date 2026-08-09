@@ -4,7 +4,7 @@
 
 操作具有 `pending`、`succeeded`、`failed`、`unknown` 四个持久状态。同步业务在提交事务内形成终态；支付和 Mint 允许由外部事实推进。随机结果在第一次裁决时持久化，不得重新生成。
 
-前端只在用户完成领域确认后生成并保存 UUID，随后立即进入 `confirming`，下一帧进入 `submitting`，但不提前宣告业务成功。网络中断只进入 `unknown`，恢复只查询原操作。默认只锁定同一 `use_case` 的再次提交；`gacha.open` 与 `wheel.spin` 从 `confirming` 开始禁用本领域操作按钮和五个底部导航，经过 `submitting`、`pending`、`unknown` 持续锁定，并在服务端成功或失败结果弹窗中保持锁定，直到用户通过弹窗规定动作处理结果。`inventory.evolve` 从 `confirming` 到 `unknown` 锁定新进化提交和五个底部导航，终态由覆盖界面的专用弹窗处理。弹窗内的结果处理和原操作查询按钮不被这些锁禁用。`me/bootstrap` 返回阻塞操作、待处理支付和 Mint，以便重新进入后继续恢复。
+前端只在用户完成领域确认后生成并保存 UUID，随后立即进入 `confirming`，下一帧进入 `submitting`，但不提前宣告业务成功。网络中断只进入 `unknown`，恢复只查询原操作。默认只锁定同一 `use_case` 的再次提交；`gacha.open` 与 `wheel.spin` 从 `confirming` 开始禁用本领域操作按钮和五个底部导航，经过 `submitting`、`pending`、`unknown` 持续锁定，并在服务端成功或失败结果弹窗中保持锁定，直到用户通过弹窗规定动作处理结果。`inventory.evolve` 从 `confirming` 到 `unknown` 锁定新进化提交和五个底部导航，终态由覆盖界面的专用弹窗处理。弹窗内的结果处理和原操作查询按钮不被这些锁禁用。`identity.initial.recovery` 在入口建立时一次返回阻塞操作、待处理支付、休眠 Mint 与 Battle 参与状态，以便重新进入后继续恢复；该快照只存在于当前 session generation 内存，不参加 React Query 刷新。
 
 `market.create_listing` 从 `confirming` 到 `unknown` 不显示全局操作状态弹窗，只锁定同一上架命令并让出售按钮显示“出售中”；`pending`、`unknown` 在当前前台运行期自动查询原 operation，不生成新幂等键。已取得服务端成功结果但尚未完成路由 refresh scope 时继续保持 `submitting` 和按钮状态。刷新范围必须全部标记失效，当前可见的交易页面与全局活动查询返回最新权威状态后才进入 `succeeded` 并打开专用“上架成功”弹窗，因此玩家能关闭成功结果时，管理页必须已可展示新挂单；隐藏的藏品查询不参与等待，保留失效状态并在返回藏品页后按 [ADR-037](ADR-037-persistent-page-query-activity.md) 回正。专用成功弹窗不展示服务器、请求或 operation ID；明确失败使用不含技术信息的专用反馈并恢复按钮。
 

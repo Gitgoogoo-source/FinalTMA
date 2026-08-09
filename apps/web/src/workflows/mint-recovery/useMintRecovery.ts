@@ -9,7 +9,7 @@ export function useMintRecovery(
     if (!pendingMints?.length) return;
     const refresh = () =>
       Promise.all([
-        invalidateApiQueries(["identity.bootstrap", "inventory.list"]),
+        invalidateApiQueries(["identity.summary", "inventory.list"]),
         invalidateDormantApiQueries(["mint.list"]),
       ]);
     void refresh();
