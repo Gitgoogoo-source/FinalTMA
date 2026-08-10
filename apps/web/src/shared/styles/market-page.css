@@ -1221,6 +1221,37 @@
   font-size: 7px;
   line-height: 1.35;
 }
+.app-shell .market-sell-quota {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  color: #66746f;
+  font-size: 8px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.app-shell .market-sell-quota strong {
+  color: #40515a;
+  font-size: 10px;
+}
+.app-shell .market-sell-quota > i {
+  color: #b1b8b4;
+  font-style: normal;
+}
+.app-shell .market-sell-quota > small {
+  color: #b74738;
+  font-size: 8px;
+  font-weight: 900;
+}
+.app-shell .market-sell-quota.is-exhausted {
+  flex-wrap: wrap;
+}
+.app-shell .market-sell-quota.is-exhausted > small {
+  flex-basis: 100%;
+  text-align: center;
+}
 .app-shell .market-sell-confirm.button {
   width: 100%;
   min-height: 44px;

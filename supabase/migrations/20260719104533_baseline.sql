@@ -9319,6 +9319,58 @@ end;
 $$;
 
 -- source: 50_market.sql
+create table market.seller_listing_quotas (
+  seller_id uuid primary key references identity.users(id) on delete cascade,
+  business_date date not null default identity.utc_day(),
+  daily_count integer not null default 0 check (daily_count between 0 and 200),
+  lifetime_count integer not null default 0 check (lifetime_count between 0 and 20000),
+  updated_at timestamptz not null default now(),
+  check (daily_count <= lifetime_count)
+);
+
+create or replace function market.lock_listing_quota(p_seller_id uuid)
+returns void
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_business_date date := identity.utc_day();
+  v_quota market.seller_listing_quotas%rowtype;
+begin
+  insert into market.seller_listing_quotas (seller_id, business_date)
+  values (p_seller_id, v_business_date)
+  on conflict (seller_id) do nothing;
+
+  select * into strict v_quota
+  from market.seller_listing_quotas
+  where seller_id = p_seller_id
+  for update;
+
+  if v_quota.business_date <> v_business_date then
+    update market.seller_listing_quotas
+    set business_date = v_business_date,
+        daily_count = 0,
+        updated_at = now()
+    where seller_id = p_seller_id
+    returning * into strict v_quota;
+  end if;
+
+  if v_quota.lifetime_count >= 20000 then
+    perform api.raise_business_error(
+      'MARKET_LIFETIME_LISTING_LIMIT',
+      '账号累计上架次数已达上限'
+    );
+  end if;
+  if v_quota.daily_count >= 200 then
+    perform api.raise_business_error(
+      'MARKET_DAILY_LISTING_LIMIT',
+      '今日上架次数已用完'
+    );
+  end if;
+end;
+$$;
+
 create table market.listings (
   id uuid primary key default extensions.gen_random_uuid(),
   seller_id uuid not null references identity.users(id) on delete cascade,
@@ -9335,6 +9387,30 @@ create table market.listings (
 create index listings_fifo_idx on market.listings (template_id, created_at, id) where status = 'active' and remaining > 0;
 create index listings_seller_active_idx on market.listings (seller_id, template_id, created_at) where status = 'active';
 create index listings_operation_idx on market.listings (operation_id);
+
+create or replace function market.consume_listing_quota()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+begin
+  perform market.lock_listing_quota(new.seller_id);
+  update market.seller_listing_quotas
+  set daily_count = daily_count + 1,
+      lifetime_count = lifetime_count + 1,
+      updated_at = now()
+  where seller_id = new.seller_id;
+  if not found then
+    raise exception using errcode = '23514', message = 'MARKET_LISTING_QUOTA_MISSING';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger listings_quota_consume
+before insert on market.listings
+for each row execute function market.consume_listing_quota();
 
 create table market.seller_template_supply (
   seller_id uuid not null references identity.users(id) on delete cascade,
@@ -9663,7 +9739,17 @@ set search_path = ''
 as $$
 declare
   v_user_id uuid := api.session_user(p_session_id);
+  v_business_date date := identity.utc_day();
+  v_daily_used integer;
+  v_lifetime_used integer;
 begin
+  select
+    coalesce(max(case when quota.business_date = v_business_date then quota.daily_count else 0 end), 0),
+    coalesce(max(quota.lifetime_count), 0)
+  into v_daily_used, v_lifetime_used
+  from market.seller_listing_quotas quota
+  where quota.seller_id = v_user_id;
+
   return jsonb_build_object(
     'templates', coalesce((
       select jsonb_agg(jsonb_build_object(
@@ -9695,6 +9781,15 @@ begin
       from user_items item
     ), '[]'::jsonb),
     'vip', vip.status_json(v_user_id),
+    'listing_quota', jsonb_build_object(
+      'business_date', v_business_date,
+      'daily_used', v_daily_used,
+      'daily_limit', 200,
+      'daily_remaining', 200 - v_daily_used,
+      'lifetime_used', v_lifetime_used,
+      'lifetime_limit', 20000,
+      'lifetime_remaining', 20000 - v_lifetime_used
+    ),
     'max_active_templates', 10,
     'fee_bps', 500,
     'vip_rebate_bps', 2000
@@ -9838,6 +9933,7 @@ begin
   v_replay := operations.replay_if_finished(v_operation);
   if v_replay is not null then return v_replay; end if;
   v_user_id := v_operation.user_id;
+  perform market.lock_listing_quota(v_user_id);
   begin
     select * into v_template from catalog.templates where id = p_template_id;
     if v_template.id is null then perform api.raise_business_error('TEMPLATE_NOT_FOUND', '藏品模板不存在'); end if;

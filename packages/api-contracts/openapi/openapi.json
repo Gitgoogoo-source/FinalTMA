@@ -414,6 +414,8 @@
                                                       "INVENTORY_RESERVED",
                                                       "JOB_NOT_FOUND",
                                                       "MARKET_ACTIVE_TEMPLATE_LIMIT",
+                                                      "MARKET_DAILY_LISTING_LIMIT",
+                                                      "MARKET_LIFETIME_LISTING_LIMIT",
                                                       "MARKET_STOCK_INSUFFICIENT",
                                                       "METHOD_NOT_ALLOWED",
                                                       "MINT_ALREADY_ACTIVE",
@@ -1599,6 +1601,8 @@
                                           "INVENTORY_RESERVED",
                                           "JOB_NOT_FOUND",
                                           "MARKET_ACTIVE_TEMPLATE_LIMIT",
+                                          "MARKET_DAILY_LISTING_LIMIT",
+                                          "MARKET_LIFETIME_LISTING_LIMIT",
                                           "MARKET_STOCK_INSUFFICIENT",
                                           "METHOD_NOT_ALLOWED",
                                           "MINT_ALREADY_ACTIVE",
@@ -9666,6 +9670,50 @@
                           ],
                           "additionalProperties": false
                         },
+                        "listing_quota": {
+                          "type": "object",
+                          "properties": {
+                            "business_date": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            },
+                            "daily_used": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 200
+                            },
+                            "daily_limit": { "type": "number", "const": 200 },
+                            "daily_remaining": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 200
+                            },
+                            "lifetime_used": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 20000
+                            },
+                            "lifetime_limit": {
+                              "type": "number",
+                              "const": 20000
+                            },
+                            "lifetime_remaining": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 20000
+                            }
+                          },
+                          "required": [
+                            "business_date",
+                            "daily_used",
+                            "daily_limit",
+                            "daily_remaining",
+                            "lifetime_used",
+                            "lifetime_limit",
+                            "lifetime_remaining"
+                          ],
+                          "additionalProperties": false
+                        },
                         "max_active_templates": {
                           "type": "number",
                           "const": 10
@@ -9677,6 +9725,7 @@
                         "templates",
                         "sellable_items",
                         "vip",
+                        "listing_quota",
                         "max_active_templates",
                         "fee_bps",
                         "vip_rebate_bps"
@@ -10614,7 +10663,7 @@
             }
           },
           "409": {
-            "description": "Errors: ENTRY_HANDOFF_PENDING, MARKET_ACTIVE_TEMPLATE_LIMIT, INSUFFICIENT_INVENTORY, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, MARKET_ACTIVE_TEMPLATE_LIMIT, MARKET_DAILY_LISTING_LIMIT, MARKET_LIFETIME_LISTING_LIMIT, INSUFFICIENT_INVENTORY, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -10690,6 +10739,8 @@
           "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "MARKET_ACTIVE_TEMPLATE_LIMIT",
+          "MARKET_DAILY_LISTING_LIMIT",
+          "MARKET_LIFETIME_LISTING_LIMIT",
           "INSUFFICIENT_INVENTORY",
           "TEMPLATE_NOT_FOUND",
           "IDEMPOTENCY_KEY_REUSED"
@@ -10803,6 +10854,20 @@
           "MARKET_ACTIVE_TEMPLATE_LIMIT": {
             "status": 409,
             "message": "最多同时出售 10 种藏品，请先售罄或下架一种藏品",
+            "retryable": false,
+            "refreshScope": "inventory",
+            "recoveryAction": "refresh"
+          },
+          "MARKET_DAILY_LISTING_LIMIT": {
+            "status": 409,
+            "message": "今日上架次数已用完",
+            "retryable": false,
+            "refreshScope": "inventory",
+            "recoveryAction": "refresh"
+          },
+          "MARKET_LIFETIME_LISTING_LIMIT": {
+            "status": 409,
+            "message": "账号累计上架次数已达上限",
             "retryable": false,
             "refreshScope": "inventory",
             "recoveryAction": "refresh"
@@ -35166,6 +35231,8 @@
                                       "INVENTORY_RESERVED",
                                       "JOB_NOT_FOUND",
                                       "MARKET_ACTIVE_TEMPLATE_LIMIT",
+                                      "MARKET_DAILY_LISTING_LIMIT",
+                                      "MARKET_LIFETIME_LISTING_LIMIT",
                                       "MARKET_STOCK_INSUFFICIENT",
                                       "METHOD_NOT_ALLOWED",
                                       "MINT_ALREADY_ACTIVE",
@@ -35571,6 +35638,8 @@
                                 "INVENTORY_RESERVED",
                                 "JOB_NOT_FOUND",
                                 "MARKET_ACTIVE_TEMPLATE_LIMIT",
+                                "MARKET_DAILY_LISTING_LIMIT",
+                                "MARKET_LIFETIME_LISTING_LIMIT",
                                 "MARKET_STOCK_INSUFFICIENT",
                                 "METHOD_NOT_ALLOWED",
                                 "MINT_ALREADY_ACTIVE",
@@ -37950,6 +38019,8 @@
                   "INVENTORY_RESERVED",
                   "JOB_NOT_FOUND",
                   "MARKET_ACTIVE_TEMPLATE_LIMIT",
+                  "MARKET_DAILY_LISTING_LIMIT",
+                  "MARKET_LIFETIME_LISTING_LIMIT",
                   "MARKET_STOCK_INSUFFICIENT",
                   "METHOD_NOT_ALLOWED",
                   "MINT_ALREADY_ACTIVE",

@@ -68,6 +68,7 @@ REQUIRED_PATHS = (
     "docs/architecture/adr/ADR-040-first-screen-runtime-boundary.md",
     "docs/architecture/adr/ADR-041-market-transactional-supply-read-model.md",
     "docs/architecture/adr/ADR-042-catalog-pointer-immutable-release.md",
+    "docs/architecture/adr/ADR-060-market-listing-quota.md",
     "docs/architecture/adr/ADR-043-adaptive-page-module-warmup.md",
     "docs/architecture/adr/ADR-045-telegram-identity-initial-and-profile-photo-minimization.md",
     "docs/architecture/adr/ADR-046-first-screen-direct-dependency-and-native-navigation.md",
@@ -2212,6 +2213,15 @@ def verify_market_transactional_supply_read_model() -> None:
         "lock table identity.users in share mode",
         "lock table market.listings in share mode",
         "revoke execute on function market.rebuild_supply() from public, anon, authenticated, service_role",
+        "create table market.seller_listing_quotas",
+        "daily_count integer not null default 0 check (daily_count between 0 and 200)",
+        "lifetime_count integer not null default 0 check (lifetime_count between 0 and 20000)",
+        "check (daily_count <= lifetime_count)",
+        "create or replace function market.lock_listing_quota(p_seller_id uuid)",
+        "create or replace function market.consume_listing_quota()",
+        "create trigger listings_quota_consume",
+        "before insert on market.listings",
+        "set daily_count = daily_count + 1,\n      lifetime_count = lifetime_count + 1",
     )
     missing = [fragment for fragment in required_sql if fragment not in sql]
     if missing:
@@ -2276,7 +2286,68 @@ def verify_market_transactional_supply_read_model() -> None:
     if missing:
         raise SystemExit(f"Market template limit must use seller supply rows: {missing}")
 
+    lock_match = re.search(
+        r"create\s+or\s+replace\s+function\s+market\.lock_listing_quota\s*\(.*?\n\$\$;",
+        sql,
+        re.DOTALL,
+    )
+    if lock_match is None:
+        raise SystemExit("Market listing quota lock function is missing")
+    lock_quota = lock_match.group(0)
+    quota_required = (
+        "v_business_date date := identity.utc_day()",
+        "for update",
+        "if v_quota.lifetime_count >= 20000 then",
+        "'market_lifetime_listing_limit'",
+        "if v_quota.daily_count >= 200 then",
+        "'market_daily_listing_limit'",
+    )
+    missing = [fragment for fragment in quota_required if fragment not in lock_quota]
+    if missing:
+        raise SystemExit(f"Market listing quota lock is incomplete: {missing}")
+    if lock_quota.index("market_lifetime_listing_limit") > lock_quota.index(
+        "market_daily_listing_limit"
+    ):
+        raise SystemExit("Market lifetime listing limit must take precedence")
+    replay = create_listing.index("operations.replay_if_finished")
+    quota_lock = create_listing.index("perform market.lock_listing_quota(v_user_id)")
+    business_block = create_listing.index("\n  begin\n", quota_lock)
+    if not replay < quota_lock < business_block:
+        raise SystemExit(
+            "Market listing quota rejection must follow replay and precede the business exception block"
+        )
+    if "delete from market.seller_listing_quotas" in sql:
+        raise SystemExit("Market lifetime listing quota cannot be deleted by business SQL")
+
+    bootstrap_quota_required = (
+        "'listing_quota', jsonb_build_object(",
+        "'business_date', v_business_date",
+        "'daily_used', v_daily_used",
+        "'daily_limit', 200",
+        "'daily_remaining', 200 - v_daily_used",
+        "'lifetime_used', v_lifetime_used",
+        "'lifetime_limit', 20000",
+        "'lifetime_remaining', 20000 - v_lifetime_used",
+    )
+    missing = [
+        fragment
+        for fragment in bootstrap_quota_required
+        if fragment not in read_blocks["market_bootstrap"]
+    ]
+    if missing:
+        raise SystemExit(f"Market bootstrap quota contract is incomplete: {missing}")
+
     contract = MARKET_CONTRACT.read_text(encoding="utf-8")
+    contract_quota_required = (
+        "listing_quota: listingQuotaSchema",
+        "daily_limit: z.literal(200)",
+        "lifetime_limit: z.literal(20_000)",
+        '"MARKET_DAILY_LISTING_LIMIT"',
+        '"MARKET_LIFETIME_LISTING_LIMIT"',
+    )
+    missing = [fragment for fragment in contract_quota_required if fragment not in contract]
+    if missing:
+        raise SystemExit(f"Market listing quota API contract is incomplete: {missing}")
     removed_contract_fields = (
         "sold_quantity",
         "estimated_gross",
@@ -2291,6 +2362,40 @@ def verify_market_transactional_supply_read_model() -> None:
         raise SystemExit(f"Market management contract restored removed fields: {remaining}")
 
     view = MARKET_VIEW.read_text(encoding="utf-8")
+    quota_view_required = (
+        "今日剩余",
+        "listingQuota.daily_remaining",
+        "累计",
+        "listingQuota.lifetime_used",
+        "20,000",
+        "Boolean(quotaLimitMessage)",
+        "nextUtcDay",
+        "refetchSellable()",
+    )
+    missing = [fragment for fragment in quota_view_required if fragment not in view]
+    if missing:
+        raise SystemExit(f"Market listing quota UI is incomplete: {missing}")
+
+    errors = (CONTRACT_ROOT / "common/errors.ts").read_text(encoding="utf-8")
+    runtime = OPERATION_REGISTRY_RUNTIME_PROVIDER.read_text(encoding="utf-8")
+    for code, message in (
+        ("MARKET_DAILY_LISTING_LIMIT", "今日上架次数已用完"),
+        ("MARKET_LIFETIME_LISTING_LIMIT", "账号累计上架次数已达上限"),
+    ):
+        if code not in errors or message not in errors or code not in runtime:
+            raise SystemExit(f"Market listing quota player error is incomplete: {code}")
+
+    product = (ROOT / "docs/product/功能说明文档.md").read_text(encoding="utf-8")
+    if "不设置每日上架次数和账号生命周期上架次数" in product:
+        raise SystemExit("Retired unlimited market listing rule is still documented")
+    product_required = (
+        "每个账号在一个 UTC+0 自然日内最多成功上架 200 次",
+        "每个账号在整个账号生命周期内最多成功上架 20,000 次",
+        "今日剩余 N / 200 · 累计 M / 20,000",
+    )
+    missing = [fragment for fragment in product_required if fragment not in product]
+    if missing:
+        raise SystemExit(f"Market listing quota product rule is incomplete: {missing}")
     forbidden_management_ui = (
         "market-listing-summary",
         "item.sold_quantity",

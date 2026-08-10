@@ -8,6 +8,7 @@ import {
   petThumbnailUrlSchema,
   raritySchema,
   timestampSchema,
+  utcDateSchema,
   uuidSchema,
 } from "../../common/schemas.ts";
 import { inventoryItemSchema } from "../inventory/models.ts";
@@ -73,6 +74,19 @@ const tradeDetailSchema = z
     fee: z.number().int().min(0),
   })
   .strict();
+const listingQuotaSchema = z
+  .object({
+    business_date: utcDateSchema,
+    daily_used: z.number().int().min(0).max(200),
+    daily_limit: z.literal(200),
+    daily_remaining: z.number().int().min(0).max(200),
+    lifetime_used: z.number().int().min(0).max(20_000),
+    lifetime_limit: z.literal(20_000),
+    lifetime_remaining: z.number().int().min(0).max(20_000),
+  })
+  .strict()
+  .refine((quota) => quota.daily_used + quota.daily_remaining === 200)
+  .refine((quota) => quota.lifetime_used + quota.lifetime_remaining === 20_000);
 
 export const marketRoutes = [
   defineRoute({
@@ -92,6 +106,7 @@ export const marketRoutes = [
           }),
         ),
         vip: vipStatusSchema,
+        listing_quota: listingQuotaSchema,
         max_active_templates: z.literal(10),
         fee_bps: z.literal(500),
         vip_rebate_bps: z.literal(2000),
@@ -147,6 +162,8 @@ export const marketRoutes = [
     output: createdListingSchema,
     errors: [
       "MARKET_ACTIVE_TEMPLATE_LIMIT",
+      "MARKET_DAILY_LISTING_LIMIT",
+      "MARKET_LIFETIME_LISTING_LIMIT",
       "INSUFFICIENT_INVENTORY",
       "TEMPLATE_NOT_FOUND",
       "IDEMPOTENCY_KEY_REUSED",

@@ -6,7 +6,7 @@ Battle 阶段化结构日志只接受 [ADR-028](adr/ADR-028-battle-request-obser
 
 Data API 只暴露 `api` schema。安全迁移撤销 `PUBLIC`、`anon`、`authenticated` 对内部 schema、表、视图、序列和函数的权限，也撤销 `service_role` 对内部对象的直接权限；`inventory.quantity_read_model` 与 `inventory.item_read_model` 额外使用 `security_invoker = true`，仍不能被非 owner 角色直接读取。Functions 的 `service_role` 只执行 `api` schema 中的 SECURITY DEFINER RPC。
 
-所有 SECURITY DEFINER 函数使用空 `search_path` 和完全限定对象名。RLS 在内部表上启用且不创建玩家访问策略，只作为外围拒绝层；业务授权全部由 Functions 与 RPC 显式完成。operation 准入使用 UUIDv7、数据库新鲜度和用户事务锁：旧 key 回放先于配额，新 key 才进入 60/60 秒、1000/24 小时、100 失败/24 小时和 20 个未决上限；Battle 继续使用独立限流。无业务引用的终态按 7/37 天删除，被业务引用的终态在 30 天后只保留最小锚点，删除保护清单必须覆盖声明式 schema 的全部 operation 外键。
+所有 SECURITY DEFINER 函数使用空 `search_path` 和完全限定对象名。RLS 在内部表上启用且不创建玩家访问策略，只作为外围拒绝层；业务授权全部由 Functions 与 RPC 显式完成。operation 准入使用 UUIDv7、数据库新鲜度和用户事务锁：旧 key 回放先于配额，新 key 才进入 60/60 秒、1000/24 小时、100 失败/24 小时和 20 个未决上限；Battle 继续使用独立限流。市场新上架在旧 key 回放后增加独立的用户配额行锁，UTC 每日最多成功 200 次、账号生命周期最多成功 20,000 次；超限发生在业务异常捕获外并回滚新 operation，最终成功计数由 `market.listings` 的 BEFORE INSERT trigger 原子消耗。`seller_listing_quotas`、锁定函数和 trigger helper 都位于非暴露 `market` schema，应用角色没有直接权限。无业务引用的终态按 7/37 天删除，被业务引用的终态在 30 天后只保留最小锚点，删除保护清单必须覆盖声明式 schema 的全部 operation 外键。
 
 `admin` schema 不属于 Exposed schemas，也不存在对应应用路由。受控 Battle 验收函数使用 `SECURITY INVOKER`、空 `search_path`、owner membership 复核和显式全角色撤权；管理表启用 RLS且无应用策略。迁移不写 project ref、环境身份或 enable 记录。数据库 owner 必须先绑定不可改写的环境/project ref，再写入同值、明确启用、最长 24 小时的门禁；生产身份不能启用。审计只保存内部 UUID、有序 payload hash、不可逆 run key、前后聚合和结果，不保存 Telegram ID、用户名、`initData`、session、token 或其他凭据。
 

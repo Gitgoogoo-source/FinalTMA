@@ -156,6 +156,8 @@ const playerFacingMarketListingErrorCodes = new Set([
   "ACCOUNT_RESTRICTED",
   "INSUFFICIENT_INVENTORY",
   "MARKET_ACTIVE_TEMPLATE_LIMIT",
+  "MARKET_DAILY_LISTING_LIMIT",
+  "MARKET_LIFETIME_LISTING_LIMIT",
   "TEMPLATE_NOT_FOUND",
 ]);
 const playerFacingMarketPurchaseErrorCodes = new Set([

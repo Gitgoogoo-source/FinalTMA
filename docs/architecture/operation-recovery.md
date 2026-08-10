@@ -6,7 +6,7 @@
 
 `operations.operations.result` 只保存业务字段和模板 ID，不保存宠物图片 URL。`operations.operation_json` 是原命令响应、幂等回放和恢复读取的统一展示入口：对开盒、进化和市场上架成功结果按模板 ID 注入当前资源批次 URL。资源切换不主动通知已运行前端；已经显示的内存结果不重写，新请求或恢复读取按当时当前批次返回。
 
-`market.create_listing` 在 `confirming`、`submitting`、`pending`、`unknown` 阶段不激活全局操作状态弹窗，只由出售按钮显示“出售中”并锁定重复提交；`pending`、`unknown` 在当前前台运行期自动查询原 operation。服务端返回成功后继续保持按钮状态，先完成该命令声明的权威 refresh scope；只有出售、管理、购买和藏品状态已回正后，才进入 `succeeded` 并打开专用“上架成功”弹窗。该弹窗只复用转盘结果弹窗的外框、遮罩和确认按钮共享样式，不复用动画、背景光效、粒子或奖品布局，也不展示服务器、请求和 operation ID。当前运行期明确失败时恢复按钮并使用专用玩家反馈；离开前台后恢复到终态时仍按统一规则刷新权威状态并静默清除，不恢复旧结果弹窗。
+`market.create_listing` 在 `confirming`、`submitting`、`pending`、`unknown` 阶段不激活全局操作状态弹窗，只由出售按钮显示“出售中”并锁定重复提交；`pending`、`unknown` 在当前前台运行期自动查询原 operation。服务端返回成功后继续保持按钮状态，先完成该命令声明的权威 refresh scope；只有出售、管理、购买、上架配额和藏品状态已回正后，才进入 `succeeded` 并打开专用“上架成功”弹窗。该弹窗只复用转盘结果弹窗的外框、遮罩和确认按钮共享样式，不复用动画、背景光效、粒子或奖品布局，也不展示服务器、请求和 operation ID。每日或账号生命周期配额拒绝发生在新 operation 落库前，前端只清除本次内存提交状态、显示固定业务反馈并按 error refresh scope 重新读取 bootstrap；不得查询一个数据库中不存在的 operation。当前运行期其他明确失败恢复按钮并使用专用玩家反馈；离开前台后恢复到终态时仍按统一规则刷新权威状态并静默清除，不恢复旧结果弹窗。
 
 `market.purchase` 在 `confirming`、`submitting`、`pending`、`unknown` 阶段同样不激活全局操作状态弹窗。购买确认弹窗保持打开，数量调整、取消和确认按钮锁定，确认按钮原位置只显示“购买中”；同一 `use_case` 的重复提交继续由操作注册中心和原幂等键阻止。同步响应、`pending` 或网络中断后的 `unknown` 都必须先完成原 operation 裁决与路由 refresh scope，才从未决阶段进入终态。当前前台运行期明确成功且输出通过 `market.purchase` Schema 校验时，关闭确认弹窗并显示专用“购买成功”弹窗，内容仅为“购买成功”“已成功购买 N 个藏品名称”和“完成”；明确失败使用不含技术信息的专用失败反馈。两种结果都不展示服务器、请求或 operation ID。页面隐藏、刷新、关闭或重新进入后不恢复旧购买结果弹窗，只查询原 operation、回正权威状态并静默清除操作锁。
 

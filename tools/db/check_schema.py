@@ -925,6 +925,58 @@ def verify_admin_fixture_contract() -> None:
         )
 
 
+def verify_market_listing_quota_contract() -> None:
+    market_sql = (SCHEMAS / "50_market.sql").read_text(encoding="utf-8").lower()
+    required = (
+        "create table market.seller_listing_quotas",
+        "daily_count integer not null default 0 check (daily_count between 0 and 200)",
+        "lifetime_count integer not null default 0 check (lifetime_count between 0 and 20000)",
+        "check (daily_count <= lifetime_count)",
+        "create or replace function market.lock_listing_quota(p_seller_id uuid)",
+        "if v_quota.lifetime_count >= 20000 then",
+        "'market_lifetime_listing_limit'",
+        "if v_quota.daily_count >= 200 then",
+        "'market_daily_listing_limit'",
+        "create or replace function market.consume_listing_quota()",
+        "set daily_count = daily_count + 1,\n      lifetime_count = lifetime_count + 1",
+        "create trigger listings_quota_consume\nbefore insert on market.listings",
+        "'listing_quota', jsonb_build_object(",
+        "'daily_limit', 200",
+        "'lifetime_limit', 20000",
+    )
+    missing = [fragment for fragment in required if fragment not in market_sql]
+    if missing:
+        raise SystemExit(f"Market listing quota contract is incomplete: {missing}")
+
+    lock_match = re.search(
+        r"create\s+or\s+replace\s+function\s+market\.lock_listing_quota\s*\(.*?\n\$\$;",
+        market_sql,
+        re.DOTALL,
+    )
+    create_match = re.search(
+        r"create\s+or\s+replace\s+function\s+api\.market_create_listing\s*\(.*?\n\$\$;",
+        market_sql,
+        re.DOTALL,
+    )
+    if lock_match is None or create_match is None:
+        raise SystemExit("Market listing quota functions are missing")
+    lock_block = lock_match.group(0)
+    if lock_block.index("market_lifetime_listing_limit") > lock_block.index(
+        "market_daily_listing_limit"
+    ):
+        raise SystemExit("Market lifetime listing limit must take precedence")
+    create_block = create_match.group(0)
+    replay = create_block.index("operations.replay_if_finished")
+    quota = create_block.index("perform market.lock_listing_quota(v_user_id)")
+    business_block = create_block.index("\n  begin\n", quota)
+    if not replay < quota < business_block:
+        raise SystemExit(
+            "Market quota rejection must follow replay and precede the business exception block"
+        )
+    if "delete from market.seller_listing_quotas" in market_sql:
+        raise SystemExit("Market lifetime listing quota cannot be deleted by business SQL")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--write-baseline", action="store_true")
@@ -947,6 +999,7 @@ def main() -> None:
     verify_database_error_codes()
     verify_database_boundaries()
     verify_inventory_read_model()
+    verify_market_listing_quota_contract()
     verify_identity_login_contract()
     verify_entry_handoff_contract()
     verify_player_rpc_session_authority()

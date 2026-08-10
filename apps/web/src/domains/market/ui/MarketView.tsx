@@ -72,6 +72,8 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
     tab === "buy" && Boolean(purchaseTarget),
   );
   const sellable = useApiQuery("market.bootstrap", {}, tab === "sell");
+  const sellableBusinessDate = sellable.data?.listing_quota.business_date;
+  const refetchSellable = sellable.refetch;
   const {
     query: mine,
     listings: managedListings,
@@ -104,6 +106,20 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
   );
   const blocked =
     purchaseInProgress || listingInProgress || delistingInProgress;
+  useEffect(() => {
+    if (!pageActive || tab !== "sell" || !sellableBusinessDate) return;
+    const now = new Date();
+    const nextUtcDay = Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate() + 1,
+    );
+    const timeout = window.setTimeout(
+      () => void refetchSellable(),
+      Math.max(1_000, nextUtcDay - now.getTime() + 1_000),
+    );
+    return () => window.clearTimeout(timeout);
+  }, [pageActive, refetchSellable, sellableBusinessDate, tab]);
   const purchaseTemplates = (listings.data?.templates ?? [])
     .map((item) => {
       const current =
@@ -232,6 +248,13 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
       return;
     }
     if (tab === "sell") {
+      const listingQuota = sellable.data?.listing_quota;
+      if (
+        listingQuota &&
+        (listingQuota.lifetime_remaining <= 0 ||
+          listingQuota.daily_remaining <= 0)
+      )
+        return;
       const limit = sellable.data?.max_active_templates ?? 10;
       if (
         mine.data &&
@@ -554,6 +577,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
               initialQuantity={requestedQuantity}
               blocked={blocked}
               listingInProgress={listingInProgress}
+              listingQuota={sellable.data?.listing_quota}
               feeBps={sellable.data?.fee_bps ?? 500}
               vipActive={sellable.data?.vip.active ?? false}
               vipRebateBps={sellable.data?.vip_rebate_bps ?? 2000}
@@ -778,6 +802,16 @@ type MarketViewItem = {
   listed?: number;
 };
 
+type MarketListingQuota = {
+  business_date: string;
+  daily_used: number;
+  daily_limit: 200;
+  daily_remaining: number;
+  lifetime_used: number;
+  lifetime_limit: 20_000;
+  lifetime_remaining: number;
+};
+
 function MarketListingCard({
   item,
   blocked,
@@ -888,6 +922,7 @@ function MarketSellWorkbench({
   initialQuantity,
   blocked,
   listingInProgress,
+  listingQuota,
   feeBps,
   vipActive,
   vipRebateBps,
@@ -900,6 +935,7 @@ function MarketSellWorkbench({
   initialQuantity: number;
   blocked: boolean;
   listingInProgress: boolean;
+  listingQuota: MarketListingQuota | undefined;
   feeBps: number;
   vipActive: boolean;
   vipRebateBps: number;
@@ -917,6 +953,12 @@ function MarketSellWorkbench({
   const net = gross - fee;
   const vipRebate = vipActive ? Math.floor((fee * vipRebateBps) / 10_000) : 0;
   const finalNet = net + vipRebate;
+  const quotaLimitMessage =
+    listingQuota?.lifetime_remaining === 0
+      ? "账号累计上架次数已达上限"
+      : listingQuota?.daily_remaining === 0
+        ? "今日上架次数已用完"
+        : null;
   return (
     <div className="market-sell-workbench">
       <Card className="market-sell-hero" aria-label="当前选中的出售藏品">
@@ -1040,9 +1082,31 @@ function MarketSellWorkbench({
           </span>
           <small>实际手续费和返还按后续每次真实成交明细计算</small>
         </div>
+        {listingQuota && (
+          <div
+            className={`market-sell-quota${quotaLimitMessage ? " is-exhausted" : ""}`}
+            role={quotaLimitMessage ? "status" : undefined}
+            aria-live="polite"
+          >
+            <span>
+              今日剩余 <strong>{listingQuota.daily_remaining}</strong> / 200
+            </span>
+            <i aria-hidden="true">·</i>
+            <span>
+              累计 <strong>{formatKCoin(listingQuota.lifetime_used)}</strong> /
+              20,000
+            </span>
+            {quotaLimitMessage && <small>{quotaLimitMessage}</small>}
+          </div>
+        )}
         <Button
           className={`market-sell-confirm${listingInProgress ? " is-pending" : ""}`}
-          disabled={blocked || !imageReady || available < 1}
+          disabled={
+            blocked ||
+            !imageReady ||
+            available < 1 ||
+            Boolean(quotaLimitMessage)
+          }
           aria-busy={listingInProgress}
           aria-live="polite"
           onPointerDown={onPrepare}

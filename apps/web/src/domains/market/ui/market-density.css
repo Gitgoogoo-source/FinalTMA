@@ -685,6 +685,19 @@
     line-height: 1.2;
   }
 
+  .app-shell .market-page-sell .market-sell-quota {
+    gap: clamp(3px, 0.7dvh, 5px);
+    font-size: clamp(6px, 0.9dvh, 8px);
+  }
+
+  .app-shell .market-page-sell .market-sell-quota strong {
+    font-size: clamp(7px, 1.1dvh, 10px);
+  }
+
+  .app-shell .market-page-sell .market-sell-quota > small {
+    font-size: clamp(6px, 0.9dvh, 8px);
+  }
+
   .app-shell .market-page-sell .market-sell-confirm.button {
     min-height: clamp(34px, 5dvh, 44px);
     padding: clamp(5px, 0.9dvh, 7px) clamp(8px, 1.5dvh, 12px);

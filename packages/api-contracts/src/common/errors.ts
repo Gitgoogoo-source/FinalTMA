@@ -266,6 +266,20 @@ export const errorRegistry = {
     "inventory",
     "refresh",
   ),
+  MARKET_DAILY_LISTING_LIMIT: error(
+    409,
+    "今日上架次数已用完",
+    false,
+    "inventory",
+    "refresh",
+  ),
+  MARKET_LIFETIME_LISTING_LIMIT: error(
+    409,
+    "账号累计上架次数已达上限",
+    false,
+    "inventory",
+    "refresh",
+  ),
   MARKET_STOCK_INSUFFICIENT: error(
     409,
     "市场可成交数量不足",
