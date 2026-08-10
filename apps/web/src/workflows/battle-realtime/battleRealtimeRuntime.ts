@@ -19,6 +19,12 @@ export type BattleRealtimeRuntimeOptions = {
   onStatus(status: BattleRealtimeRuntimeStatus): void;
 };
 
+type BattleRealtimeDiagnosticStage =
+  | "token_refresh_invalid"
+  | "token_refresh_failed"
+  | "connection_unavailable"
+  | "channel_attach_failed";
+
 export function connectBattleRealtimeRuntime({
   tokenDetails,
   authorizedChannels,
@@ -39,6 +45,7 @@ export function connectBattleRealtimeRuntime({
           if (disposed) return;
           if (!validateRefreshedToken(refreshed)) {
             onStatus("offline");
+            reportBattleRealtimeDiagnostic("token_refresh_invalid");
             callback("BATTLE_REALTIME_CAPABILITY_INVALID", null);
             return;
           }
@@ -46,6 +53,7 @@ export function connectBattleRealtimeRuntime({
         })
         .catch((cause: unknown) => {
           if (disposed) return;
+          reportBattleRealtimeDiagnostic("token_refresh_failed", cause);
           callback(
             cause instanceof Error
               ? cause.message
@@ -66,9 +74,14 @@ export function connectBattleRealtimeRuntime({
       change.current === "disconnected" ||
       change.current === "suspended" ||
       change.current === "failed"
-    )
+    ) {
+      reportBattleRealtimeDiagnostic(
+        "connection_unavailable",
+        change.reason,
+        change.current,
+      );
       onStatus("offline");
-    else if (
+    } else if (
       change.current === "initialized" ||
       change.current === "connecting"
     )
@@ -79,8 +92,11 @@ export function connectBattleRealtimeRuntime({
   for (const name of authorizedChannels) {
     const channel = client.channels.get(name);
     channels.push(channel);
-    void channel.subscribe(handleMessage).catch(() => {
-      if (!disposed) onStatus("offline");
+    void channel.subscribe(handleMessage).catch((cause: unknown) => {
+      if (!disposed) {
+        reportBattleRealtimeDiagnostic("channel_attach_failed", cause);
+        onStatus("offline");
+      }
     });
   }
   client.connect();
@@ -100,4 +116,28 @@ export function connectBattleRealtimeRuntime({
       client.close();
     },
   };
+}
+
+function reportBattleRealtimeDiagnostic(
+  stage: BattleRealtimeDiagnosticStage,
+  cause?: unknown,
+  connectionState?: Ably.ConnectionState,
+): void {
+  const error = isAblyErrorShape(cause) ? cause : null;
+  console.warn("battle_realtime_unavailable", {
+    stage,
+    connection_state: connectionState ?? null,
+    code: safeDiagnosticInteger(error?.code),
+    status_code: safeDiagnosticInteger(error?.statusCode),
+  });
+}
+
+function isAblyErrorShape(
+  value: unknown,
+): value is { code?: unknown; statusCode?: unknown } {
+  return typeof value === "object" && value !== null;
+}
+
+function safeDiagnosticInteger(value: unknown): number | null {
+  return Number.isSafeInteger(value) ? (value as number) : null;
 }

@@ -136,3 +136,4 @@ TMA 首屏同步闭包固定为入口、默认开盒页、首屏契约及各自�
 - [转盘有界终态与结果层视口锚定](adr/ADR-052-wheel-animation-bounded-terminal-convergence.md)
 - [Battle Tick 告警自动闭环](adr/ADR-053-battle-tick-alert-lifecycle.md)
 - [Ably 浏览器 CSP 端点白名单](adr/ADR-054-ably-browser-csp-endpoint-allowlist.md)
+- [Battle 实时客户端安全诊断](adr/ADR-055-battle-realtime-client-diagnostics.md)

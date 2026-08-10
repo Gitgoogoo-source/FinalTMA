@@ -394,7 +394,7 @@ export function BattleWaiting({
         </div>
         {realtimeOffline ? (
           <p className="battle-offline-note" role="status">
-            实时通知不可用，页面正按固定 2 秒间隔通过 REST 回正。
+            实时连接暂不可用，正在自动恢复。
           </p>
         ) : null}
         {!publicMatch && shareState ? (
@@ -521,7 +521,7 @@ export function BattleLobby({
       ) : null}
       {realtimeOffline ? (
         <p className="battle-offline-note" role="status">
-          实时通知不可用，页面正按固定 2 秒间隔通过 REST 读取权威房间状态。
+          实时连接暂不可用，正在自动恢复。
         </p>
       ) : null}
       <p className="battle-lobby-authority">
@@ -573,7 +573,7 @@ function BattleCountdownLock({
           <small role="status">{recoveryMessage}</small>
         ) : null}
         {realtimeOffline ? (
-          <small>实时通知暂不可用，数据库倒计时仍会继续</small>
+          <small>实时连接暂不可用，倒计时仍会继续</small>
         ) : null}
       </footer>
     </section>
@@ -743,7 +743,7 @@ export function BattleAccept({
       ) : null}
       {realtimeOffline ? (
         <p className="battle-offline-note" role="status">
-          实时通知不可用，接受页正按固定 2 秒间隔通过 REST 回正。
+          实时连接暂不可用，正在自动恢复。
         </p>
       ) : null}
       {!available ? (
