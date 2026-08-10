@@ -215,7 +215,7 @@
     inset 0 1px 0 #fff;
   overflow: hidden;
 }
-.app-shell .gacha-rarity-previews .catalog-image,
+.app-shell .gacha-rarity-previews .gacha-rarity-image,
 .app-shell .gacha-rarity-previews .image-missing {
   width: 100%;
   height: 100%;

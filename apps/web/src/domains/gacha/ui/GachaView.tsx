@@ -10,14 +10,18 @@ import {
   type ReactNode,
 } from "react";
 
-import { CatalogImage } from "../../../shared/ui/CatalogImage.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
-import { useCatalogQuery } from "../../../platform/query/useCatalogQuery.ts";
 import {
   registerSensitiveStateResetter,
   useSession,
 } from "../../../platform/session/store.ts";
 import { subscribeFreeRareClaimed } from "../../../shared/events/vipDailyBenefits.ts";
+import {
+  gachaDisplayProbabilityByTier,
+  gachaRarityOrder,
+  gachaRarityPresentation,
+  type GachaRarity,
+} from "../../../shared/assets/gachaRarityPresentation.ts";
 import {
   boxArtUrl,
   boxHeroSizes,
@@ -48,7 +52,7 @@ import {
 } from "../../../workflows/operation-recovery/context.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/context.ts";
 type BoxTier = BoxArtTier;
-type Rarity = "common" | "rare" | "epic" | "legendary" | "mythic";
+type Rarity = GachaRarity;
 type GachaViewState = { selectedTier: BoxTier; scrollY: number };
 
 const viewStates = new Map<string, GachaViewState>();
@@ -58,27 +62,10 @@ registerSensitiveStateResetter(() => {
   viewStates.clear();
 });
 
-const rarityLabels = {
-  common: "普通",
-  rare: "稀有",
-  epic: "史诗",
-  legendary: "传说",
-  mythic: "神话",
-} as const;
-const representativeTemplateIds: Record<Rarity, string> = {
-  common: "PET-N-001-1",
-  rare: "PET-N-001-2",
-  epic: "PET-N-001-3",
-  legendary: "PET-A-001-3",
-  mythic: "PET-T-001-3",
-};
-const rarityOrder = ["common", "rare", "epic", "legendary", "mythic"] as const;
-
 const pityLoadError = new Error("保底进度加载失败，请重试");
 
 export function GachaView(): ReactNode {
   const boxes = useApiQuery("gacha.bootstrap");
-  const catalog = useCatalogQuery();
   const identity = useApiQuery("identity.summary");
   const session = useSession();
   const { preload, run } = useOperationCommands();
@@ -94,10 +81,9 @@ export function GachaView(): ReactNode {
     params.get("resume") && isBoxTier(requestedTier) ? requestedTier : null;
   const resumedCount = params.get("count") === "10" ? 10 : 1;
   const remembered = session ? viewStates.get(session.userId) : undefined;
-  const rareBox = boxes.data?.boxes.find((box) => box.tier === "rare");
   const autoSelectRare =
     Number(boxes.data?.entitlements.free_rare_box) > 0 &&
-    (!targetRarity || (rareBox?.rarity_weights[targetRarity] ?? 0) > 0);
+    (!targetRarity || gachaDisplayProbabilityByTier.rare[targetRarity] > 0);
   const [selection, setSelection] = useState(() => ({
     tier: remembered?.selectedTier ?? "rare",
     touched: false,
@@ -118,7 +104,9 @@ export function GachaView(): ReactNode {
   const visibleItems = useMemo(
     () =>
       targetRarity
-        ? items.filter((box) => box.rarity_weights[targetRarity] > 0)
+        ? items.filter(
+            (box) => gachaDisplayProbabilityByTier[box.tier][targetRarity] > 0,
+          )
         : items,
     [items, targetRarity],
   );
@@ -132,10 +120,8 @@ export function GachaView(): ReactNode {
     pageActive &&
     Boolean(session?.generation) &&
     boxes.data !== undefined &&
-    catalog.data !== undefined &&
     identity.data !== undefined &&
     !boxes.isFetching &&
-    !catalog.isFetching &&
     !identity.isFetching &&
     rulesComplete &&
     Boolean(selectedBox && ready[selectedBox.tier]);
@@ -147,7 +133,9 @@ export function GachaView(): ReactNode {
       ? selectedPity
       : null;
   const previewRarities = selectedBox
-    ? rarityOrder.filter((rarity) => selectedBox.rarity_weights[rarity] > 0)
+    ? gachaRarityOrder.filter(
+        (rarity) => gachaDisplayProbabilityByTier[selectedBox.tier][rarity] > 0,
+      )
     : [];
   const pityPercent = validPity
     ? Math.min(100, Math.max(0, (validPity.progress / validPity.limit) * 100))
@@ -177,13 +165,10 @@ export function GachaView(): ReactNode {
     [selectedBox?.tier],
   );
   const handleFreeRareClaimed = useCallback(() => {
-    if (
-      !targetRarity ||
-      items.find((box) => box.tier === "rare")?.rarity_weights[targetRarity]
-    )
+    if (!targetRarity || gachaDisplayProbabilityByTier.rare[targetRarity] > 0)
       selectTier("rare");
     if (requestedTier) setParams({}, { replace: true });
-  }, [items, requestedTier, selectTier, setParams, targetRarity]);
+  }, [requestedTier, selectTier, setParams, targetRarity]);
 
   useEffect(() => {
     if (!pageActive) return;
@@ -264,9 +249,12 @@ export function GachaView(): ReactNode {
       </header>
       {targetRarity && visibleItems.length > 0 && (
         <Card className="gacha-target" role="status">
-          <strong>可产出{rarityLabels[targetRarity]}的盲盒</strong>
+          <strong>
+            可产出{gachaRarityPresentation[targetRarity].label}的盲盒
+          </strong>
           <p>
-            共 {visibleItems.length} 档；下方概率、价格与保底均为当前真实规则。
+            共 {visibleItems.length}{" "}
+            档；下方概率为固定公示，价格与保底按当前规则显示。
           </p>
           <Button className="secondary" onClick={() => setParams({})}>
             查看全部盲盒
@@ -410,28 +398,28 @@ export function GachaView(): ReactNode {
                   }}
                 >
                   {previewRarities.map((rarity) => {
-                    const representative = catalog.data?.templates.find(
-                      (template) =>
-                        template.id === representativeTemplateIds[rarity],
-                    );
+                    const presentation = gachaRarityPresentation[rarity];
                     const probability =
-                      selectedBox.rarity_weights[rarity] / 100;
+                      gachaDisplayProbabilityByTier[selectedBox.tier][rarity];
                     return (
                       <article
                         key={rarity}
                         role="listitem"
-                        aria-label={`${representative?.name ?? rarityLabels[rarity]}，${rarityLabels[rarity]}代表藏品，稀有度出货概率 ${probability}%`}
+                        aria-label={`${presentation.label}稀有度代表图，公示总出货概率 ${probability}%`}
                       >
                         <span className={`preview-art rarity-${rarity}`}>
-                          <CatalogImage
-                            url={representative?.image_thumbnail_url}
-                            alt={representative?.name ?? rarityLabels[rarity]}
-                            variant="thumbnail"
-                            loading="lazy"
+                          <img
+                            className="gacha-rarity-image"
+                            src={presentation.imageSrc}
+                            alt={presentation.imageAlt}
+                            width={256}
+                            height={256}
+                            loading="eager"
+                            decoding="async"
                           />
                         </span>
                         <strong className={`rarity-${rarity}`}>
-                          {rarityLabels[rarity]} {probability}%
+                          {presentation.label} {probability}%
                         </strong>
                       </article>
                     );
@@ -463,7 +451,7 @@ export function GachaView(): ReactNode {
                     <div className="pity-copy">
                       {validPity ? (
                         <strong className="pity-target">
-                          {`还需 ${validPity.limit - validPity.progress} 次，必得${rarityLabels[validPity.target_rarity]}`}
+                          {`还需 ${validPity.limit - validPity.progress} 次，必得${gachaRarityPresentation[validPity.target_rarity].label}`}
                         </strong>
                       ) : !pityFailed ? (
                         <span className="pity-placeholder">保底进度加载中</span>
