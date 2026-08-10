@@ -1,8 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 
-import { z } from "zod";
-
 import type { Gateway, RouteDefinition } from "@pokepets/api-contracts/common";
+import { operationIdSchema } from "@pokepets/api-contracts/common";
 
 import {
   authenticateSessionCredential,
@@ -59,8 +58,8 @@ export function idempotencyKey(
   if (!route.idempotent) return null;
   const value = request.headers.get("idempotency-key");
   if (!value) throw new ApiError(400, "IDEMPOTENCY_KEY_REQUIRED", "缺少幂等键");
-  if (!z.string().uuid().safeParse(value).success)
-    throw new ApiError(400, "IDEMPOTENCY_KEY_INVALID", "幂等键必须是 UUID");
+  if (!operationIdSchema.safeParse(value).success)
+    throw new ApiError(400, "IDEMPOTENCY_KEY_INVALID", "幂等键必须是 UUIDv7");
   return value;
 }
 

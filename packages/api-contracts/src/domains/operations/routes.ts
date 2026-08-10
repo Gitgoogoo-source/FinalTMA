@@ -5,7 +5,7 @@ import { defineRoute } from "../../common/route.ts";
 import {
   identifierSchema,
   nonNegativeBigintStringSchema,
-  uuidSchema,
+  operationIdSchema,
 } from "../../common/schemas.ts";
 
 export const operationRoutes = [
@@ -36,7 +36,7 @@ export const operationRoutes = [
     auth: true,
     idempotent: false,
     allowPendingEntryHandoff: true,
-    input: z.object({ operation_id: uuidSchema }).strict(),
+    input: z.object({ operation_id: operationIdSchema }).strict(),
     output: operationSummarySchema,
     errors: [
       "OPERATION_NOT_FOUND",

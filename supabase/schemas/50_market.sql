@@ -13,6 +13,7 @@ create table market.listings (
 
 create index listings_fifo_idx on market.listings (template_id, created_at, id) where status = 'active' and remaining > 0;
 create index listings_seller_active_idx on market.listings (seller_id, template_id, created_at) where status = 'active';
+create index listings_operation_idx on market.listings (operation_id);
 
 create table market.seller_template_supply (
   seller_id uuid not null references identity.users(id) on delete cascade,

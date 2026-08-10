@@ -4,6 +4,7 @@ import { errorCodes } from "./error-codes.ts";
 import {
   accountStatusSchema,
   nonNegativeIntegerSchema,
+  operationIdSchema,
   operationStatusSchema,
   timestampSchema,
   uuidSchema,
@@ -35,7 +36,7 @@ export const userSchema = z
 
 export const operationSummarySchema = z
   .object({
-    operation_id: uuidSchema,
+    operation_id: operationIdSchema,
     use_case: z.string(),
     status: operationStatusSchema,
     result: z.json().nullable(),

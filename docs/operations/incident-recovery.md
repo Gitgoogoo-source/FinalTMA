@@ -6,9 +6,13 @@
 
 收到 `ENTRY_HANDOFF_PENDING` 时不得放开主页面。核对 `identity.sessions.referral_processed_at`、`identity.entry_candidates` 与当前 `referral.bind` 操作；只查询原邀请操作，确定成功或拒绝后由 RPC 完成交接，不得手工写会话完成时间。
 
+如果用户在候选 `pending` 时已经重认证，必须同时核对被撤销的请求会话与唯一未撤销会话；两者的 `referral_processed_at` 都只能由原绑定 RPC 或其幂等回放补齐。`entry_kind = direct|battle` 不能作为交接完成证据，也不能据此开放业务。
+
 ## 未知操作
 
 禁止重新生成幂等键。使用 `GET /api/operations/:operation_id` 查询原操作；数据库终态与前端临时状态不一致时刷新契约声明的资产、库存、支付或 Mint scope，以数据库结果覆盖。
+
+出现 operation 表增长或准入限流异常时，先核对 `operations.user_admission_counters`、最近 24 小时失败数、当前未决数和 `cleanup-idempotency` 的 `maintenance`/`job_runs.details`。不得手工删除有外键引用、未决、未确认进化或活动支付/Mint operation；恢复清理任务时只重跑原 job，由 UUIDv7 新鲜度和引用保护保证旧命令不重新执行。
 
 封禁事故先确认客户端已切换到新 generation 且 DOM、查询缓存、操作弹窗和导航为空，再按旧 generation 定位迟到请求。禁止通过恢复缓存或重放成功响应复原页面。
 

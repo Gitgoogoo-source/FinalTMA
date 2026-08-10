@@ -7,6 +7,9 @@ create table album.nodes (
 );
 
 create index album_nodes_template_idx on album.nodes (template_id, user_id);
+create index album_nodes_first_operation_idx
+on album.nodes (first_operation_id)
+where first_operation_id is not null;
 
 create table album.rewards (
   user_id uuid not null references identity.users(id) on delete cascade,
@@ -15,6 +18,8 @@ create table album.rewards (
   claimed_at timestamptz not null default now(),
   primary key (user_id, chain_id)
 );
+
+create index album_rewards_operation_idx on album.rewards (operation_id);
 
 create or replace function album.unlock_template(p_user_id uuid, p_template_id text, p_operation_id uuid)
 returns boolean

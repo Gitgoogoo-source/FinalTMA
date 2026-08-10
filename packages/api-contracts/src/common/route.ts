@@ -51,7 +51,11 @@ export function defineRoute<const Route extends RouteDefinition>(
   if (route.auth && !route.allowPendingEntryHandoff)
     errors.push("ENTRY_HANDOFF_PENDING");
   if (route.idempotent) {
-    errors.push("IDEMPOTENCY_KEY_INVALID", "IDEMPOTENCY_KEY_REQUIRED");
+    errors.push(
+      "IDEMPOTENCY_KEY_INVALID",
+      "IDEMPOTENCY_KEY_REQUIRED",
+      "RATE_LIMITED",
+    );
     if (route.id !== "identity.authenticate")
       errors.push("OPERATION_RESULT_EXPIRED");
   }

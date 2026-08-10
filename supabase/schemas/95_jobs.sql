@@ -1,3 +1,30 @@
+create or replace function operations.operation_has_durable_reference(p_operation_id uuid)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select
+    exists (select 1 from economy.ledger where operation_id = p_operation_id)
+    or exists (select 1 from economy.entitlements where operation_id = p_operation_id)
+    or exists (select 1 from expedition.expeditions where operation_id = p_operation_id)
+    or exists (select 1 from wheel.results where operation_id = p_operation_id)
+    or exists (select 1 from battle.rooms where create_operation_id = p_operation_id)
+    or exists (select 1 from battle.participants where join_operation_id = p_operation_id)
+    or exists (select 1 from battle.actions where operation_id = p_operation_id)
+    or exists (select 1 from market.listings where operation_id = p_operation_id)
+    or exists (select 1 from market.trades where operation_id = p_operation_id)
+    or exists (select 1 from payments.orders where operation_id = p_operation_id)
+    or exists (select 1 from vip.claims where operation_id = p_operation_id)
+    or exists (select 1 from tasks.daily_progress where claim_operation_id = p_operation_id)
+    or exists (select 1 from referral.relationships where reward_operation_id = p_operation_id)
+    or exists (select 1 from referral.milestones where operation_id = p_operation_id)
+    or exists (select 1 from album.nodes where first_operation_id = p_operation_id)
+    or exists (select 1 from album.rewards where operation_id = p_operation_id)
+    or exists (select 1 from onchain.mints where operation_id = p_operation_id)
+$$;
+
 create or replace function api.run_job(p_job_name text, p_limit integer default 100)
 returns jsonb
 language plpgsql
@@ -9,8 +36,11 @@ declare
   v_count integer := 0;
   v_added integer := 0;
   v_compacted integer := 0;
+  v_deleted integer := 0;
+  v_auth_deleted integer := 0;
   v_row record;
   v_details jsonb;
+  v_battle_details jsonb;
   v_scan_from timestamptz;
   v_scan_to timestamptz := now();
   v_active_run operations.job_runs%rowtype;
@@ -81,7 +111,6 @@ begin
         and o.status in ('succeeded', 'failed')
         and o.payload_purged_at is null
         and not (o.use_case = 'inventory.evolve' and o.result_acknowledged_at is null)
-        and o.use_case not like 'battle.%'
         and not exists (
           select 1 from payments.orders p
           where p.operation_id = o.id and p.status in ('pending', 'processing', 'paid', 'payment_identity_conflict')
@@ -91,7 +120,7 @@ begin
           where m.operation_id = o.id and m.status in ('reserved', 'submitted', 'unknown')
         )
       order by o.completed_at, o.id
-      limit greatest(1, least(p_limit, 500))
+      limit greatest(1, least(p_limit, 5000))
       for update of o skip locked
     ), purged_wheel_results as (
       delete from wheel.results result
@@ -109,13 +138,41 @@ begin
       returning operation.id
     )
     select count(*)::integer into v_compacted from compacted;
-    v_count := v_compacted;
+
+    with candidates as materialized (
+      select o.id
+      from operations.operations o
+      where o.status in ('succeeded', 'failed')
+        and (
+          (o.status = 'failed' and o.completed_at < now() - interval '7 days')
+          or (o.status = 'succeeded' and o.completed_at < now() - interval '37 days')
+        )
+        and not (o.use_case = 'inventory.evolve' and o.result_acknowledged_at is null)
+        and not operations.operation_has_durable_reference(o.id)
+      order by o.completed_at, o.id
+      limit greatest(1, least(p_limit, 5000))
+      for update of o skip locked
+    ), deleted as (
+      delete from operations.operations operation
+      using candidates candidate
+      where operation.id = candidate.id
+      returning operation.id
+    )
+    select count(*)::integer into v_deleted from deleted;
+
     delete from identity.auth_attempts where attempted_at < now() - interval '1 day';
-    v_details := battle.cleanup_operational_data(greatest(1, least(p_limit, 5000)));
-    v_count := v_count
-      + coalesce((v_details->>'rate_limit_attempts_deleted')::integer, 0)
-      + coalesce((v_details->>'published_outbox_deleted')::integer, 0)
-      + coalesce((v_details->>'tick_runs_deleted')::integer, 0);
+    get diagnostics v_auth_deleted = row_count;
+    v_battle_details := battle.cleanup_operational_data(greatest(1, least(p_limit, 5000)));
+    v_details := jsonb_build_object(
+      'payloads_compacted', v_compacted,
+      'operations_deleted', v_deleted,
+      'auth_attempts_deleted', v_auth_deleted,
+      'battle', v_battle_details
+    );
+    v_count := v_compacted + v_deleted + v_auth_deleted
+      + coalesce((v_battle_details->>'rate_limit_attempts_deleted')::integer, 0)
+      + coalesce((v_battle_details->>'published_outbox_deleted')::integer, 0)
+      + coalesce((v_battle_details->>'tick_runs_deleted')::integer, 0);
   else
     insert into operations.invariant_violations (code, subject, details)
     select 'BALANCE_LEDGER_MISMATCH', b.user_id::text || ':' || b.currency, jsonb_build_object('balance', b.available, 'ledger', coalesce(sum(l.amount), 0))
@@ -216,8 +273,17 @@ begin
     update operations.job_runs set processed_count = v_count, details = jsonb_build_object('phase', 'chain_reconciliation') where id = v_run;
     return jsonb_build_object('job_run_id', v_run, 'job_name', p_job_name, 'status', 'running', 'processed_count', v_count, 'scan_from', v_scan_from, 'scan_to', v_scan_to);
   end if;
-  update operations.job_runs set status = 'succeeded', processed_count = v_count, finished_at = now() where id = v_run;
-  return jsonb_build_object('job_run_id', v_run, 'job_name', p_job_name, 'status', 'succeeded', 'processed_count', v_count, 'scan_from', v_scan_from, 'scan_to', v_scan_to);
+  update operations.job_runs
+  set status = 'succeeded', processed_count = v_count,
+      details = coalesce(v_details, '{}'::jsonb), finished_at = now()
+  where id = v_run;
+  return jsonb_build_object(
+    'job_run_id', v_run, 'job_name', p_job_name, 'status', 'succeeded',
+    'processed_count', v_count, 'scan_from', v_scan_from, 'scan_to', v_scan_to
+  ) || case
+    when v_details is null then '{}'::jsonb
+    else jsonb_build_object('maintenance', v_details)
+  end;
 exception when others then
   update operations.job_runs set status = 'failed', details = jsonb_build_object('error', sqlerrm), finished_at = now() where id = v_run;
   return jsonb_build_object('job_run_id', v_run, 'job_name', p_job_name, 'status', 'failed', 'processed_count', v_count, 'scan_from', v_scan_from, 'scan_to', v_scan_to, 'error', sqlerrm);

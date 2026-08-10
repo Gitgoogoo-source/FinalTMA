@@ -11,6 +11,9 @@ create table referral.relationships (
 
 create index referrals_inviter_bound_idx on referral.relationships (inviter_id, bound_at);
 create index referrals_inviter_recharge_idx on referral.relationships (inviter_id, first_recharge_at) where first_recharge_at is not null;
+create index referrals_reward_operation_idx
+on referral.relationships (reward_operation_id)
+where reward_operation_id is not null;
 
 create table referral.milestones (
   user_id uuid not null references identity.users(id) on delete cascade,
@@ -19,6 +22,8 @@ create table referral.milestones (
   granted_at timestamptz not null default now(),
   primary key (user_id, threshold)
 );
+
+create index referral_milestones_operation_idx on referral.milestones (operation_id);
 
 create or replace function api.referral_get(p_session_id uuid, p_bot_username text, p_mini_app_short_name text)
 returns jsonb
@@ -64,7 +69,8 @@ begin
   where user_id = p_user_id and status = 'pending';
   update identity.sessions
   set referral_processed_at = coalesce(referral_processed_at, now())
-  where id = p_session_id and user_id = p_user_id;
+  where user_id = p_user_id
+    and (id = p_session_id or revoked_at is null);
   return operations.fail_command(p_operation_id, p_code, '{}'::jsonb);
 end;
 $$;
@@ -94,7 +100,8 @@ begin
     if v_operation.status in ('succeeded', 'failed') then
       update identity.sessions
       set referral_processed_at = coalesce(referral_processed_at, now())
-      where id = p_session_id and user_id = v_operation.user_id;
+      where user_id = v_operation.user_id
+        and (id = p_session_id or revoked_at is null);
     end if;
     return v_replay;
   end if;
@@ -144,7 +151,8 @@ begin
   where user_id = v_user_id;
   update identity.sessions
   set referral_processed_at = coalesce(referral_processed_at, now())
-  where id = p_session_id and user_id = v_user_id;
+  where user_id = v_user_id
+    and (id = p_session_id or revoked_at is null);
   v_result := jsonb_build_object('bound', true, 'referral_code', p_code);
   return operations.complete_command(p_operation_id, v_result);
 end;

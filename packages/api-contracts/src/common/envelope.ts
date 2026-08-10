@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { errorCodeSchema, uuidSchema } from "./schemas.ts";
+import { errorCodeSchema, operationIdSchema, uuidSchema } from "./schemas.ts";
 
 export const standardErrorSchema = z
   .object({
@@ -12,7 +12,7 @@ export const standardErrorSchema = z
       })
       .strict(),
     request_id: uuidSchema,
-    operation_id: uuidSchema.nullable(),
+    operation_id: operationIdSchema.nullable(),
   })
   .strict();
 
@@ -21,7 +21,7 @@ export function successEnvelopeSchema<T extends z.ZodType>(data: T) {
     .object({
       data,
       request_id: uuidSchema,
-      operation_id: uuidSchema.nullable(),
+      operation_id: operationIdSchema.nullable(),
     })
     .strict();
 }

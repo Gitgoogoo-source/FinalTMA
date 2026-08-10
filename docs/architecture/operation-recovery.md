@@ -1,6 +1,6 @@
 # 操作恢复
 
-用户确认会创建 operation 的写操作时，操作注册中心先生成 UUID 并写入内存记录，再在下一动画帧提交请求。同一 operation 的会话恢复重试和结果查询始终复用该 UUID。Battle heartbeat 和 offline 不进入操作注册中心、不生成 UUID，也不通过 operations 查询恢复；Battle 结果按钮不发送请求。
+用户确认会创建 operation 的写操作时，操作注册中心先使用 Web Crypto 生成 UUIDv7 并写入内存记录，再在下一动画帧提交请求。同一 operation 的会话恢复重试和结果查询始终复用该 UUIDv7；旧记录查询先于数据库新鲜度与配额，因此同 key 重试不创建或计数第二条 operation。Battle heartbeat 和 offline 不进入操作注册中心、不生成 UUID，也不通过 operations 查询恢复；Battle 结果按钮不发送请求。
 
 网络失败不会展示业务成功。`unknown`、`pending` 通过 `GET /api/operations/:operation_id` 查询；只有明确返回 `OPERATION_NOT_FOUND` 时才用原 UUID 单次重提。恢复成功时，`use_case` 对应的原命令输出 Schema 会重新校验 `result`，随后把该路由声明的 refresh scope 全部标记失效并刷新当前可见页面与全局活动查询；隐藏页面不读取、不参与等待，返回时按 [ADR-037](adr/ADR-037-persistent-page-query-activity.md) 回正。`battle.action` 的完整权威 room snapshot 直接写入对应查询缓存并应用页面 authority，不再失效整个 `battle` scope。入口交接未完成时，该查询只能读取当前用户的原 `referral.bind` 操作。
 
@@ -24,7 +24,7 @@ Battle 终局只在当前前台会话通过 `BattleRoomSnapshotDto.terminal_resu
 
 `album.claim` 成功且结果通过该命令输出 Schema 校验时展示图鉴奖励专用结果，包含服务端返回的链条名称和真实 Fgems 奖励，不显示 operation ID；确认前不提前显示奖励。图鉴是脱离主壳层的全屏页面，因此页面自身消费当前 generation 的 `identity.initial.recovery.blocking_operations` 并注入同一操作注册中心，网络中断后只查询原 `operation_id`。成功、失败或未知恢复都会按 `album.claim` 声明的资产与图鉴刷新范围重新读取 `album.get` 和 `identity.summary` 顶部资产事实，不从临时弹窗状态重放领取。
 
-每日幂等清理永久保留 operation 的 UUID、用户、用例、请求哈希、终态、错误码、权威序号和时间戳，禁止删除被账本、库存、图鉴、市场、支付、任务或 Battle 引用的幂等锚点。非 Battle 终态在 `completed_at` 满 30 天后只清空 `request`、`result` 和转盘逐项结果并写入 `payload_purged_at`；非终态、尚未确认展示的进化终态、活动支付/Mint 和全部 Battle operation 不压缩完整载荷。压缩后同键异请求仍返回 `IDEMPOTENCY_KEY_REUSED`，同键同请求返回 `OPERATION_RESULT_EXPIRED`，绝不重新执行原业务。
+每日幂等清理禁止删除被账本、库存、图鉴、市场、支付、任务或 Battle 引用的幂等锚点；这类终态在 `completed_at` 满 30 天后只清空 `request`、`result` 和转盘逐项结果并写入 `payload_purged_at`，继续保留 UUID、用户、用例、请求哈希、终态、错误码、权威序号和时间戳。无业务引用的失败 operation 满 7 天删除，无引用的成功 operation 满 37 天删除。非终态、尚未确认展示的进化终态和活动支付/Mint 不清理。压缩后同键异请求仍返回 `IDEMPOTENCY_KEY_REUSED`，同键同请求返回 `OPERATION_RESULT_EXPIRED`；删除后的旧 UUIDv7 因超过新鲜度窗口返回 `IDEMPOTENCY_KEY_INVALID`，两者都绝不重新执行原业务。
 
 每条前端操作记录绑定创建时的 session generation。会话过期、被替换或重新登录时先切换 generation，再清空全局操作、导航和查询状态；封禁时同时先切换为 `banned` 和新 generation。旧 generation 的请求、查询、动画及恢复结果全部丢弃。自然过期的并发请求共享一次认证交换，恢复只允许一次；新会话为 `pending` 时只继续邀请交接，不自动重做首屏或资产业务。
 

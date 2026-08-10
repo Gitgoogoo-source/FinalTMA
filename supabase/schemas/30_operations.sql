@@ -4,6 +4,15 @@ create table operations.user_authority_sequences (
   updated_at timestamptz not null default now()
 );
 
+create table operations.user_admission_counters (
+  user_id uuid primary key references identity.users(id) on delete cascade,
+  minute_window_started_at timestamptz not null,
+  minute_count integer not null default 0 check (minute_count between 0 and 60),
+  day_window_started_at timestamptz not null,
+  day_count integer not null default 0 check (day_count between 0 and 1000),
+  updated_at timestamptz not null default now()
+);
+
 create table operations.operations (
   id uuid primary key,
   user_id uuid not null references identity.users(id) on delete cascade,
@@ -19,6 +28,7 @@ create table operations.operations (
   completed_at timestamptz,
   result_acknowledged_at timestamptz,
   payload_purged_at timestamptz,
+  check (substr(id::text, 15, 1) = '7' and substr(id::text, 20, 1) in ('8', '9', 'a', 'b')),
   check (result_acknowledged_at is null or status in ('succeeded', 'failed')),
   check (
     (status in ('pending', 'unknown') and authority_sequence is null)
@@ -44,6 +54,12 @@ create table operations.operations (
 
 create index operations_user_created_idx on operations.operations (user_id, created_at desc);
 create index operations_pending_idx on operations.operations (created_at) where status in ('pending', 'unknown');
+create index operations_non_battle_open_user_idx
+on operations.operations (user_id, created_at, id)
+where status in ('pending', 'unknown') and use_case not like 'battle.%';
+create index operations_non_battle_failed_user_idx
+on operations.operations (user_id, completed_at desc)
+where status = 'failed' and use_case not like 'battle.%';
 create unique index operations_user_authority_sequence_idx
 on operations.operations (user_id, authority_sequence)
 where authority_sequence is not null;
@@ -61,6 +77,119 @@ where use_case <> 'gacha.open'
       and result_acknowledged_at is null
     )
   );
+
+create or replace function operations.operation_id_timestamp_ms(p_operation_id uuid)
+returns bigint
+language sql
+immutable
+strict
+security invoker
+set search_path = ''
+as $$
+  with value as (
+    select decode(substr(replace(p_operation_id::text, '-', ''), 1, 12), 'hex') bytes
+  )
+  select get_byte(bytes, 0)::bigint * 1099511627776
+    + get_byte(bytes, 1)::bigint * 4294967296
+    + get_byte(bytes, 2)::bigint * 16777216
+    + get_byte(bytes, 3)::bigint * 65536
+    + get_byte(bytes, 4)::bigint * 256
+    + get_byte(bytes, 5)::bigint
+  from value
+$$;
+
+create or replace function operations.assert_new_operation_id(p_operation_id uuid)
+returns void
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_text text := p_operation_id::text;
+  v_timestamp_ms bigint;
+  v_now_ms bigint := floor(extract(epoch from clock_timestamp()) * 1000)::bigint;
+begin
+  if p_operation_id is null
+    or substr(v_text, 15, 1) <> '7'
+    or substr(v_text, 20, 1) not in ('8', '9', 'a', 'b')
+  then
+    perform api.raise_business_error('IDEMPOTENCY_KEY_INVALID', '幂等键必须是 UUIDv7');
+  end if;
+  v_timestamp_ms := operations.operation_id_timestamp_ms(p_operation_id);
+  if v_timestamp_ms < v_now_ms - 86400000
+    or v_timestamp_ms > v_now_ms + 300000
+  then
+    perform api.raise_business_error('IDEMPOTENCY_KEY_INVALID', '幂等键时间无效');
+  end if;
+end;
+$$;
+
+create or replace function operations.admit_new_command(p_user_id uuid, p_use_case text)
+returns void
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_counter operations.user_admission_counters%rowtype;
+  v_failed_count integer;
+  v_open_count integer;
+  v_now timestamptz := clock_timestamp();
+begin
+  if p_use_case like 'battle.%' then
+    return;
+  end if;
+
+  perform pg_advisory_xact_lock(hashtextextended('operations.admission:' || p_user_id::text, 0));
+  insert into operations.user_admission_counters (
+    user_id, minute_window_started_at, day_window_started_at
+  ) values (p_user_id, v_now, v_now)
+  on conflict (user_id) do nothing;
+  select * into v_counter
+  from operations.user_admission_counters
+  where user_id = p_user_id
+  for update;
+
+  if v_counter.minute_window_started_at <= v_now - interval '60 seconds' then
+    v_counter.minute_window_started_at := v_now;
+    v_counter.minute_count := 0;
+  end if;
+  if v_counter.day_window_started_at <= v_now - interval '24 hours' then
+    v_counter.day_window_started_at := v_now;
+    v_counter.day_count := 0;
+  end if;
+  if v_counter.minute_count >= 60 or v_counter.day_count >= 1000 then
+    perform api.raise_business_error('RATE_LIMITED', '操作过于频繁，请稍后重试');
+  end if;
+
+  select count(*)::integer into v_failed_count
+  from operations.operations
+  where user_id = p_user_id
+    and use_case not like 'battle.%'
+    and status = 'failed'
+    and completed_at >= v_now - interval '24 hours';
+  if v_failed_count >= 100 then
+    perform api.raise_business_error('RATE_LIMITED', '操作过于频繁，请稍后重试');
+  end if;
+
+  select count(*)::integer into v_open_count
+  from operations.operations
+  where user_id = p_user_id
+    and use_case not like 'battle.%'
+    and status in ('pending', 'unknown');
+  if v_open_count >= 20 then
+    perform api.raise_business_error('RATE_LIMITED', '操作过于频繁，请稍后重试');
+  end if;
+
+  update operations.user_admission_counters
+  set minute_window_started_at = v_counter.minute_window_started_at,
+      minute_count = v_counter.minute_count + 1,
+      day_window_started_at = v_counter.day_window_started_at,
+      day_count = v_counter.day_count + 1,
+      updated_at = v_now
+  where user_id = p_user_id;
+end;
+$$;
 
 create or replace function operations.assign_authority_sequence()
 returns trigger
@@ -269,20 +398,29 @@ declare
   v_hash text := encode(extensions.digest(convert_to(p_request::text, 'UTF8'), 'sha256'), 'hex');
   v_operation operations.operations%rowtype;
 begin
-  insert into operations.operations (id, user_id, use_case, request_hash, request)
-  values (p_operation_id, v_user_id, p_use_case, v_hash, p_request)
-  on conflict (id) do nothing
-  returning * into v_operation;
-
-  if v_operation.id is null then
-    select * into v_operation from operations.operations where id = p_operation_id for update;
+  if p_operation_id is null or p_use_case is null or btrim(p_use_case) = '' or p_request is null then
+    perform api.raise_business_error('REQUEST_INVALID', '操作请求无效');
+  end if;
+  perform pg_advisory_xact_lock(hashtextextended('operations.command:' || p_operation_id::text, 0));
+  select * into v_operation
+  from operations.operations
+  where id = p_operation_id
+  for update;
+  if v_operation.id is not null then
     if v_operation.user_id <> v_user_id or v_operation.use_case <> p_use_case or v_operation.request_hash <> v_hash then
       perform api.raise_business_error('IDEMPOTENCY_KEY_REUSED', '幂等键已用于不同请求');
     end if;
     if v_operation.payload_purged_at is not null then
       perform api.raise_business_error('OPERATION_RESULT_EXPIRED', '操作结果已超过可恢复期限');
     end if;
+    return v_operation;
   end if;
+
+  perform operations.assert_new_operation_id(p_operation_id);
+  perform operations.admit_new_command(v_user_id, p_use_case);
+  insert into operations.operations (id, user_id, use_case, request_hash, request)
+  values (p_operation_id, v_user_id, p_use_case, v_hash, p_request)
+  returning * into v_operation;
   return v_operation;
 end;
 $$;

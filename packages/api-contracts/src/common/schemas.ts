@@ -3,6 +3,11 @@ import { z } from "zod";
 import { errorCodes } from "./error-codes.ts";
 
 export const uuidSchema = z.string().uuid();
+export const operationIdSchema = z
+  .string()
+  .regex(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+  );
 export const identifierSchema = z.string().trim().min(1).max(128);
 export const nonNegativeIntegerSchema = z.number().int().min(0);
 export const nonNegativeBigintStringSchema = z.string().regex(/^(0|[1-9]\d*)$/);

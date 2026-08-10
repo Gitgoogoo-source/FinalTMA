@@ -47,6 +47,8 @@ pnpm manifest:check
 
 `pnpm architecture:check` 同时验证 `/game` 只承载 React + TypeScript Battle、没有 Phaser 或客户端战斗模拟器，任务页转盘位置、远征/钱包/Mint 任务与横幅隐藏、钱包/Mint/Mint 对账不进入当前运行时注册表，活动 Web 只使用 `app-client`、目录调用方只能使用 `useCatalogQuery()`、共享 UI barrel 与 React Router 保持删除、原生导航保留单一 popstate 订阅和完整 push/replace/历史返回/同源边界、`global.css` 不得恢复、入口没有未登记的预渲染动态预取、重型操作运行时与操作表现保持动态边界、两个恢复 effect 通过 `useEffectEvent` 调用最新 `hydrate` 且不把它作为重新执行条件、操作注册中心 Context 只发布稳定 Store、聚合式 Hook 与完整 Runtime value bridge 保持删除、领域/导航/恢复/Wheel 只使用各自选择性订阅、根路径与深链唯一 CSP 的 `img-src` 不扩张且 `connect-src` 精确等于 ADR-054 的 Ably TLS 端点集合，以及其余模块边界、网关隔离和文档归属。生产 build 必须输出并通过 ADR-040/046 的 JS `400000 / gzip 125000`、CSS `110000 / gzip 23000` 首屏闭包硬门禁，以及 ADR-047/048 的 Battle 增量核心 JS `160000 / gzip 45000`、CSS `45000 / gzip 9000` 硬门禁；两组禁止模块和 Battle 动态 preload 映射中的应用入口 JS 均为零，且没有 Vite 大 chunk 警告。`pnpm contracts:check` 额外验证 OpenAPI 不发布休眠端点，并验证 `catalog.release` 与 Mint metadata 的 `x-cache-policy = public-immutable`。
 
+同一架构门禁还必须证明推荐交接只由 `referral_processed_at` 裁决、绑定终态覆盖请求会话与当前活跃会话，以及 operation 的 UUIDv7、回放优先、四项非 Battle 配额、Battle 独立限流、全部外键引用保护、7/30/37 天保留期和 5000 条 `SKIP LOCKED` 清理批次。任一项缺失都禁止进入数据库重建与发布。
+
 休眠实现的 TON Connect manifest 仅通过以下命令保持格式确定：
 
 ```sh

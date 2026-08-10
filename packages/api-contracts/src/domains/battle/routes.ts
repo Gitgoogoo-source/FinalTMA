@@ -3,6 +3,7 @@ import { z } from "zod";
 import { defineRoute } from "../../common/route.ts";
 import {
   emptyObjectSchema,
+  operationIdSchema,
   timestampSchema,
   uuidSchema,
 } from "../../common/schemas.ts";
@@ -31,7 +32,7 @@ const battleCreateResultSchema = z.discriminatedUnion("status", [
     .object({
       room_id: uuidSchema,
       status: z.literal("preparing_share"),
-      create_operation_id: uuidSchema,
+      create_operation_id: operationIdSchema,
       prepare_deadline: timestampSchema,
     })
     .strict(),

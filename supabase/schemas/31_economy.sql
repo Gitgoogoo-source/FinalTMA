@@ -39,6 +39,9 @@ create table economy.entitlements (
 );
 
 create index entitlements_fifo_idx on economy.entitlements (user_id, kind, obtained_at, id) where status = 'unused';
+create index entitlements_operation_idx
+on economy.entitlements (operation_id)
+where operation_id is not null;
 
 create or replace function economy.assets(p_user_id uuid)
 returns jsonb

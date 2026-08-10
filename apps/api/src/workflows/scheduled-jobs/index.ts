@@ -19,7 +19,7 @@ export async function runScheduledJob(
     "run_job",
     {
       p_job_name: name,
-      p_limit: 100,
+      p_limit: name === "cleanup-idempotency" ? 5000 : 100,
     },
   );
   if (database.status === "failed")

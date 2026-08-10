@@ -170,6 +170,11 @@ def verify_database_boundaries() -> None:
         "create or replace function operations.strip_pet_urls",
         "create or replace function operations.present_pet_urls",
         "create or replace function operations.present_result",
+        "create table operations.user_admission_counters",
+        "create or replace function operations.assert_new_operation_id",
+        "create or replace function operations.admit_new_command",
+        "perform operations.assert_new_operation_id(p_operation_id)",
+        "perform operations.admit_new_command(v_user_id, p_use_case)",
         "result = operations.strip_pet_urls(p_result)",
         "result = operations.strip_pet_urls(p_detail)",
         "operations.present_result(p_operation.use_case, p_operation.result)",
@@ -184,6 +189,10 @@ def verify_database_boundaries() -> None:
         "catalog.require_asset_mutation(",
         "p_mutation_run_id uuid",
         "p_mutation_fence bigint",
+        "create or replace function operations.operation_has_durable_reference",
+        "delete from operations.operations",
+        "o.status = 'failed' and o.completed_at < now() - interval '7 days'",
+        "o.status = 'succeeded' and o.completed_at < now() - interval '37 days'",
     )
     missing = [fragment for fragment in jobs_required if fragment not in jobs_sql]
     if missing:
@@ -339,10 +348,14 @@ def verify_entry_handoff_contract() -> None:
         "raise_business_error('entry_handoff_pending'",
         "identity.session_entry_handoff(v_login.session_id)",
         "referral_processed_at is null",
+        "case when s.referral_processed_at is null then 'pending' else 'complete' end",
+        "if v_session.referral_processed_at is null",
     )
     missing = [fragment for fragment in identity_required if fragment not in identity_sql]
     if missing:
         raise SystemExit(f"Entry handoff identity contract is incomplete: {missing}")
+    if "v_session.entry_kind = 'referral'" in identity_sql:
+        raise SystemExit("Entry handoff authorization cannot depend on the latest launch kind")
 
     operations_sql = (SCHEMAS / "30_operations.sql").read_text(encoding="utf-8").lower()
     operations_required = (
@@ -359,6 +372,7 @@ def verify_entry_handoff_contract() -> None:
     referral_required = (
         "create or replace function referral.reject_bind",
         "set referral_processed_at = coalesce(referral_processed_at, now())",
+        "and (id = p_session_id or revoked_at is null)",
         "v_operation.status in ('succeeded', 'failed')",
         "return referral.reject_bind",
     )

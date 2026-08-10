@@ -177,11 +177,15 @@ security invoker
 set search_path = ''
 as $$
   select jsonb_build_object(
-    'entry_handoff_state', case when s.entry_kind = 'referral' and s.referral_processed_at is null then 'pending' else 'complete' end,
-    'entry_handoff_code', case when s.entry_kind = 'referral' then coalesce(c.code, s.referral_code) else null end,
+    'entry_handoff_state', case when s.referral_processed_at is null then 'pending' else 'complete' end,
+    'entry_handoff_code', case
+      when s.referral_processed_at is null then coalesce(c.code, s.referral_code)
+      when s.entry_kind = 'referral' then coalesce(c.code, s.referral_code)
+      else null
+    end,
     'entry_handoff_result', case
-      when s.entry_kind <> 'referral' then null
       when s.referral_processed_at is null then null
+      when s.entry_kind <> 'referral' then null
       when c.status in ('bound', 'rejected') then c.result_code
       when not s.new_user and s.referral_code is not null then 'REFERRAL_OLD_USER'
       else null
@@ -219,8 +223,7 @@ begin
   if v_status <> 'normal' then
     perform api.raise_business_error('ACCOUNT_RESTRICTED', '账号不可用');
   end if;
-  if v_session.entry_kind = 'referral'
-    and v_session.referral_processed_at is null
+  if v_session.referral_processed_at is null
     and not coalesce(p_allow_pending_entry_handoff, false)
   then
     perform api.raise_business_error('ENTRY_HANDOFF_PENDING', '邀请绑定结果确认中，请稍后刷新');
@@ -1238,6 +1241,15 @@ create table operations.user_authority_sequences (
   updated_at timestamptz not null default now()
 );
 
+create table operations.user_admission_counters (
+  user_id uuid primary key references identity.users(id) on delete cascade,
+  minute_window_started_at timestamptz not null,
+  minute_count integer not null default 0 check (minute_count between 0 and 60),
+  day_window_started_at timestamptz not null,
+  day_count integer not null default 0 check (day_count between 0 and 1000),
+  updated_at timestamptz not null default now()
+);
+
 create table operations.operations (
   id uuid primary key,
   user_id uuid not null references identity.users(id) on delete cascade,
@@ -1253,6 +1265,7 @@ create table operations.operations (
   completed_at timestamptz,
   result_acknowledged_at timestamptz,
   payload_purged_at timestamptz,
+  check (substr(id::text, 15, 1) = '7' and substr(id::text, 20, 1) in ('8', '9', 'a', 'b')),
   check (result_acknowledged_at is null or status in ('succeeded', 'failed')),
   check (
     (status in ('pending', 'unknown') and authority_sequence is null)
@@ -1278,6 +1291,12 @@ create table operations.operations (
 
 create index operations_user_created_idx on operations.operations (user_id, created_at desc);
 create index operations_pending_idx on operations.operations (created_at) where status in ('pending', 'unknown');
+create index operations_non_battle_open_user_idx
+on operations.operations (user_id, created_at, id)
+where status in ('pending', 'unknown') and use_case not like 'battle.%';
+create index operations_non_battle_failed_user_idx
+on operations.operations (user_id, completed_at desc)
+where status = 'failed' and use_case not like 'battle.%';
 create unique index operations_user_authority_sequence_idx
 on operations.operations (user_id, authority_sequence)
 where authority_sequence is not null;
@@ -1295,6 +1314,119 @@ where use_case <> 'gacha.open'
       and result_acknowledged_at is null
     )
   );
+
+create or replace function operations.operation_id_timestamp_ms(p_operation_id uuid)
+returns bigint
+language sql
+immutable
+strict
+security invoker
+set search_path = ''
+as $$
+  with value as (
+    select decode(substr(replace(p_operation_id::text, '-', ''), 1, 12), 'hex') bytes
+  )
+  select get_byte(bytes, 0)::bigint * 1099511627776
+    + get_byte(bytes, 1)::bigint * 4294967296
+    + get_byte(bytes, 2)::bigint * 16777216
+    + get_byte(bytes, 3)::bigint * 65536
+    + get_byte(bytes, 4)::bigint * 256
+    + get_byte(bytes, 5)::bigint
+  from value
+$$;
+
+create or replace function operations.assert_new_operation_id(p_operation_id uuid)
+returns void
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_text text := p_operation_id::text;
+  v_timestamp_ms bigint;
+  v_now_ms bigint := floor(extract(epoch from clock_timestamp()) * 1000)::bigint;
+begin
+  if p_operation_id is null
+    or substr(v_text, 15, 1) <> '7'
+    or substr(v_text, 20, 1) not in ('8', '9', 'a', 'b')
+  then
+    perform api.raise_business_error('IDEMPOTENCY_KEY_INVALID', '幂等键必须是 UUIDv7');
+  end if;
+  v_timestamp_ms := operations.operation_id_timestamp_ms(p_operation_id);
+  if v_timestamp_ms < v_now_ms - 86400000
+    or v_timestamp_ms > v_now_ms + 300000
+  then
+    perform api.raise_business_error('IDEMPOTENCY_KEY_INVALID', '幂等键时间无效');
+  end if;
+end;
+$$;
+
+create or replace function operations.admit_new_command(p_user_id uuid, p_use_case text)
+returns void
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_counter operations.user_admission_counters%rowtype;
+  v_failed_count integer;
+  v_open_count integer;
+  v_now timestamptz := clock_timestamp();
+begin
+  if p_use_case like 'battle.%' then
+    return;
+  end if;
+
+  perform pg_advisory_xact_lock(hashtextextended('operations.admission:' || p_user_id::text, 0));
+  insert into operations.user_admission_counters (
+    user_id, minute_window_started_at, day_window_started_at
+  ) values (p_user_id, v_now, v_now)
+  on conflict (user_id) do nothing;
+  select * into v_counter
+  from operations.user_admission_counters
+  where user_id = p_user_id
+  for update;
+
+  if v_counter.minute_window_started_at <= v_now - interval '60 seconds' then
+    v_counter.minute_window_started_at := v_now;
+    v_counter.minute_count := 0;
+  end if;
+  if v_counter.day_window_started_at <= v_now - interval '24 hours' then
+    v_counter.day_window_started_at := v_now;
+    v_counter.day_count := 0;
+  end if;
+  if v_counter.minute_count >= 60 or v_counter.day_count >= 1000 then
+    perform api.raise_business_error('RATE_LIMITED', '操作过于频繁，请稍后重试');
+  end if;
+
+  select count(*)::integer into v_failed_count
+  from operations.operations
+  where user_id = p_user_id
+    and use_case not like 'battle.%'
+    and status = 'failed'
+    and completed_at >= v_now - interval '24 hours';
+  if v_failed_count >= 100 then
+    perform api.raise_business_error('RATE_LIMITED', '操作过于频繁，请稍后重试');
+  end if;
+
+  select count(*)::integer into v_open_count
+  from operations.operations
+  where user_id = p_user_id
+    and use_case not like 'battle.%'
+    and status in ('pending', 'unknown');
+  if v_open_count >= 20 then
+    perform api.raise_business_error('RATE_LIMITED', '操作过于频繁，请稍后重试');
+  end if;
+
+  update operations.user_admission_counters
+  set minute_window_started_at = v_counter.minute_window_started_at,
+      minute_count = v_counter.minute_count + 1,
+      day_window_started_at = v_counter.day_window_started_at,
+      day_count = v_counter.day_count + 1,
+      updated_at = v_now
+  where user_id = p_user_id;
+end;
+$$;
 
 create or replace function operations.assign_authority_sequence()
 returns trigger
@@ -1503,20 +1635,29 @@ declare
   v_hash text := encode(extensions.digest(convert_to(p_request::text, 'UTF8'), 'sha256'), 'hex');
   v_operation operations.operations%rowtype;
 begin
-  insert into operations.operations (id, user_id, use_case, request_hash, request)
-  values (p_operation_id, v_user_id, p_use_case, v_hash, p_request)
-  on conflict (id) do nothing
-  returning * into v_operation;
-
-  if v_operation.id is null then
-    select * into v_operation from operations.operations where id = p_operation_id for update;
+  if p_operation_id is null or p_use_case is null or btrim(p_use_case) = '' or p_request is null then
+    perform api.raise_business_error('REQUEST_INVALID', '操作请求无效');
+  end if;
+  perform pg_advisory_xact_lock(hashtextextended('operations.command:' || p_operation_id::text, 0));
+  select * into v_operation
+  from operations.operations
+  where id = p_operation_id
+  for update;
+  if v_operation.id is not null then
     if v_operation.user_id <> v_user_id or v_operation.use_case <> p_use_case or v_operation.request_hash <> v_hash then
       perform api.raise_business_error('IDEMPOTENCY_KEY_REUSED', '幂等键已用于不同请求');
     end if;
     if v_operation.payload_purged_at is not null then
       perform api.raise_business_error('OPERATION_RESULT_EXPIRED', '操作结果已超过可恢复期限');
     end if;
+    return v_operation;
   end if;
+
+  perform operations.assert_new_operation_id(p_operation_id);
+  perform operations.admit_new_command(v_user_id, p_use_case);
+  insert into operations.operations (id, user_id, use_case, request_hash, request)
+  values (p_operation_id, v_user_id, p_use_case, v_hash, p_request)
+  returning * into v_operation;
   return v_operation;
 end;
 $$;
@@ -1702,6 +1843,9 @@ create table economy.entitlements (
 );
 
 create index entitlements_fifo_idx on economy.entitlements (user_id, kind, obtained_at, id) where status = 'unused';
+create index entitlements_operation_idx
+on economy.entitlements (operation_id)
+where operation_id is not null;
 
 create or replace function economy.assets(p_user_id uuid)
 returns jsonb
@@ -9190,6 +9334,7 @@ create table market.listings (
 
 create index listings_fifo_idx on market.listings (template_id, created_at, id) where status = 'active' and remaining > 0;
 create index listings_seller_active_idx on market.listings (seller_id, template_id, created_at) where status = 'active';
+create index listings_operation_idx on market.listings (operation_id);
 
 create table market.seller_template_supply (
   seller_id uuid not null references identity.users(id) on delete cascade,
@@ -10492,6 +10637,8 @@ create table vip.claims (
   primary key (user_id, benefit_date, benefit)
 );
 
+create index vip_claims_operation_idx on vip.claims (operation_id);
+
 create or replace function vip.status_json(p_user_id uuid)
 returns jsonb
 language plpgsql
@@ -10622,6 +10769,9 @@ create table tasks.daily_progress (
 );
 
 create index task_progress_claimable_idx on tasks.daily_progress (user_id, business_date) where claimed_at is null;
+create index task_progress_claim_operation_idx
+on tasks.daily_progress (claim_operation_id)
+where claim_operation_id is not null;
 
 create table tasks.checkins (
   user_id uuid primary key references identity.users(id) on delete cascade,
@@ -10791,6 +10941,9 @@ create table referral.relationships (
 
 create index referrals_inviter_bound_idx on referral.relationships (inviter_id, bound_at);
 create index referrals_inviter_recharge_idx on referral.relationships (inviter_id, first_recharge_at) where first_recharge_at is not null;
+create index referrals_reward_operation_idx
+on referral.relationships (reward_operation_id)
+where reward_operation_id is not null;
 
 create table referral.milestones (
   user_id uuid not null references identity.users(id) on delete cascade,
@@ -10799,6 +10952,8 @@ create table referral.milestones (
   granted_at timestamptz not null default now(),
   primary key (user_id, threshold)
 );
+
+create index referral_milestones_operation_idx on referral.milestones (operation_id);
 
 create or replace function api.referral_get(p_session_id uuid, p_bot_username text, p_mini_app_short_name text)
 returns jsonb
@@ -10844,7 +10999,8 @@ begin
   where user_id = p_user_id and status = 'pending';
   update identity.sessions
   set referral_processed_at = coalesce(referral_processed_at, now())
-  where id = p_session_id and user_id = p_user_id;
+  where user_id = p_user_id
+    and (id = p_session_id or revoked_at is null);
   return operations.fail_command(p_operation_id, p_code, '{}'::jsonb);
 end;
 $$;
@@ -10874,7 +11030,8 @@ begin
     if v_operation.status in ('succeeded', 'failed') then
       update identity.sessions
       set referral_processed_at = coalesce(referral_processed_at, now())
-      where id = p_session_id and user_id = v_operation.user_id;
+      where user_id = v_operation.user_id
+        and (id = p_session_id or revoked_at is null);
     end if;
     return v_replay;
   end if;
@@ -10924,7 +11081,8 @@ begin
   where user_id = v_user_id;
   update identity.sessions
   set referral_processed_at = coalesce(referral_processed_at, now())
-  where id = p_session_id and user_id = v_user_id;
+  where user_id = v_user_id
+    and (id = p_session_id or revoked_at is null);
   v_result := jsonb_build_object('bound', true, 'referral_code', p_code);
   return operations.complete_command(p_operation_id, v_result);
 end;
@@ -10940,6 +11098,9 @@ create table album.nodes (
 );
 
 create index album_nodes_template_idx on album.nodes (template_id, user_id);
+create index album_nodes_first_operation_idx
+on album.nodes (first_operation_id)
+where first_operation_id is not null;
 
 create table album.rewards (
   user_id uuid not null references identity.users(id) on delete cascade,
@@ -10948,6 +11109,8 @@ create table album.rewards (
   claimed_at timestamptz not null default now(),
   primary key (user_id, chain_id)
 );
+
+create index album_rewards_operation_idx on album.rewards (operation_id);
 
 create or replace function album.unlock_template(p_user_id uuid, p_template_id text, p_operation_id uuid)
 returns boolean
@@ -11965,6 +12128,33 @@ end;
 $$;
 
 -- source: 95_jobs.sql
+create or replace function operations.operation_has_durable_reference(p_operation_id uuid)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select
+    exists (select 1 from economy.ledger where operation_id = p_operation_id)
+    or exists (select 1 from economy.entitlements where operation_id = p_operation_id)
+    or exists (select 1 from expedition.expeditions where operation_id = p_operation_id)
+    or exists (select 1 from wheel.results where operation_id = p_operation_id)
+    or exists (select 1 from battle.rooms where create_operation_id = p_operation_id)
+    or exists (select 1 from battle.participants where join_operation_id = p_operation_id)
+    or exists (select 1 from battle.actions where operation_id = p_operation_id)
+    or exists (select 1 from market.listings where operation_id = p_operation_id)
+    or exists (select 1 from market.trades where operation_id = p_operation_id)
+    or exists (select 1 from payments.orders where operation_id = p_operation_id)
+    or exists (select 1 from vip.claims where operation_id = p_operation_id)
+    or exists (select 1 from tasks.daily_progress where claim_operation_id = p_operation_id)
+    or exists (select 1 from referral.relationships where reward_operation_id = p_operation_id)
+    or exists (select 1 from referral.milestones where operation_id = p_operation_id)
+    or exists (select 1 from album.nodes where first_operation_id = p_operation_id)
+    or exists (select 1 from album.rewards where operation_id = p_operation_id)
+    or exists (select 1 from onchain.mints where operation_id = p_operation_id)
+$$;
+
 create or replace function api.run_job(p_job_name text, p_limit integer default 100)
 returns jsonb
 language plpgsql
@@ -11976,8 +12166,11 @@ declare
   v_count integer := 0;
   v_added integer := 0;
   v_compacted integer := 0;
+  v_deleted integer := 0;
+  v_auth_deleted integer := 0;
   v_row record;
   v_details jsonb;
+  v_battle_details jsonb;
   v_scan_from timestamptz;
   v_scan_to timestamptz := now();
   v_active_run operations.job_runs%rowtype;
@@ -12048,7 +12241,6 @@ begin
         and o.status in ('succeeded', 'failed')
         and o.payload_purged_at is null
         and not (o.use_case = 'inventory.evolve' and o.result_acknowledged_at is null)
-        and o.use_case not like 'battle.%'
         and not exists (
           select 1 from payments.orders p
           where p.operation_id = o.id and p.status in ('pending', 'processing', 'paid', 'payment_identity_conflict')
@@ -12058,7 +12250,7 @@ begin
           where m.operation_id = o.id and m.status in ('reserved', 'submitted', 'unknown')
         )
       order by o.completed_at, o.id
-      limit greatest(1, least(p_limit, 500))
+      limit greatest(1, least(p_limit, 5000))
       for update of o skip locked
     ), purged_wheel_results as (
       delete from wheel.results result
@@ -12076,13 +12268,41 @@ begin
       returning operation.id
     )
     select count(*)::integer into v_compacted from compacted;
-    v_count := v_compacted;
+
+    with candidates as materialized (
+      select o.id
+      from operations.operations o
+      where o.status in ('succeeded', 'failed')
+        and (
+          (o.status = 'failed' and o.completed_at < now() - interval '7 days')
+          or (o.status = 'succeeded' and o.completed_at < now() - interval '37 days')
+        )
+        and not (o.use_case = 'inventory.evolve' and o.result_acknowledged_at is null)
+        and not operations.operation_has_durable_reference(o.id)
+      order by o.completed_at, o.id
+      limit greatest(1, least(p_limit, 5000))
+      for update of o skip locked
+    ), deleted as (
+      delete from operations.operations operation
+      using candidates candidate
+      where operation.id = candidate.id
+      returning operation.id
+    )
+    select count(*)::integer into v_deleted from deleted;
+
     delete from identity.auth_attempts where attempted_at < now() - interval '1 day';
-    v_details := battle.cleanup_operational_data(greatest(1, least(p_limit, 5000)));
-    v_count := v_count
-      + coalesce((v_details->>'rate_limit_attempts_deleted')::integer, 0)
-      + coalesce((v_details->>'published_outbox_deleted')::integer, 0)
-      + coalesce((v_details->>'tick_runs_deleted')::integer, 0);
+    get diagnostics v_auth_deleted = row_count;
+    v_battle_details := battle.cleanup_operational_data(greatest(1, least(p_limit, 5000)));
+    v_details := jsonb_build_object(
+      'payloads_compacted', v_compacted,
+      'operations_deleted', v_deleted,
+      'auth_attempts_deleted', v_auth_deleted,
+      'battle', v_battle_details
+    );
+    v_count := v_compacted + v_deleted + v_auth_deleted
+      + coalesce((v_battle_details->>'rate_limit_attempts_deleted')::integer, 0)
+      + coalesce((v_battle_details->>'published_outbox_deleted')::integer, 0)
+      + coalesce((v_battle_details->>'tick_runs_deleted')::integer, 0);
   else
     insert into operations.invariant_violations (code, subject, details)
     select 'BALANCE_LEDGER_MISMATCH', b.user_id::text || ':' || b.currency, jsonb_build_object('balance', b.available, 'ledger', coalesce(sum(l.amount), 0))
@@ -12183,8 +12403,17 @@ begin
     update operations.job_runs set processed_count = v_count, details = jsonb_build_object('phase', 'chain_reconciliation') where id = v_run;
     return jsonb_build_object('job_run_id', v_run, 'job_name', p_job_name, 'status', 'running', 'processed_count', v_count, 'scan_from', v_scan_from, 'scan_to', v_scan_to);
   end if;
-  update operations.job_runs set status = 'succeeded', processed_count = v_count, finished_at = now() where id = v_run;
-  return jsonb_build_object('job_run_id', v_run, 'job_name', p_job_name, 'status', 'succeeded', 'processed_count', v_count, 'scan_from', v_scan_from, 'scan_to', v_scan_to);
+  update operations.job_runs
+  set status = 'succeeded', processed_count = v_count,
+      details = coalesce(v_details, '{}'::jsonb), finished_at = now()
+  where id = v_run;
+  return jsonb_build_object(
+    'job_run_id', v_run, 'job_name', p_job_name, 'status', 'succeeded',
+    'processed_count', v_count, 'scan_from', v_scan_from, 'scan_to', v_scan_to
+  ) || case
+    when v_details is null then '{}'::jsonb
+    else jsonb_build_object('maintenance', v_details)
+  end;
 exception when others then
   update operations.job_runs set status = 'failed', details = jsonb_build_object('error', sqlerrm), finished_at = now() where id = v_run;
   return jsonb_build_object('job_run_id', v_run, 'job_name', p_job_name, 'status', 'failed', 'processed_count', v_count, 'scan_from', v_scan_from, 'scan_to', v_scan_to, 'error', sqlerrm);

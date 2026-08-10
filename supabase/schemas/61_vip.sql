@@ -17,6 +17,8 @@ create table vip.claims (
   primary key (user_id, benefit_date, benefit)
 );
 
+create index vip_claims_operation_idx on vip.claims (operation_id);
+
 create or replace function vip.status_json(p_user_id uuid)
 returns jsonb
 language plpgsql

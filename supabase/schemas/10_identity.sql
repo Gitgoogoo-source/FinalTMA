@@ -146,11 +146,15 @@ security invoker
 set search_path = ''
 as $$
   select jsonb_build_object(
-    'entry_handoff_state', case when s.entry_kind = 'referral' and s.referral_processed_at is null then 'pending' else 'complete' end,
-    'entry_handoff_code', case when s.entry_kind = 'referral' then coalesce(c.code, s.referral_code) else null end,
+    'entry_handoff_state', case when s.referral_processed_at is null then 'pending' else 'complete' end,
+    'entry_handoff_code', case
+      when s.referral_processed_at is null then coalesce(c.code, s.referral_code)
+      when s.entry_kind = 'referral' then coalesce(c.code, s.referral_code)
+      else null
+    end,
     'entry_handoff_result', case
-      when s.entry_kind <> 'referral' then null
       when s.referral_processed_at is null then null
+      when s.entry_kind <> 'referral' then null
       when c.status in ('bound', 'rejected') then c.result_code
       when not s.new_user and s.referral_code is not null then 'REFERRAL_OLD_USER'
       else null
@@ -188,8 +192,7 @@ begin
   if v_status <> 'normal' then
     perform api.raise_business_error('ACCOUNT_RESTRICTED', '账号不可用');
   end if;
-  if v_session.entry_kind = 'referral'
-    and v_session.referral_processed_at is null
+  if v_session.referral_processed_at is null
     and not coalesce(p_allow_pending_entry_handoff, false)
   then
     perform api.raise_business_error('ENTRY_HANDOFF_PENDING', '邀请绑定结果确认中，请稍后刷新');

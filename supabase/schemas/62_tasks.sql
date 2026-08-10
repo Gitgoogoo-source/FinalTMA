@@ -21,6 +21,9 @@ create table tasks.daily_progress (
 );
 
 create index task_progress_claimable_idx on tasks.daily_progress (user_id, business_date) where claimed_at is null;
+create index task_progress_claim_operation_idx
+on tasks.daily_progress (claim_operation_id)
+where claim_operation_id is not null;
 
 create table tasks.checkins (
   user_id uuid primary key references identity.users(id) on delete cascade,

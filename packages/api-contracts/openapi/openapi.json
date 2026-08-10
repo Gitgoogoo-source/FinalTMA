@@ -41,8 +41,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -338,8 +337,7 @@
                                             "properties": {
                                               "operation_id": {
                                                 "type": "string",
-                                                "format": "uuid",
-                                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                                               },
                                               "use_case": { "type": "string" },
                                               "status": {
@@ -1099,8 +1097,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -1218,11 +1215,11 @@
           "REQUEST_TOO_LARGE",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "TELEGRAM_INIT_DATA_INVALID",
           "TELEGRAM_INIT_DATA_EXPIRED",
           "TELEGRAM_INIT_DATA_TIME_INVALID",
           "TELEGRAM_START_PARAM_INVALID",
-          "RATE_LIMITED",
           "IDEMPOTENCY_KEY_REUSED",
           "SESSION_REQUIRED",
           "SESSION_EXPIRED",
@@ -1275,7 +1272,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -1283,6 +1280,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -1314,13 +1318,6 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
-          },
-          "RATE_LIMITED": {
-            "status": 429,
-            "message": "操作过于频繁，请稍后重试",
-            "retryable": false,
-            "refreshScope": "none",
-            "recoveryAction": "none"
           },
           "IDEMPOTENCY_KEY_REUSED": {
             "status": 409,
@@ -1527,8 +1524,7 @@
                                 "properties": {
                                   "operation_id": {
                                     "type": "string",
-                                    "format": "uuid",
-                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                                   },
                                   "use_case": { "type": "string" },
                                   "status": {
@@ -2233,8 +2229,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -2529,8 +2524,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -2732,8 +2726,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -3393,8 +3386,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -3759,8 +3751,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -3971,8 +3962,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -4040,6 +4030,14 @@
               }
             }
           },
+          "429": {
+            "description": "Errors: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR, CATALOG_INVALID",
             "content": {
@@ -4074,6 +4072,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "BOX_TIER_INVALID",
           "DRAW_COUNT_INVALID",
@@ -4162,7 +4161,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -4170,6 +4169,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -4405,8 +4411,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -4697,8 +4702,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -5105,8 +5109,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -5326,8 +5329,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -5821,8 +5823,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -6100,8 +6101,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -6169,6 +6169,14 @@
               }
             }
           },
+          "429": {
+            "description": "Errors: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -6203,6 +6211,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "EVOLUTION_NOT_AVAILABLE",
           "INSUFFICIENT_INVENTORY",
@@ -6289,7 +6298,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -6297,6 +6306,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -6476,8 +6492,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -6584,8 +6599,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -6653,6 +6667,14 @@
               }
             }
           },
+          "429": {
+            "description": "Errors: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -6687,6 +6709,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "INSUFFICIENT_INVENTORY",
           "INVENTORY_RESERVED",
@@ -6772,7 +6795,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -6780,6 +6803,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -7005,8 +7035,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -7267,8 +7296,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -7377,8 +7405,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -7446,6 +7473,14 @@
               }
             }
           },
+          "429": {
+            "description": "Errors: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -7480,6 +7515,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "EXPEDITION_LIMIT_REACHED",
           "EXPEDITION_ALREADY_ACTIVE",
@@ -7567,7 +7603,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -7575,6 +7611,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -7821,8 +7864,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -8051,8 +8093,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -8109,8 +8150,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -8186,6 +8226,14 @@
               }
             }
           },
+          "429": {
+            "description": "Errors: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -8220,6 +8268,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "EXPEDITION_NOT_FOUND",
           "EXPEDITION_NOT_READY",
@@ -8305,7 +8354,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -8313,6 +8362,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -8418,8 +8474,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -8830,8 +8885,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -9088,8 +9142,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -9157,6 +9210,14 @@
               }
             }
           },
+          "429": {
+            "description": "Errors: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -9191,6 +9252,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "WHEEL_COUNT_INVALID",
           "WHEEL_DAILY_LIMIT",
@@ -9277,7 +9339,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -9285,6 +9347,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -9623,8 +9692,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -9858,8 +9926,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -10186,8 +10253,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -10422,8 +10488,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -10504,8 +10569,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -10581,6 +10645,14 @@
               }
             }
           },
+          "429": {
+            "description": "Errors: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -10615,6 +10687,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "MARKET_ACTIVE_TEMPLATE_LIMIT",
           "INSUFFICIENT_INVENTORY",
@@ -10701,7 +10774,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -10709,6 +10782,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -10837,8 +10917,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -10889,8 +10968,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -10966,6 +11044,14 @@
               }
             }
           },
+          "429": {
+            "description": "Errors: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -11000,6 +11086,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "TEMPLATE_NOT_FOUND",
           "IDEMPOTENCY_KEY_REUSED"
@@ -11084,7 +11171,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -11092,6 +11179,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -11288,8 +11382,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -11439,8 +11532,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -11516,6 +11608,14 @@
               }
             }
           },
+          "429": {
+            "description": "Errors: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -11550,6 +11650,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "MARKET_STOCK_INSUFFICIENT",
           "INSUFFICIENT_BALANCE",
@@ -11636,7 +11737,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -11644,6 +11745,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -12091,8 +12199,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -12589,8 +12696,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -12933,8 +13039,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -13010,6 +13115,14 @@
               }
             }
           },
+          "429": {
+            "description": "Errors: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -13052,6 +13165,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "TOPUP_AMOUNT_INVALID",
           "TOPUP_NOT_REQUIRED",
@@ -13155,7 +13269,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -13163,6 +13277,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -14054,8 +14175,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -14398,8 +14518,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -14475,6 +14594,14 @@
               }
             }
           },
+          "429": {
+            "description": "Errors: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -14509,6 +14636,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "PAYMENT_NOT_FOUND",
           "PAYMENT_ALREADY_PROCESSING",
@@ -14594,7 +14722,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -14602,6 +14730,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -15008,8 +15143,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -15352,8 +15486,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -15429,6 +15562,14 @@
               }
             }
           },
+          "429": {
+            "description": "Errors: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -15463,6 +15604,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "PAYMENT_NOT_FOUND",
           "IDEMPOTENCY_KEY_REUSED"
@@ -15547,7 +15689,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -15555,6 +15697,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -15948,8 +16097,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -16558,8 +16706,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -17056,8 +17203,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -17400,8 +17546,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -17477,6 +17622,14 @@
               }
             }
           },
+          "429": {
+            "description": "Errors: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -17511,6 +17664,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "VIP_RENEWAL_LIMIT",
           "PAYMENT_ALREADY_PENDING",
@@ -17598,7 +17752,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -17606,6 +17760,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -18025,8 +18186,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -18369,8 +18529,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -18446,6 +18605,14 @@
               }
             }
           },
+          "429": {
+            "description": "Errors: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -18480,6 +18647,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "PAYMENT_NOT_FOUND",
           "PAYMENT_ALREADY_PROCESSING",
@@ -18565,7 +18733,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -18573,6 +18741,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -18665,8 +18840,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -18705,8 +18879,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -18774,6 +18947,14 @@
               }
             }
           },
+          "429": {
+            "description": "Errors: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -18808,6 +18989,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "VIP_BENEFIT_INVALID",
           "VIP_INACTIVE",
@@ -18894,7 +19076,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -18902,6 +19084,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -19000,8 +19189,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -19040,8 +19228,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -19109,6 +19296,14 @@
               }
             }
           },
+          "429": {
+            "description": "Errors: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -19143,6 +19338,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "VIP_BENEFIT_INVALID",
           "VIP_INACTIVE",
@@ -19229,7 +19425,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -19237,6 +19433,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -19458,8 +19661,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -19669,8 +19871,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -19726,8 +19927,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -19795,6 +19995,14 @@
               }
             }
           },
+          "429": {
+            "description": "Errors: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -19829,6 +20037,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "CHECKIN_ALREADY_CLAIMED",
           "IDEMPOTENCY_KEY_REUSED"
@@ -19913,7 +20122,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -19921,6 +20130,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -20057,8 +20273,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -20122,8 +20337,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -20199,6 +20413,14 @@
               }
             }
           },
+          "429": {
+            "description": "Errors: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -20233,6 +20455,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "TASK_NOT_FOUND",
           "TASK_NOT_COMPLETE",
@@ -20319,7 +20542,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -20327,6 +20550,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -20463,8 +20693,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -20656,8 +20885,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -20695,8 +20923,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -20764,6 +20991,14 @@
               }
             }
           },
+          "429": {
+            "description": "Errors: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -20797,6 +21032,7 @@
           "SESSION_REQUIRED",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "REFERRAL_ALREADY_RECHARGED",
           "REFERRAL_CANDIDATE_EXPIRED",
@@ -20881,7 +21117,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -20889,6 +21125,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -21136,8 +21379,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -21357,8 +21599,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -21418,8 +21659,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -21487,6 +21727,14 @@
               }
             }
           },
+          "429": {
+            "description": "Errors: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -21521,6 +21769,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "ALBUM_CHAIN_INCOMPLETE",
           "ALBUM_REWARD_ALREADY_CLAIMED",
@@ -21606,7 +21855,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -21614,6 +21863,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -22878,8 +23134,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -23225,8 +23480,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -23542,8 +23796,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -24622,8 +24875,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -24837,8 +25089,7 @@
                             },
                             "create_operation_id": {
                               "type": "string",
-                              "format": "uuid",
-                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                             },
                             "prepare_deadline": {
                               "type": "string",
@@ -24893,8 +25144,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -24930,8 +25180,7 @@
                             },
                             "create_operation_id": {
                               "type": "string",
-                              "format": "uuid",
-                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                             },
                             "prepare_deadline": {
                               "type": "string",
@@ -24986,8 +25235,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -25105,6 +25353,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "BATTLE_RULESET_UNAVAILABLE",
           "BATTLE_TIER_INVALID",
@@ -25116,7 +25365,6 @@
           "INSUFFICIENT_BALANCE",
           "INSUFFICIENT_INVENTORY",
           "INVENTORY_RESERVED",
-          "RATE_LIMITED",
           "IDEMPOTENCY_KEY_REUSED"
         ],
         "x-error-definitions": {
@@ -25199,7 +25447,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -25207,6 +25455,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -25287,13 +25542,6 @@
             "retryable": false,
             "refreshScope": "inventory",
             "recoveryAction": "refresh"
-          },
-          "RATE_LIMITED": {
-            "status": 429,
-            "message": "操作过于频繁，请稍后重试",
-            "retryable": false,
-            "refreshScope": "none",
-            "recoveryAction": "none"
           },
           "IDEMPOTENCY_KEY_REUSED": {
             "status": 409,
@@ -25399,8 +25647,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -25450,8 +25697,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -25527,6 +25773,14 @@
               }
             }
           },
+          "429": {
+            "description": "Errors: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -25561,6 +25815,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "BATTLE_ROOM_NOT_FOUND",
           "BATTLE_ROOM_EXPIRED",
@@ -25649,7 +25904,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -25657,6 +25912,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -26626,8 +26888,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -27522,8 +27783,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -27641,6 +27901,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "BATTLE_RULESET_UNAVAILABLE",
           "BATTLE_TIER_INVALID",
@@ -27651,7 +27912,6 @@
           "INSUFFICIENT_BALANCE",
           "INSUFFICIENT_INVENTORY",
           "INVENTORY_RESERVED",
-          "RATE_LIMITED",
           "IDEMPOTENCY_KEY_REUSED"
         ],
         "x-error-definitions": {
@@ -27734,7 +27994,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -27742,6 +28002,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -27815,13 +28082,6 @@
             "retryable": false,
             "refreshScope": "inventory",
             "recoveryAction": "refresh"
-          },
-          "RATE_LIMITED": {
-            "status": 429,
-            "message": "操作过于频繁，请稍后重试",
-            "retryable": false,
-            "refreshScope": "none",
-            "recoveryAction": "none"
           },
           "IDEMPOTENCY_KEY_REUSED": {
             "status": 409,
@@ -28762,8 +29022,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -29658,8 +29917,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -29777,6 +30035,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "BATTLE_INVITE_INVALID",
           "BATTLE_ROOM_EXPIRED",
@@ -29790,7 +30049,6 @@
           "INSUFFICIENT_INVENTORY",
           "INVENTORY_RESERVED",
           "BATTLE_VOIDED",
-          "RATE_LIMITED",
           "IDEMPOTENCY_KEY_REUSED"
         ],
         "x-error-definitions": {
@@ -29873,7 +30131,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -29881,6 +30139,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -29975,13 +30240,6 @@
             "retryable": false,
             "refreshScope": ["battle", "assets", "inventory"],
             "recoveryAction": "refresh"
-          },
-          "RATE_LIMITED": {
-            "status": 429,
-            "message": "操作过于频繁，请稍后重试",
-            "retryable": false,
-            "refreshScope": "none",
-            "recoveryAction": "none"
           },
           "IDEMPOTENCY_KEY_REUSED": {
             "status": 409,
@@ -30928,8 +31186,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -31824,8 +32081,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -31943,6 +32199,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "BATTLE_ROOM_NOT_FOUND",
           "BATTLE_NOT_PARTICIPANT",
@@ -31952,7 +32209,6 @@
           "BATTLE_SWITCH_TARGET_INVALID",
           "BATTLE_STATE_CONFLICT",
           "BATTLE_VOIDED",
-          "RATE_LIMITED",
           "IDEMPOTENCY_KEY_REUSED"
         ],
         "x-error-definitions": {
@@ -32035,7 +32291,7 @@
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
-            "message": "幂等键必须是 UUID",
+            "message": "幂等键必须是 UUIDv7",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -32043,6 +32299,13 @@
           "IDEMPOTENCY_KEY_REQUIRED": {
             "status": 400,
             "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -32109,13 +32372,6 @@
             "retryable": false,
             "refreshScope": ["battle", "assets", "inventory"],
             "recoveryAction": "refresh"
-          },
-          "RATE_LIMITED": {
-            "status": 429,
-            "message": "操作过于频繁，请稍后重试",
-            "retryable": false,
-            "refreshScope": "none",
-            "recoveryAction": "none"
           },
           "IDEMPOTENCY_KEY_REUSED": {
             "status": 409,
@@ -33145,8 +33401,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -34297,8 +34552,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -34600,8 +34854,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -34838,8 +35091,7 @@
                             "properties": {
                               "operation_id": {
                                 "type": "string",
-                                "format": "uuid",
-                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                               },
                               "use_case": { "type": "string" },
                               "status": {
@@ -35046,8 +35298,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -35232,8 +35483,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
             }
           }
         ],
@@ -35251,8 +35501,7 @@
                       "properties": {
                         "operation_id": {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         "use_case": { "type": "string" },
                         "status": {
@@ -35433,8 +35682,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -35672,8 +35920,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -36124,8 +36371,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -36324,8 +36570,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -36558,6 +36803,59 @@
                             "unknown"
                           ],
                           "additionalProperties": false
+                        },
+                        "maintenance": {
+                          "type": "object",
+                          "properties": {
+                            "payloads_compacted": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "operations_deleted": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "auth_attempts_deleted": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "battle": {
+                              "type": "object",
+                              "properties": {
+                                "rate_limit_attempts_deleted": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "published_outbox_deleted": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "tick_runs_deleted": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "rate_limit_attempts_deleted",
+                                "published_outbox_deleted",
+                                "tick_runs_deleted"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "payloads_compacted",
+                            "operations_deleted",
+                            "auth_attempts_deleted",
+                            "battle"
+                          ],
+                          "additionalProperties": false
                         }
                       },
                       "required": [
@@ -36579,8 +36877,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -36796,6 +37093,59 @@
                             "unknown"
                           ],
                           "additionalProperties": false
+                        },
+                        "maintenance": {
+                          "type": "object",
+                          "properties": {
+                            "payloads_compacted": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "operations_deleted": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "auth_attempts_deleted": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "battle": {
+                              "type": "object",
+                              "properties": {
+                                "rate_limit_attempts_deleted": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "published_outbox_deleted": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "tick_runs_deleted": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "rate_limit_attempts_deleted",
+                                "published_outbox_deleted",
+                                "tick_runs_deleted"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "payloads_compacted",
+                            "operations_deleted",
+                            "auth_attempts_deleted",
+                            "battle"
+                          ],
+                          "additionalProperties": false
                         }
                       },
                       "required": [
@@ -36817,8 +37167,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -37034,6 +37383,59 @@
                             "unknown"
                           ],
                           "additionalProperties": false
+                        },
+                        "maintenance": {
+                          "type": "object",
+                          "properties": {
+                            "payloads_compacted": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "operations_deleted": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "auth_attempts_deleted": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "battle": {
+                              "type": "object",
+                              "properties": {
+                                "rate_limit_attempts_deleted": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "published_outbox_deleted": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "tick_runs_deleted": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "rate_limit_attempts_deleted",
+                                "published_outbox_deleted",
+                                "tick_runs_deleted"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "payloads_compacted",
+                            "operations_deleted",
+                            "auth_attempts_deleted",
+                            "battle"
+                          ],
+                          "additionalProperties": false
                         }
                       },
                       "required": [
@@ -37055,8 +37457,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -37272,6 +37673,59 @@
                             "unknown"
                           ],
                           "additionalProperties": false
+                        },
+                        "maintenance": {
+                          "type": "object",
+                          "properties": {
+                            "payloads_compacted": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "operations_deleted": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "auth_attempts_deleted": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "battle": {
+                              "type": "object",
+                              "properties": {
+                                "rate_limit_attempts_deleted": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "published_outbox_deleted": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "tick_runs_deleted": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "rate_limit_attempts_deleted",
+                                "published_outbox_deleted",
+                                "tick_runs_deleted"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "payloads_compacted",
+                            "operations_deleted",
+                            "auth_attempts_deleted",
+                            "battle"
+                          ],
+                          "additionalProperties": false
                         }
                       },
                       "required": [
@@ -37293,8 +37747,7 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
                         },
                         { "type": "null" }
                       ]
@@ -37578,8 +38031,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "format": "uuid",
-                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
               },
               { "type": "null" }
             ]

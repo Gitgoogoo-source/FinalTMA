@@ -31,6 +31,21 @@ const jobOutputSchema = z
       })
       .strict()
       .optional(),
+    maintenance: z
+      .object({
+        payloads_compacted: z.number().int().min(0),
+        operations_deleted: z.number().int().min(0),
+        auth_attempts_deleted: z.number().int().min(0),
+        battle: z
+          .object({
+            rate_limit_attempts_deleted: z.number().int().min(0),
+            published_outbox_deleted: z.number().int().min(0),
+            tick_runs_deleted: z.number().int().min(0),
+          })
+          .strict(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 

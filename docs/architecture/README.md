@@ -56,7 +56,7 @@ Battle 队伍选择与有效邀请接受页按 [ADR-058](adr/ADR-058-battle-team
 
 前端只提交动作、目标标识、数量、operation-backed 命令所需的幂等键，以及 Battle presence 意图所需的 lifecycle version、lease UUID 与 command sequence。价格、余额、库存、资格、奖励、Battle presence 终态、属性与技能数值、命中、伤害、行动顺序、胜负、结算、随机结果、任务进度和链上状态均由服务端重新校验，并由单个数据库事务裁决。
 
-创建 operation 的玩家写请求以 UUID `Idempotency-Key` 作为 `operation_id`。数据库对规范化请求计算哈希；相同键和相同请求返回原结果，相同键和不同请求返回 `IDEMPOTENCY_KEY_REUSED`。Battle 只有创建、随机匹配、取消、接受和 `attack | switch | replace_attack` 行动属于这一范围；heartbeat/offline 不接收幂等键、不创建 operation，由数据库在 room-first 锁内先裁决 lifecycle version + lease UUID + command sequence，旧 lease、低版本、重复和乱序命令完全无副作用。Battle 结果展示不产生写请求。
+创建 operation 的玩家写请求以 UUIDv7 `Idempotency-Key` 作为 `operation_id`。数据库先回放旧 key，再对新 key 执行时间新鲜度与有界准入，并对规范化请求计算哈希；相同键和相同请求返回原结果，相同键和不同请求返回 `IDEMPOTENCY_KEY_REUSED`。Battle 只有创建、随机匹配、取消、接受和 `attack | switch | replace_attack` 行动属于这一范围；heartbeat/offline 不接收幂等键、不创建 operation，由数据库在 room-first 锁内先裁决 lifecycle version + lease UUID + command sequence，旧 lease、低版本、重复和乱序命令完全无副作用。Battle 结果展示不产生写请求。
 
 会话令牌只在运行内存保存，绝对有效期 15 分钟。只有 `POST /api/auth/telegram` 接收 Telegram `initData`；认证裁决固定执行验签前来源限流和验签后登录事务两个数据库 RPC，完成交接的正常首屏再在事务提交后执行一次 `identity_initial` 只读 RPC，因此正常完整首屏共三次数据库 RPC、一个浏览器认证请求。令牌是包含版本、session UUID 与 HMAC 的自定义 opaque bearer，Function 本地证明完整性后只把 `session_id` 传给业务 RPC。账号为 `banned` 时前端立即清空全部业务内容，只渲染空白界面。
 
@@ -71,6 +71,8 @@ Battle 队伍选择与有效邀请接受页按 [ADR-058](adr/ADR-058-battle-team
 前端内存操作阶段固定为 `confirming → submitting → pending/unknown → succeeded/failed`；数据库持久状态为 `pending`、`unknown`、`succeeded`、`failed`。随机结果和资产结果只生成一次，`unknown` 只查询原 `operation_id`。`identity.initial.recovery` 在同一数据库语句快照返回用户权威游标与恢复种子；`GET /api/operations/recoverable` 既发现转盘未决和进化规定状态，也只用不含结果内容的路由标记发现晚于首屏提交的任意 operation 终态。发现绑定可见、Telegram 激活和在线状态，恢复队列存在时暂停，清空后立即追赶；路由刷新范围全部标记失效且当前页面与全局活动查询成功后推进内存游标，身份域只精确刷新 `identity.summary`，隐藏页面不阻塞并在返回时回正。六类专用表现与业务请求并行加载，表现失败只重载 UI 而不重提 operation；Runtime 后置兄弟节点中的应用风格结果遮罩通过共享双类规则固定覆盖当前 WebView，不继承普通主壳的相对定位、固定高度或裁剪，各表现模块自带自身动画和响应式规则。转盘停盘按 [ADR-052](adr/ADR-052-wheel-animation-bounded-terminal-convergence.md) 只等待独立固定时长计时器，不读取、等待或竞速 Animation 完成 Promise；计时到达或表现 API 异常都落到服务端最终奖励并继续打开结果弹窗，旧运行期迟到动画不得恢复展示。除进化专用回执外，开盒、转盘、分解和通用结果只在取得它们的当前前台运行期展示，“确定”“收下”或返回只处理 Web 内存展示，不发送结果 API、RPC、原操作查询或刷新；隐藏、刷新或重新进入后不恢复旧结果，只刷新权威页面状态。恢复注入的非进化 `pending`、`unknown` 只查询原操作，取得终态后静默回正并移除。进化在未决阶段锁定新提交和底部导航，终态由专用覆盖弹窗和服务端回执处理。Battle 创建、随机匹配、取消、接受和行动恢复原 operation 后必须读取 viewer-specific room snapshot；heartbeat/offline 只在当前 lease 内重试，生命周期结束后以权威快照申请下一版本 lease。普通 heartbeat/offline 结果只应用 room，确认退款终态才按路由契约刷新 Battle、`identity.summary` 和 inventory。Battle 终局快照到达后立即执行三域回正，结果覆盖层等待动作表现队列清空，按钮只在内存返回首页；其他领域既有确认回执保持各自规则。
 
 市场购买按 [ADR-030](adr/ADR-030-market-purchase-inline-progress.md) 在未决阶段只保留确认弹窗内的“购买中”按钮状态，不显示全局操作状态；当前前台运行期的权威刷新完成后才显示不含服务器、请求和 operation ID 的专用购买结果。离开前台后只恢复原 operation 与权威状态，不恢复旧购买结果弹窗。
+
+operation 准入与保留按 [ADR-059](adr/ADR-059-bounded-operation-admission-and-retention.md) 固定：所有幂等命令使用 UUIDv7，旧 key 回放不计入新请求配额；非 Battle 新 key 有用户级四项上限。无业务引用的失败/成功终态分别在 7/37 天删除，被业务事实引用的终态在 30 天后只保留最小锚点。
 
 ## 生成物
 
@@ -143,3 +145,4 @@ Battle 队伍选择与有效邀请接受页按 [ADR-058](adr/ADR-058-battle-team
 - [Battle 实时客户端安全诊断](adr/ADR-055-battle-realtime-client-diagnostics.md)
 - [Battle 原生分享返回后的 Presence 恢复](adr/ADR-057-battle-native-share-presence-resumption.md)
 - [Battle 队伍候选首次加载状态](adr/ADR-058-battle-team-options-loading-state.md)
+- [有界 operation 准入与保留](adr/ADR-059-bounded-operation-admission-and-retention.md)

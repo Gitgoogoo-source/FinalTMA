@@ -16,7 +16,7 @@
 
 开盒资格继续由 `gacha.bootstrap` 返回。身份读模型不再返回 `entitlements`、`catalog_version` 或 `server_time`。`identity.bootstrap` 路由、RPC、OpenAPI operation、权限和全部调用方删除，不保留兼容别名。
 
-`POST /api/auth/telegram` 继续先执行来源限流 RPC，再执行 `identity_authenticate`。认证事务提交后，同一 Vercel Function 在 `entry_handoff_state = complete` 时调用 `identity_initial`，并把结果作为可空 `initial_state` 与令牌一起返回；初始状态读取不嵌入认证事务，不延长登录锁。正常路径仍为三次数据库 RPC，但浏览器启动只发一个认证 HTTP 请求。若入口交接为 `pending`，认证响应固定返回 `initial_state: null`；推荐绑定形成确定终态后，前端必须读取一次新的 `identity.initial`，不得使用绑定前快照。
+`POST /api/auth/telegram` 继续先执行来源限流 RPC，再执行 `identity_authenticate`。账号已有待处理推荐候选时，直接入口或 Battle 入口重认证仍返回 `entry_handoff_state = pending` 和原候选 code，固定不读取初始状态；`entry_kind` 不参与该裁决。认证事务提交后，同一 Vercel Function 在 `entry_handoff_state = complete` 时调用 `identity_initial`，并把结果作为可空 `initial_state` 与令牌一起返回；初始状态读取不嵌入认证事务，不延长登录锁。正常路径仍为三次数据库 RPC，但浏览器启动只发一个认证 HTTP 请求。若入口交接为 `pending`，认证响应固定返回 `initial_state: null`；推荐绑定形成确定终态后，前端必须读取一次新的 `identity.initial`，不得使用绑定前快照。
 
 只有初始状态 RPC 的临时数据库或内部失败可以降级为 `initial_state: null`，认证端点仍返回已签发的有效短期 session。`SESSION_REQUIRED`、`SESSION_EXPIRED`、`SESSION_REPLACED`、`ACCOUNT_RESTRICTED`、`ENTRY_HANDOFF_PENDING` 等稳定身份裁决不得降级。前端对空初始状态执行一次命令式 `identity.initial` 回退；失败时保留内存 session 并显示业务化重试界面。会话自然恢复使用认证响应中的初始状态，空值时执行同一回退。
 

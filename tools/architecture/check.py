@@ -77,6 +77,7 @@ REQUIRED_PATHS = (
     "docs/architecture/adr/ADR-051-operation-registry-selective-subscription.md",
     "docs/architecture/adr/ADR-053-battle-tick-alert-lifecycle.md",
     "docs/architecture/adr/ADR-054-ably-browser-csp-endpoint-allowlist.md",
+    "docs/architecture/adr/ADR-059-bounded-operation-admission-and-retention.md",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
     "docs/architecture/adr/ADR-025-battle-active-switch-atomicity.md",
@@ -194,6 +195,7 @@ def main() -> None:
     verify_adaptive_page_warmup()
     verify_evolution_refresh_semantics()
     verify_operation_recovery_discovery()
+    verify_security_finding_closures()
     verify_game_page_boundary()
     verify_battle_staged_runtime_loading()
     verify_battle_legacy_removal()
@@ -1322,10 +1324,6 @@ def verify_operation_recovery_discovery() -> None:
             "Operation authority convergence and payload retention are incomplete: "
             f"{missing_authority_terms}"
         )
-    if "delete from operations.operations" in jobs_schema.lower():
-        raise SystemExit(
-            "Idempotency cleanup must compact payloads without deleting operation anchors"
-        )
     cleanup_terms = (
         "o.completed_at < now() - interval '30 days'",
         "for update of o skip locked",
@@ -1333,11 +1331,15 @@ def verify_operation_recovery_discovery() -> None:
         "set request = null",
         "result = null",
         "payload_purged_at = now()",
+        "operations.operation_has_durable_reference(o.id)",
+        "o.status = 'failed' and o.completed_at < now() - interval '7 days'",
+        "o.status = 'succeeded' and o.completed_at < now() - interval '37 days'",
+        "delete from operations.operations",
     )
     missing_cleanup_terms = [term for term in cleanup_terms if term not in jobs_schema]
     if missing_cleanup_terms:
         raise SystemExit(
-            "Operation payload compaction is incomplete: "
+            "Operation payload compaction and bounded retention are incomplete: "
             f"{missing_cleanup_terms}"
         )
 
@@ -1359,6 +1361,134 @@ def verify_operation_recovery_discovery() -> None:
     ):
         raise SystemExit(
             "Operation discovery lifecycle documentation is incomplete"
+        )
+
+
+def verify_security_finding_closures() -> None:
+    identity = (ROOT / "supabase/schemas/10_identity.sql").read_text(
+        encoding="utf-8"
+    ).lower()
+    referral = (ROOT / "supabase/schemas/63_referral.sql").read_text(
+        encoding="utf-8"
+    ).lower()
+    operations = (ROOT / "supabase/schemas/30_operations.sql").read_text(
+        encoding="utf-8"
+    ).lower()
+    jobs = (ROOT / "supabase/schemas/95_jobs.sql").read_text(
+        encoding="utf-8"
+    ).lower()
+    middleware = (API_ROOT / "http/middleware.ts").read_text(encoding="utf-8")
+    client = (WEB_ROOT / "platform/api/client.ts").read_text(encoding="utf-8")
+    bootstrap = (
+        WEB_ROOT / "workflows/session-bootstrap/useBootstrap.ts"
+    ).read_text(encoding="utf-8")
+
+    referral_required = (
+        "case when s.referral_processed_at is null then 'pending' else 'complete' end",
+        "when s.referral_processed_at is null then coalesce(c.code, s.referral_code)",
+        "if v_session.referral_processed_at is null",
+        "and (id = p_session_id or revoked_at is null)",
+    )
+    missing = [term for term in referral_required if term not in identity + referral]
+    if missing or "v_session.entry_kind = 'referral'" in identity:
+        raise SystemExit(
+            "Pending referral handoff must remain sticky across reauthentication: "
+            f"missing={missing}"
+        )
+    if (
+        'context.entryHandoffState === "pending"' not in bootstrap
+        or "context.entryKind" in bootstrap[bootstrap.index('context.entryHandoffState === "pending"') :]
+    ):
+        raise SystemExit("Referral settlement routing must use handoff state, not entry kind")
+
+    operation_required = (
+        "create table operations.user_admission_counters",
+        "create or replace function operations.assert_new_operation_id",
+        "create or replace function operations.admit_new_command",
+        "v_timestamp_ms < v_now_ms - 86400000",
+        "v_timestamp_ms > v_now_ms + 300000",
+        "v_counter.minute_count >= 60",
+        "v_counter.day_count >= 1000",
+        "v_failed_count >= 100",
+        "v_open_count >= 20",
+        "if p_use_case like 'battle.%' then",
+        "pg_advisory_xact_lock(hashtextextended('operations.command:'",
+    )
+    missing = [term for term in operation_required if term not in operations]
+    begin_command = operations[operations.index("create or replace function operations.begin_command") :]
+    ordering = [
+        begin_command.find("select * into v_operation"),
+        begin_command.find("perform operations.assert_new_operation_id"),
+        begin_command.find("perform operations.admit_new_command"),
+        begin_command.find("insert into operations.operations"),
+    ]
+    if missing or any(index < 0 for index in ordering) or ordering != sorted(ordering):
+        raise SystemExit(
+            "Operation admission must replay before UUIDv7 freshness, quota, and insert: "
+            f"missing={missing}, ordering={ordering}"
+        )
+    if "on conflict (id) do nothing" in begin_command.partition("$$;")[0]:
+        raise SystemExit("Operation admission cannot count a racing same-key retry")
+    if (
+        "operationIdSchema.safeParse(value)" not in middleware
+        or "crypto.getRandomValues(new Uint8Array(16))" not in client
+        or "(bytes[6]! & 0x0f) | 0x70" not in client
+        or "(bytes[8]! & 0x3f) | 0x80" not in client
+    ):
+        raise SystemExit("Browser and API UUIDv7 boundary is incomplete")
+
+    operation_references: set[tuple[str, str]] = set()
+    for path in sorted((ROOT / "supabase/schemas").glob("*.sql")):
+        table: str | None = None
+        for line in path.read_text(encoding="utf-8").lower().splitlines():
+            table_match = re.match(r"create table ([a-z_]+\.[a-z_]+) \(", line)
+            if table_match:
+                table = table_match.group(1)
+            reference_match = re.match(
+                r"\s*([a-z_]+) uuid[^\n]*references operations\.operations\(id\)",
+                line,
+            )
+            if table and reference_match:
+                operation_references.add((table, reference_match.group(1)))
+    uncovered = sorted(
+        f"{table}.{column}"
+        for table, column in operation_references
+        if f"from {table} where {column} = p_operation_id" not in jobs
+    )
+    retention_required = (
+        "create or replace function operations.operation_has_durable_reference",
+        "o.status = 'failed' and o.completed_at < now() - interval '7 days'",
+        "o.status = 'succeeded' and o.completed_at < now() - interval '37 days'",
+        "limit greatest(1, least(p_limit, 5000))",
+        "for update of o skip locked",
+        "delete from operations.operations",
+        "'payloads_compacted'",
+        "'operations_deleted'",
+    )
+    missing = [term for term in retention_required if term not in jobs]
+    if uncovered or missing:
+        raise SystemExit(
+            "Operation retention reference coverage is incomplete: "
+            f"uncovered={uncovered}, missing={missing}"
+        )
+
+    function_pattern = re.compile(
+        r"create or replace function api\.[a-z0-9_]+\(.*?\n\$\$;",
+        re.DOTALL,
+    )
+    nested_admission: list[str] = []
+    for path in sorted((ROOT / "supabase/schemas").glob("*.sql")):
+        for function in function_pattern.findall(path.read_text(encoding="utf-8").lower()):
+            if "operations.begin_command(" not in function:
+                continue
+            prefix = function[: function.index("operations.begin_command(")]
+            if len(re.findall(r"^begin$", prefix, re.MULTILINE)) != 1:
+                name = re.search(r"function api\.([a-z0-9_]+)", function)
+                nested_admission.append(name.group(1) if name else path.name)
+    if nested_admission:
+        raise SystemExit(
+            "Operation admission errors cannot be caught as business failures: "
+            f"{nested_admission}"
         )
 
 
