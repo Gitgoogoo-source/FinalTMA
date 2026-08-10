@@ -2369,6 +2369,9 @@ def verify_market_transactional_supply_read_model() -> None:
         "listingQuota.lifetime_used",
         "20,000",
         "Boolean(quotaLimitMessage)",
+        'empty={false}',
+        'className="market-sell-empty"',
+        "MarketListingQuotaStatus",
         "nextUtcDay",
         "refetchSellable()",
     )

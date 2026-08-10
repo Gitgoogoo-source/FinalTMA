@@ -567,9 +567,9 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
           onRetry={() => void state.refetch()}
           hasContent={state.data !== undefined}
           retrying={state.isFetching}
-          empty={!selectedSellItem}
+          empty={false}
         >
-          {selectedSellItem && (
+          {selectedSellItem ? (
             <MarketSellWorkbench
               key={`${selectedSellItem.template_id}:${requestedQuantity}`}
               items={visible}
@@ -587,6 +587,13 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
               onSubmit={submit}
               onPrepare={() => preload("market.create_listing")}
             />
+          ) : (
+            <Card className="market-sell-empty">
+              <MarketListingQuotaStatus
+                listingQuota={sellable.data?.listing_quota}
+              />
+              <div className="page-state">暂无可出售藏品</div>
+            </Card>
           )}
         </PageState>
       ) : (
@@ -812,6 +819,39 @@ type MarketListingQuota = {
   lifetime_remaining: number;
 };
 
+function listingQuotaLimitMessage(
+  listingQuota: MarketListingQuota | undefined,
+): string | null {
+  if (listingQuota?.lifetime_remaining === 0) return "账号累计上架次数已达上限";
+  if (listingQuota?.daily_remaining === 0) return "今日上架次数已用完";
+  return null;
+}
+
+function MarketListingQuotaStatus({
+  listingQuota,
+}: {
+  listingQuota: MarketListingQuota | undefined;
+}): ReactNode {
+  if (!listingQuota) return null;
+  const quotaLimitMessage = listingQuotaLimitMessage(listingQuota);
+  return (
+    <div
+      className={`market-sell-quota${quotaLimitMessage ? " is-exhausted" : ""}`}
+      role={quotaLimitMessage ? "status" : undefined}
+      aria-live="polite"
+    >
+      <span>
+        今日剩余 <strong>{listingQuota.daily_remaining}</strong> / 200
+      </span>
+      <i aria-hidden="true">·</i>
+      <span>
+        累计 <strong>{formatKCoin(listingQuota.lifetime_used)}</strong> / 20,000
+      </span>
+      {quotaLimitMessage && <small>{quotaLimitMessage}</small>}
+    </div>
+  );
+}
+
 function MarketListingCard({
   item,
   blocked,
@@ -953,12 +993,7 @@ function MarketSellWorkbench({
   const net = gross - fee;
   const vipRebate = vipActive ? Math.floor((fee * vipRebateBps) / 10_000) : 0;
   const finalNet = net + vipRebate;
-  const quotaLimitMessage =
-    listingQuota?.lifetime_remaining === 0
-      ? "账号累计上架次数已达上限"
-      : listingQuota?.daily_remaining === 0
-        ? "今日上架次数已用完"
-        : null;
+  const quotaLimitMessage = listingQuotaLimitMessage(listingQuota);
   return (
     <div className="market-sell-workbench">
       <Card className="market-sell-hero" aria-label="当前选中的出售藏品">
@@ -1082,23 +1117,7 @@ function MarketSellWorkbench({
           </span>
           <small>实际手续费和返还按后续每次真实成交明细计算</small>
         </div>
-        {listingQuota && (
-          <div
-            className={`market-sell-quota${quotaLimitMessage ? " is-exhausted" : ""}`}
-            role={quotaLimitMessage ? "status" : undefined}
-            aria-live="polite"
-          >
-            <span>
-              今日剩余 <strong>{listingQuota.daily_remaining}</strong> / 200
-            </span>
-            <i aria-hidden="true">·</i>
-            <span>
-              累计 <strong>{formatKCoin(listingQuota.lifetime_used)}</strong> /
-              20,000
-            </span>
-            {quotaLimitMessage && <small>{quotaLimitMessage}</small>}
-          </div>
-        )}
+        <MarketListingQuotaStatus listingQuota={listingQuota} />
         <Button
           className={`market-sell-confirm${listingInProgress ? " is-pending" : ""}`}
           disabled={

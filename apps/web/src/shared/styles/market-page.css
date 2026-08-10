@@ -1252,6 +1252,14 @@
   flex-basis: 100%;
   text-align: center;
 }
+.app-shell .market-sell-empty {
+  display: grid;
+  gap: 12px;
+  margin: 16px;
+}
+.app-shell .market-sell-empty .page-state {
+  min-height: 240px;
+}
 .app-shell .market-sell-confirm.button {
   width: 100%;
   min-height: 44px;
