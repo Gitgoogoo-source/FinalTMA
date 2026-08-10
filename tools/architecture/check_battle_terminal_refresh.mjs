@@ -700,10 +700,31 @@ function checkView(source) {
   const pageDerivation = calls(view, "derivePageState")[0];
   const pageDerivationOptions = objectArgument(pageDerivation, 0);
   const stateDeriver = topLevelFunction(source, "derivePageState");
+  const strictSelfInviteGuard = ifStatements(stateDeriver).find(
+    (node) =>
+      identifiers(node.expression).includes("battleEntry") &&
+      identifiers(node.expression).includes("forceHome") &&
+      Boolean(
+        findBinaryComparison(
+          node.expression,
+          "invite.invite_status",
+          ts.SyntaxKind.EqualsEqualsEqualsToken,
+          "self",
+        ),
+      ),
+  );
   const bearerInviteGuard = ifStatements(stateDeriver).find(
     (node) =>
       identifiers(node.expression).includes("battleEntry") &&
-      identifiers(node.expression).includes("forceHome"),
+      identifiers(node.expression).includes("forceHome") &&
+      Boolean(
+        findBinaryComparison(
+          node.expression,
+          "invite.invite_status",
+          ts.SyntaxKind.ExclamationEqualsEqualsToken,
+          "none",
+        ),
+      ),
   );
   const participantRoomGuard = ifStatements(stateDeriver).find(
     (node) => expressionValue(node.expression) === "room",
@@ -783,6 +804,7 @@ function checkView(source) {
       ) === "createHandoff" &&
       handoffGuard &&
       handoffGuard.pos < participantRoomGuard.pos &&
+      handoffGuard.pos < strictSelfInviteGuard.pos &&
       handoffGuard.pos < bearerInviteGuard.pos &&
       handoffReturns.length === 1 &&
       handoffReturns[0] === "preparing_share" &&
@@ -818,6 +840,7 @@ function checkView(source) {
       ) === "matchmakeHandoff" &&
       matchmakeHandoffGuard &&
       matchmakeHandoffGuard.pos < participantRoomGuard.pos &&
+      matchmakeHandoffGuard.pos < strictSelfInviteGuard.pos &&
       matchmakeHandoffGuard.pos < bearerInviteGuard.pos &&
       matchmakeHandoffReturns.length === 1 &&
       matchmakeHandoffReturns[0] === "team_select" &&
@@ -868,6 +891,9 @@ function checkView(source) {
   const bearerGuardReturns = returnExpressions(
     bearerInviteGuard?.thenStatement,
   ).map((expression) => expressionValue(expression));
+  const strictSelfGuardReturns = returnExpressions(
+    strictSelfInviteGuard?.thenStatement,
+  ).map((expression) => expressionValue(expression));
   must(
     inviteEntryChoice &&
       authoritativeInvite &&
@@ -878,11 +904,26 @@ function checkView(source) {
       expressionValue(
         objectPropertyExpression(pageDerivationOptions, "invite"),
       ) === "authoritativeInvite" &&
+      strictSelfInviteGuard &&
       bearerInviteGuard &&
       participantRoomGuard &&
+      strictSelfInviteGuard.pos < participantRoomGuard.pos &&
       participantRoomGuard.pos < bearerInviteGuard.pos &&
+      !identifiers(strictSelfInviteGuard.expression).includes("room") &&
       !identifiers(bearerInviteGuard.expression).includes("room") &&
+      containsNegatedIdentifier(
+        strictSelfInviteGuard.expression,
+        "forceHome",
+      ) &&
       containsNegatedIdentifier(bearerInviteGuard.expression, "forceHome") &&
+      Boolean(
+        findBinaryComparison(
+          strictSelfInviteGuard.expression,
+          "invite.invite_status",
+          ts.SyntaxKind.EqualsEqualsEqualsToken,
+          "self",
+        ),
+      ) &&
       propertyPaths(bearerInviteGuard.expression).includes(
         "invite.invite_status",
       ) &&
@@ -894,9 +935,11 @@ function checkView(source) {
           "none",
         ),
       ) &&
+      strictSelfGuardReturns.length === 1 &&
+      strictSelfGuardReturns[0] === "accept" &&
       bearerGuardReturns.length === 1 &&
       bearerGuardReturns[0] === "accept",
-    "Battle bearer entry must query current_invite despite participation and reject stale query data, while participant room authority renders first and a terminal participant's none state reopens at Battle Home",
+    "Battle bearer entry must query current_invite despite participation: authoritative self renders before the creator waiting room, while participant room authority still precedes every other bearer state and a terminal participant's none state reopens at Battle Home",
   );
   const participantInviteRefresh = calls(authority, "refetchInvite").find(
     (call) =>
@@ -2336,7 +2379,15 @@ function runSelfTests() {
         const bearerGuard = ifStatements(derive).find(
           (node) =>
             identifiers(node.expression).includes("battleEntry") &&
-            identifiers(node.expression).includes("forceHome"),
+            identifiers(node.expression).includes("forceHome") &&
+            Boolean(
+              findBinaryComparison(
+                node.expression,
+                "invite.invite_status",
+                ts.SyntaxKind.ExclamationEqualsEqualsToken,
+                "none",
+              ),
+            ),
         );
         const roomGuard = ifStatements(derive).find((node) =>
           identifiers(node.expression).includes("room"),
@@ -2354,13 +2405,53 @@ function runSelfTests() {
     ),
     fixture(
       paths.view,
+      "strict self invite falls behind participant room",
+      (source, text) => {
+        const derive = topLevelFunction(source, "derivePageState");
+        const strictSelfGuard = ifStatements(derive).find(
+          (node) =>
+            identifiers(node.expression).includes("battleEntry") &&
+            identifiers(node.expression).includes("forceHome") &&
+            Boolean(
+              findBinaryComparison(
+                node.expression,
+                "invite.invite_status",
+                ts.SyntaxKind.EqualsEqualsEqualsToken,
+                "self",
+              ),
+            ),
+        );
+        const roomGuard = ifStatements(derive).find(
+          (node) => expressionValue(node.expression) === "room",
+        );
+        const strictSelfStart = strictSelfGuard.getStart(source);
+        const roomStart = roomGuard.getStart(source);
+        return (
+          text.slice(0, strictSelfStart) +
+          roomGuard.getText(source) +
+          text.slice(strictSelfGuard.end, roomStart) +
+          strictSelfGuard.getText(source) +
+          text.slice(roomGuard.end)
+        );
+      },
+    ),
+    fixture(
+      paths.view,
       "terminal participant Battle entry ignores home reset",
       (source, text) => {
         const derive = topLevelFunction(source, "derivePageState");
         const bearerGuard = ifStatements(derive).find(
           (node) =>
             identifiers(node.expression).includes("battleEntry") &&
-            identifiers(node.expression).includes("forceHome"),
+            identifiers(node.expression).includes("forceHome") &&
+            Boolean(
+              findBinaryComparison(
+                node.expression,
+                "invite.invite_status",
+                ts.SyntaxKind.ExclamationEqualsEqualsToken,
+                "none",
+              ),
+            ),
         );
         const noneGuard = findBinaryComparison(
           bearerGuard.expression,

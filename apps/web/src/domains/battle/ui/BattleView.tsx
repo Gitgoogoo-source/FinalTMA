@@ -1733,6 +1733,8 @@ function derivePageState({
   if (result) return "result";
   if (createHandoff) return "preparing_share";
   if (matchmakeHandoff) return "team_select";
+  if (!forceHome && battleEntry && invite?.invite_status === "self")
+    return "accept";
   if (room) {
     if (room.status === "preparing_share") return "preparing_share";
     if (room.status === "waiting") return "waiting";
