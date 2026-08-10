@@ -6,7 +6,7 @@
 
 ## 决定
 
-Ably Standard 只发送 Battle 状态失效通知，不承载业务状态或裁决。浏览器使用 5 分钟短期 token，capability 只允许 subscribe 当前用户、当前参与 room 或当前 invite 状态频道；浏览器不能 publish、presence-enter 或管理频道。消息固定只含 `event_id`、`room_id`、`state_version` 和 `event_kind`。
+Ably Standard 只发送 Battle 状态失效通知，不承载业务状态或裁决。浏览器使用 5 分钟短期 token，capability 只允许 subscribe 当前用户、当前参与 room 或当前 invite 状态频道；浏览器不能 publish、presence-enter 或管理频道。邀请接受前后的最小权限切换固定遵循 [ADR-056](ADR-056-battle-realtime-authorization-context-handoff.md)：授权上下文 key 区分 invite 与 room，并在同一身份内于 Ably AUTH 成功后重协调频道集合。消息固定只含 `event_id`、`room_id`、`state_version` 和 `event_kind`。
 
 数据库只为实际状态转换递增 room 的 `state_version` 并在同一事务写入 `battle.outbox`。普通心跳续租只更新 participant 服务端时间和 lease 命令序号，不增加 room 版本；online/offline 转换、lobby 倒计时锁定、开战、动作结算和等待期取消才产生事件，不存在倒计时中止事件。heartbeat/offline 在这些转换前先裁决 lifecycle version、lease UUID 与 command sequence；旧、重复和乱序命令不改变 presence、deadline、`state_version` 或资产，合法新命令在 `lobby_countdown` 也只能更新 presence，不能改变锁定 deadline 或产生退款。客户端收到 Ably 消息后通过 REST 携带 `after_action_sequence` 读取 viewer-specific 权威快照，按动作 sequence 补齐最多 16 条事件，并丢弃低于当前版本的重复、乱序和迟到通知。Ably 为 `disconnected`、`suspended` 或 `failed` 时，邀请 waiting、接受和 lobby 每 2 秒轮询，`active_turn` 每 1 秒轮询；重新可见时读取不带游标的快照并把游标直接初始化为最新 sequence。deadline 到达时立即执行 REST 回正；权威 deadline 尚未前进或读取失败时，即使 Ably 仍报告 connected，也按邀请 waiting、接受和 lobby 每 2 秒、`active_turn` 每 1 秒继续静默读取，直到权威状态前进或终结。当前会话已经持有未终局 room 时，bootstrap 的空 participation 只能触发该 room 权威读取，不能单独清空 room。Ably presence 不参与在线裁决，participant REST 命令与数据库时间字段是唯一 presence 事实；进入 active 战斗后停止 presence 心跳。heartbeat/offline 普通完成只应用 room，实际退款终态才刷新 `battle + assets + inventory`，不产生 5 秒资产轮询。
 

@@ -761,7 +761,14 @@ export function BattleView(): ReactNode {
       pageState !== "result" &&
       !isTerminalLocked(room?.room_id ?? roomId),
     pageActive,
-    contextKey: room?.room_id ?? inviteRoom?.room_id ?? session?.userId ?? "",
+    contextKey:
+      room || participation
+        ? `room:${room?.room_id ?? participation?.room_id}`
+        : inviteRoom
+          ? `invite:${inviteRoom.room_id}`
+          : session
+            ? `user:${session.userId}`
+            : "",
     phase: realtimePhase,
     stateVersion: room?.state_version ?? participation?.state_version ?? 0,
     refetch: refetchAuthorityVoid,

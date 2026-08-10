@@ -584,6 +584,8 @@ flowchart LR
 - 服务端使用 `ABLY_API_KEY` 发布。
 - Web 通过 `/api/battle/realtime-token` 获取 5 分钟短期 token。
 - token capability 只允许 subscribe 当前用户频道、当前参与房间频道，或当前 Battle 入口对应的邀请状态频道。
+- Web 的授权上下文 key 固定区分 `invite:<room_id>`、`room:<room_id>` 与 `user:<user_id>`；接受成功时即使 room ID 相同也立即关闭旧连接并按新权威上下文重新取 token，不等待 token 到期。
+- 自动 token 更新只允许唯一用户频道与 `clientId` 保持不变的同身份权限切换；token 仍须为精确 Battle 频道、无通配符且逐频道仅有 `subscribe`。Ably AUTH 成功后才订阅新增频道并取消、detach 已移除频道，浏览器不能提交或选择频道。
 - 浏览器不能 publish、presence-enter 或管理频道。
 - Ably 消息只包含 `event_id`、`room_id`、`state_version` 和 `event_kind`，不包含阵容、行动、命中、伤害、余额或结算。
 - 客户端收到消息后用 REST 读取最新权威快照，并丢弃低于当前 `state_version` 的重复通知。

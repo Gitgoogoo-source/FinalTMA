@@ -132,12 +132,12 @@ export function useBattleRealtime({
           runtimePromise,
         ]);
         if (disposed) return;
-        const authorized = parseAuthorizedChannels(token.data.capability);
-        if (!authorized || authorized.length === 0)
+        const authorization = parseBattleRealtimeAuthorization(token.data);
+        if (!authorization)
           throw new Error("BATTLE_REALTIME_CAPABILITY_INVALID");
         connectionRef.current = runtime.connectBattleRealtimeRuntime({
           tokenDetails: token.data,
-          authorizedChannels: authorized,
+          authorizedChannels: authorization.channels,
           refreshToken: async () => {
             const controller = new AbortController();
             authControllers.add(controller);
@@ -153,12 +153,15 @@ export function useBattleRealtime({
               authControllers.delete(controller);
             }
           },
-          validateRefreshedToken: (refreshed) => {
-            const capability = tokenCapability(refreshed);
-            const channels = capability
-              ? parseAuthorizedChannels(capability)
-              : null;
-            return Boolean(channels && sameChannels(channels, authorized));
+          validateRefreshedAuthorization: (tokenDetails) => {
+            const refreshed = parseBattleRealtimeAuthorization(tokenDetails);
+            if (
+              !refreshed ||
+              refreshed.clientId !== authorization.clientId ||
+              refreshed.userChannel !== authorization.userChannel
+            )
+              return null;
+            return refreshed.channels;
           },
           onMessage,
           onStatus: (next) => {
@@ -260,19 +263,40 @@ function parseAuthorizedChannels(capability: string): string[] | null {
   }
 }
 
+function parseBattleRealtimeAuthorization(tokenDetails: unknown): {
+  channels: string[];
+  clientId: string;
+  userChannel: string;
+} | null {
+  const capability = tokenCapability(tokenDetails);
+  const clientId = tokenClientId(tokenDetails);
+  if (!capability || !clientId) return null;
+  const channels = parseAuthorizedChannels(capability);
+  if (!channels || channels.length === 0) return null;
+  const userChannels = channels.filter((channel) =>
+    battleChannelPatterns[0].test(channel),
+  );
+  const roomChannels = channels.filter((channel) =>
+    battleChannelPatterns[1].test(channel),
+  );
+  const inviteChannels = channels.filter((channel) =>
+    battleChannelPatterns[2].test(channel),
+  );
+  if (
+    userChannels.length !== 1 ||
+    roomChannels.length > 1 ||
+    inviteChannels.length > 1
+  )
+    return null;
+  const userChannel = userChannels[0]!;
+  if (clientId !== `battle-user:${userChannel.slice("battle:user:".length)}`)
+    return null;
+  return { channels, clientId, userChannel };
+}
+
 function hasWildcardSyntax(channel: string): boolean {
   return ["*", "?", "[", "]", "{", "}", "#", ">"].some((marker) =>
     channel.includes(marker),
-  );
-}
-
-function sameChannels(
-  left: readonly string[],
-  right: readonly string[],
-): boolean {
-  return (
-    left.length === right.length &&
-    left.every((channel, index) => channel === right[index])
   );
 }
 
@@ -283,4 +307,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function tokenCapability(value: unknown): string | null {
   if (!isRecord(value)) return null;
   return typeof value.capability === "string" ? value.capability : null;
+}
+
+function tokenClientId(value: unknown): string | null {
+  if (!isRecord(value)) return null;
+  return typeof value.clientId === "string" ? value.clientId : null;
 }

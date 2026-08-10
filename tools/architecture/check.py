@@ -1382,6 +1382,9 @@ def verify_game_page_boundary() -> None:
     battle_realtime = (
         WEB_ROOT / "workflows/battle-realtime/useBattleRealtime.ts"
     ).read_text(encoding="utf-8")
+    battle_view = (
+        WEB_ROOT / "domains/battle/ui/BattleView.tsx"
+    ).read_text(encoding="utf-8")
     required_battle_terms = (
         'data-battle-page-state={pageState}',
         "viewer_action_state",
@@ -1493,6 +1496,9 @@ def verify_game_page_boundary() -> None:
     required_realtime_terms = (
         '"battle.realtime_token"',
         "parseBattleRealtimeInvalidation(data)",
+        "parseBattleRealtimeAuthorization(token.data)",
+        "refreshed.clientId !== authorization.clientId",
+        "refreshed.userChannel !== authorization.userChannel",
         "return 1_000",
         "return 2_000",
         "loadBattleRealtimeRuntime()",
@@ -1500,6 +1506,10 @@ def verify_game_page_boundary() -> None:
     )
     required_realtime_runtime_terms = (
         'import * as Ably from "ably"',
+        "validateRefreshedAuthorization",
+        "pendingAuthorizedChannels",
+        "synchronizeChannels",
+        'client.connection.on("update", handleConnectionUpdate)',
         "channel.unsubscribe",
         "client.close()",
     )
@@ -1519,6 +1529,19 @@ def verify_game_page_boundary() -> None:
         raise SystemExit(
             "Battle realtime dynamic runtime is incomplete: "
             f"{missing_realtime_runtime_terms}"
+        )
+    required_realtime_context_terms = (
+        "`room:${room?.room_id ?? participation?.room_id}`",
+        "`invite:${inviteRoom.room_id}`",
+        "`user:${session.userId}`",
+    )
+    missing_realtime_context_terms = [
+        value for value in required_realtime_context_terms if value not in battle_view
+    ]
+    if missing_realtime_context_terms:
+        raise SystemExit(
+            "Battle realtime authorization context handoff is incomplete: "
+            f"{missing_realtime_context_terms}"
         )
 
     tasks_view = (

@@ -14,7 +14,9 @@ export type BattleRealtimeRuntimeOptions = {
   tokenDetails: unknown;
   authorizedChannels: readonly string[];
   refreshToken(): Promise<unknown>;
-  validateRefreshedToken(tokenDetails: unknown): boolean;
+  validateRefreshedAuthorization(
+    tokenDetails: unknown,
+  ): readonly string[] | null;
   onMessage(data: unknown): void;
   onStatus(status: BattleRealtimeRuntimeStatus): void;
 };
@@ -29,12 +31,16 @@ export function connectBattleRealtimeRuntime({
   tokenDetails,
   authorizedChannels,
   refreshToken,
-  validateRefreshedToken,
+  validateRefreshedAuthorization,
   onMessage,
   onStatus,
 }: BattleRealtimeRuntimeOptions): BattleRealtimeRuntimeConnection {
   let disposed = false;
-  const channels: Ably.RealtimeChannel[] = [];
+  let pendingAuthorizedChannels: readonly string[] | null = null;
+  const channels = new Map<string, Ably.RealtimeChannel>();
+  const handleMessage = (message: Ably.InboundMessage) => {
+    onMessage(message.data);
+  };
   const client = new Ably.Realtime({
     tokenDetails: tokenDetails as Ably.TokenDetails,
     autoConnect: false,
@@ -43,12 +49,15 @@ export function connectBattleRealtimeRuntime({
       void refreshToken()
         .then((refreshed) => {
           if (disposed) return;
-          if (!validateRefreshedToken(refreshed)) {
+          const nextAuthorizedChannels =
+            validateRefreshedAuthorization(refreshed);
+          if (!nextAuthorizedChannels) {
             onStatus("offline");
             reportBattleRealtimeDiagnostic("token_refresh_invalid");
             callback("BATTLE_REALTIME_CAPABILITY_INVALID", null);
             return;
           }
+          pendingAuthorizedChannels = [...nextAuthorizedChannels];
           callback(null, refreshed as Ably.TokenDetails);
         })
         .catch((cause: unknown) => {
@@ -64,13 +73,38 @@ export function connectBattleRealtimeRuntime({
     },
   });
 
-  const handleMessage = (message: Ably.InboundMessage) => {
-    onMessage(message.data);
+  const synchronizeChannels = (nextChannelNames: readonly string[]) => {
+    const nextNames = new Set(nextChannelNames);
+    for (const name of nextNames) {
+      if (channels.has(name)) continue;
+      const channel = client.channels.get(name);
+      channels.set(name, channel);
+      void channel.subscribe(handleMessage).catch((cause: unknown) => {
+        if (!disposed) {
+          reportBattleRealtimeDiagnostic("channel_attach_failed", cause);
+          onStatus("offline");
+        }
+      });
+    }
+    for (const [name, channel] of channels) {
+      if (nextNames.has(name)) continue;
+      channel.unsubscribe(handleMessage);
+      channels.delete(name);
+      void channel.detach().catch(() => undefined);
+    }
+  };
+  const applyPendingAuthorization = () => {
+    if (!pendingAuthorizedChannels) return;
+    const nextAuthorizedChannels = pendingAuthorizedChannels;
+    pendingAuthorizedChannels = null;
+    synchronizeChannels(nextAuthorizedChannels);
   };
   const handleConnectionState = (change: Ably.ConnectionStateChange) => {
     if (disposed) return;
-    if (change.current === "connected") onStatus("connected");
-    else if (
+    if (change.current === "connected") {
+      applyPendingAuthorization();
+      onStatus("connected");
+    } else if (
       change.current === "disconnected" ||
       change.current === "suspended" ||
       change.current === "failed"
@@ -87,18 +121,13 @@ export function connectBattleRealtimeRuntime({
     )
       onStatus("connecting");
   };
+  const handleConnectionUpdate = () => {
+    if (!disposed) applyPendingAuthorization();
+  };
 
   client.connection.on(handleConnectionState);
-  for (const name of authorizedChannels) {
-    const channel = client.channels.get(name);
-    channels.push(channel);
-    void channel.subscribe(handleMessage).catch((cause: unknown) => {
-      if (!disposed) {
-        reportBattleRealtimeDiagnostic("channel_attach_failed", cause);
-        onStatus("offline");
-      }
-    });
-  }
+  client.connection.on("update", handleConnectionUpdate);
+  synchronizeChannels(authorizedChannels);
   client.connect();
 
   return {
@@ -109,10 +138,12 @@ export function connectBattleRealtimeRuntime({
       if (disposed) return;
       disposed = true;
       client.connection.off(handleConnectionState);
-      for (const channel of channels) {
+      client.connection.off("update", handleConnectionUpdate);
+      for (const channel of channels.values()) {
         channel.unsubscribe(handleMessage);
         void channel.detach().catch(() => undefined);
       }
+      channels.clear();
       client.close();
     },
   };
