@@ -5,7 +5,7 @@
 
 ## 背景
 
-Telegram Mini Apps 官方协议为 `shareMessage(message_id, callback)` 定义调用级 callback，并定义 `shareMessageSent` 与 `shareMessageFailed` 完成事件。真实 Telegram iOS 中，打开原生分享面板会使 Battle 收到 `deactivated` 并按既有规则结束当前 lease；面板发送或关闭后 callback 能正常返回，但客户端不保证再发一次 `activated`，`Telegram.WebApp.isActive` 也可能继续短暂为 `false`。原实现只更新分享反馈，presence 恢复完全依赖 `activated`、`visibilitychange`、`pageshow` 或 `focus`，因此创建者虽然已经回到可见 `waiting` 页面，数据库仍停留在 offline，直到页面重载。
+Telegram Mini Apps 官方协议为 `shareMessage(message_id, callback)` 定义调用级 callback，并定义 `shareMessageSent` 与 `shareMessageFailed` 完成事件。真实 Telegram iOS 的平台时序并不固定：缺陷现场中，打开原生分享面板曾使 Battle 收到 `deactivated` 并按既有规则结束当前 lease；面板发送或关闭后 callback 能正常返回，但客户端没有再发 `activated`，`Telegram.WebApp.isActive` 也短暂保持 `false`。当前客户端也可能只产生 `blur` 而保持 active lease。原实现只更新分享反馈，presence 恢复完全依赖 `activated`、`visibilitychange`、`pageshow` 或 `focus`，因此在前一时序中创建者虽然已经回到可见 `waiting` 页面，数据库仍停留在 offline，直到页面重载。
 
 [ADR-013](ADR-013-session-page-lifecycle.md)要求恢复时先读取权威 room，再使用数据库下一 lifecycle version 创建新 lease；[ADR-018](ADR-018-battle-share-platform-conditional-evidence.md)要求分享 callback 与全局事件必须按 session generation、room、side、status 和实际调用尝试隔离，且分享反馈不得进入业务裁决。本修复必须同时保留两项边界。
 
@@ -18,7 +18,7 @@ Telegram Mini Apps 官方协议为 `shareMessage(message_id, callback)` 定义�
 
 callback 与全局事件可能为同一尝试各到达一次。Web 以 `ShareAttempt` 对象身份同时记录待恢复与已经启动恢复的尝试，同一尝试最多启动一次恢复。恢复前仍复核当前 session generation、room ID、创建者 side 与 `waiting` 状态；切换房间、终态退出、离开 `/game`、重新认证或 generation 改变时清除待恢复信号，迟到完成信号既不能更新反馈，也不能恢复 presence。
 
-恢复必须复用 `restorePresence()`：先读取 viewer-specific 权威 room，确认 authority 健康后才开放 heartbeat effect；heartbeat 使用数据库快照的下一 lifecycle version、新 UUID lease 和从 1 开始递增的 command sequence。禁止直接复活分享前已经结束的 lease，禁止从 callback 直接写数据库 presence，禁止新增分享专用 API、RPC、持久状态或业务 operation。
+恢复必须复用 `restorePresence()`：先读取 viewer-specific 权威 room，确认 authority 健康后才开放 heartbeat effect。若平台已经用 `deactivated` 结束当前 lifecycle，heartbeat 使用数据库快照的下一 lifecycle version、新 UUID lease 和从 1 开始递增的 command sequence；若平台只产生 `blur` 且数据库仍确认当前 lease active，则继续该 lease 的递增 command sequence，不制造无意义的新生命周期。禁止直接复活已经结束的 lease，禁止从 callback 直接写数据库 presence，禁止新增分享专用 API、RPC、持久状态或业务 operation。
 
 ## 结果
 
@@ -29,4 +29,4 @@ Telegram iOS 即使没有补发 `activated`，创建者回到可见等待页后�
 - TypeScript、架构、格式、完整静态构建门禁通过。
 - 真实 Telegram iOS 分别执行成功发送与关闭面板，不能只用普通浏览器事件模拟。
 - Safari Web Inspector 保存 callback/官方完成事件、缺失或滞后的激活事实、单次 room 回正和后续 heartbeat 网络证据。
-- Supabase 证明 lifecycle version 增加、lease 更换、command sequence 递增、10 秒在线窗口保持，且旧 lease、资产、reservation、operation、outbox 与 violation 无异常变化。
+- Supabase 证明 command sequence 递增且 10 秒在线窗口保持；实际收到 `deactivated` 时还必须证明 lifecycle version 增加、lease 更换和旧 lease 无效，只有 `blur` 时必须证明原 active lease 未被错误结束。资产、reservation、operation、outbox 与 violation 均不得出现异常变化。
