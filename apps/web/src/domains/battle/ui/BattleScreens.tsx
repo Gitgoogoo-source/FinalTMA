@@ -461,9 +461,9 @@ export function BattleLobby({
   const opponent = lobby.presence.opponent;
   const recoveryMessage =
     onlineState === "syncing"
-      ? "正在恢复连接，在线状态以后端 Presence 确认为准。"
+      ? "正在恢复连接，双方在线状态确认中。"
       : onlineState === "offline"
-        ? "连接尚未恢复，页面正在读取后端 Presence。"
+        ? "连接尚未恢复，正在确认双方在线状态。"
         : null;
   if (lobby.phase === "lobby_countdown")
     return (
@@ -478,7 +478,7 @@ export function BattleLobby({
       <BattleScreenHeader
         kicker="BATTLE LOBBY"
         title="双方等待房间"
-        description="数据库确认双方在线并完成 3 秒倒计时后才会创建第 1 回合。"
+        description="双方都已准备，并完成 3 秒倒计时后开始第 1 回合。"
       />
       <section
         className="battle-lobby-stage"
@@ -510,7 +510,7 @@ export function BattleLobby({
           <strong>{formatBattleTime(remainingSeconds)}</strong>
         </div>
         <div>
-          <span>服务器开战倒计时</span>
+          <span>开战倒计时</span>
           <strong>尚未开始</strong>
         </div>
       </section>
@@ -525,7 +525,7 @@ export function BattleLobby({
         </p>
       ) : null}
       <p className="battle-lobby-authority">
-        开战、离线终结、退款和藏品释放只由数据库裁决；本页不会提供取消、分享或重新选队。
+        倒计时开始后，离开不会取消战斗；退款和藏品占用将按战斗规则处理。本页不提供取消、分享或重新选队。
       </p>
     </div>
   );
@@ -568,7 +568,7 @@ function BattleCountdownLock({
       </div>
       <footer>
         <strong>离开不会取消战斗</strong>
-        <span>服务器将在截止时自动进入对战</span>
+        <span>倒计时结束后将自动进入对战</span>
         {recoveryMessage ? (
           <small role="status">{recoveryMessage}</small>
         ) : null}
@@ -636,16 +636,13 @@ export function BattleInviteMissing({
       <BattleScreenHeader
         kicker="INVITED BATTLE"
         title={invalid ? "这张挑战卡不可用" : "没有可接受的挑战"}
-        description="页面未发现可支付、可占用藏品的权威邀请。"
+        description="当前入口没有可接受的挑战。"
         back={onHome}
         disabled={loading}
       />
       <section className="battle-invite-unavailable">
         <h2>{invalid ? "挑战标识无效或已失效" : "当前入口没有有效挑战"}</h2>
-        <p>
-          前端不会猜测房间或继续提交接受请求。请重新读取权威状态，或返回 Battle
-          首页。
-        </p>
+        <p>无法确认当前挑战状态，请刷新后重试，或返回 Battle 首页。</p>
         <div>
           <Button className="secondary" disabled={loading} onClick={onHome}>
             <ArrowLeft />
@@ -653,7 +650,7 @@ export function BattleInviteMissing({
           </Button>
           <Button disabled={loading} onClick={onRefresh}>
             <RefreshCw />
-            {loading ? "正在读取" : "重新读取"}
+            {loading ? "正在刷新" : "重新刷新"}
           </Button>
         </div>
       </section>
@@ -803,7 +800,7 @@ export function BattleResult({
       className={`battle-result ${result.result}`}
       aria-labelledby="battle-result-title"
     >
-      <span className="battle-kicker">AUTHORITATIVE RESULT</span>
+      <span className="battle-kicker">BATTLE RESULT</span>
       <div className="battle-result-mark" aria-hidden="true">
         {result.result === "win" ? <Swords /> : <ShieldCheck />}
       </div>
@@ -815,7 +812,7 @@ export function BattleResult({
           <dd>{result.entry_fee} K-coin</dd>
         </div>
         <div>
-          <dt>{refund ? "权威退款" : "权威到账"}</dt>
+          <dt>{refund ? "已退款" : "本次到账"}</dt>
           <dd>{result.payout} K-coin</dd>
         </div>
         <div>
@@ -873,13 +870,13 @@ export function BattleCancelSheet({
       <h2 id="battle-cancel-title">
         {publicMatch ? "取消正在进行的匹配？" : "取消等待中的挑战？"}
       </h2>
-      <p>服务端将在同一终结事务中退款并释放三宠占用。前端不会提前宣称成功。</p>
+      <p>确认取消后，将退还入场费并恢复三只参战藏品。</p>
       <div>
         <Button className="secondary" disabled={pending} onClick={onClose}>
           继续等待
         </Button>
         <Button className="danger" disabled={pending} onClick={onConfirm}>
-          {pending ? "正在等待服务器裁决" : "确认取消"}
+          {pending ? "正在取消" : "确认取消"}
         </Button>
       </div>
     </BattleModal>

@@ -153,9 +153,9 @@ export function BattleArena({
           {presentation.runtimePreparing
             ? "战斗准备中；倒计时与操作保持可用"
             : presentation.busy
-              ? "动作正在按服务端顺序播放；操作区保持可用"
+              ? "动作正在依次播放；操作区保持可用"
               : snapshot.status !== "active_turn"
-                ? "服务端已完成战斗结算"
+                ? "战斗已经结算"
                 : snapshot.active_actor === "self"
                   ? "你的 15 秒行动窗口已经开放"
                   : "等待对手在其 15 秒行动窗口内操作"}
@@ -221,7 +221,7 @@ export function BattleArena({
               actionIntent
                 ? `已提交：${actionIntent}`
                 : snapshot.status !== "active_turn"
-                  ? "服务端已结算，等待表现队列完成"
+                  ? "战斗已结算，正在完成剩余表现"
                   : "正在同步当前可用动作"
             }
           />
@@ -251,7 +251,7 @@ function actionPrompt(
   actionIntent: string | null,
 ): string {
   if (actionIntent) return `已提交：${actionIntent}`;
-  if (snapshot.status !== "active_turn") return "战斗已由服务器结算";
+  if (snapshot.status !== "active_turn") return "战斗已经结算";
   if (snapshot.active_actor !== "self") return "等待对手行动";
   return snapshot.active_action_mode === "replace_attack"
     ? "选择存活宠物，再直接选择其反击技能"
@@ -409,7 +409,7 @@ function ArenaSide({
         </div>
       ) : (
         <div className="battle-empty-active">
-          {team.length === 0 ? "正在读取权威阵容" : "等待存活宠物换入"}
+          {team.length === 0 ? "正在确认参战阵容" : "等待存活宠物换入"}
         </div>
       )}
     </div>

@@ -279,7 +279,7 @@ async function recoverSameOperation<Id extends BattleCommandRouteId>(
             failure: new ApiFailure(
               502,
               "OPERATION_RESULT_INVALID",
-              "原操作结果格式无效，请刷新权威状态",
+              "原操作结果无法确认，请刷新战斗状态",
               true,
               operationId,
             ),

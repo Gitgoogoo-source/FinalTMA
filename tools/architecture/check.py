@@ -1419,7 +1419,7 @@ def verify_game_page_boundary() -> None:
         'aria-modal="true"',
         "倒计时已锁定",
         "离开不会取消战斗",
-        "服务器将在截止时自动进入对战",
+        "倒计时结束后将自动进入对战",
     )
     missing_countdown_terms = [
         value for value in countdown_terms if value not in battle_screens

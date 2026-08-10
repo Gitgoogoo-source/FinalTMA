@@ -49,7 +49,7 @@ export const battleStatusLabels: Record<BattleRoomStatus, string> = {
   preparing_share: "正在准备挑战卡",
   waiting: "等待对手接受",
   lobby_waiting: "等待双方进入房间",
-  lobby_countdown: "服务器开战倒计时",
+  lobby_countdown: "开战倒计时",
   active_turn: "轮到当前玩家行动",
   finished: "战斗已结束",
   draw: "战斗平局",
