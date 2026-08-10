@@ -76,6 +76,7 @@ REQUIRED_PATHS = (
     "docs/architecture/adr/ADR-050-catalog-post-rebuild-readiness-gate.md",
     "docs/architecture/adr/ADR-051-operation-registry-selective-subscription.md",
     "docs/architecture/adr/ADR-053-battle-tick-alert-lifecycle.md",
+    "docs/architecture/adr/ADR-054-ably-browser-csp-endpoint-allowlist.md",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
     "docs/architecture/adr/ADR-025-battle-active-switch-atomicity.md",
@@ -185,6 +186,7 @@ def main() -> None:
     assert_nonempty_domains(API_ROOT / "domains")
     verify_web_boundaries()
     verify_identity_avatar_minimization()
+    verify_browser_csp_boundaries()
     verify_persistent_page_route_leaves()
     verify_first_screen_runtime_boundaries()
     verify_first_screen_persistent_page_boundaries()
@@ -329,9 +331,63 @@ def verify_identity_avatar_minimization() -> None:
             "Top asset and Battle invite identity markers must use the shared initial helper"
         )
 
-    vercel = (ROOT / "vercel.json").read_text(encoding="utf-8")
-    if "https://t.me" in vercel or "https://*.supabase.co" not in vercel:
-        raise SystemExit("CSP image sources must not expand for Telegram user avatars")
+
+
+def verify_browser_csp_boundaries() -> None:
+    vercel = json.loads((ROOT / "vercel.json").read_text(encoding="utf-8"))
+    csp_values = [
+        header.get("value")
+        for route in vercel.get("headers", [])
+        if route.get("source") == "/(.*)"
+        for header in route.get("headers", [])
+        if str(header.get("key", "")).lower() == "content-security-policy"
+    ]
+    if len(csp_values) != 1 or not isinstance(csp_values[0], str):
+        raise SystemExit("Root and deep routes must share one Content-Security-Policy")
+
+    directives: dict[str, list[str]] = {}
+    for raw_directive in csp_values[0].split(";"):
+        parts = raw_directive.strip().split()
+        if not parts:
+            continue
+        name, *sources = parts
+        if name in directives:
+            raise SystemExit(f"Content-Security-Policy repeats directive: {name}")
+        directives[name] = sources
+
+    expected_image_sources = {
+        "'self'",
+        "data:",
+        "blob:",
+        "https://*.supabase.co",
+    }
+    image_sources = directives.get("img-src", [])
+    if (
+        set(image_sources) != expected_image_sources
+        or len(image_sources) != len(expected_image_sources)
+    ):
+        raise SystemExit(
+            "CSP image sources must remain same-origin, inline, blob, and public Supabase assets only"
+        )
+
+    expected_connect_sources = {
+        "'self'",
+        "https://rest.ably.io",
+        "https://realtime.ably.io",
+        "wss://realtime.ably.io",
+        "https://main.realtime.ably.net",
+        "wss://main.realtime.ably.net",
+        "https://*.ably-realtime.com",
+        "wss://*.ably-realtime.com",
+    }
+    connect_sources = directives.get("connect-src", [])
+    if (
+        set(connect_sources) != expected_connect_sources
+        or len(connect_sources) != len(expected_connect_sources)
+    ):
+        raise SystemExit(
+            "CSP connect-src must remain same-origin plus the exact Ably browser endpoint allowlist"
+        )
 
 
 def verify_persistent_page_route_leaves() -> None:

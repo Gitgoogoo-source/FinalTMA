@@ -19,7 +19,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; font-src 'self' data:; connect-src 'self' https://*.ably.io wss://*.ably.io; worker-src 'self' blob:"
+          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; font-src 'self' data:; connect-src 'self' https://rest.ably.io https://realtime.ably.io wss://realtime.ably.io https://main.realtime.ably.net wss://main.realtime.ably.net https://*.ably-realtime.com wss://*.ably-realtime.com; worker-src 'self' blob:"
         }
       ]
     }

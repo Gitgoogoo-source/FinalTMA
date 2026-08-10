@@ -135,3 +135,4 @@ TMA 首屏同步闭包固定为入口、默认开盒页、首屏契约及各自�
 - [操作注册中心稳定命令与选择性信号订阅](adr/ADR-051-operation-registry-selective-subscription.md)
 - [转盘有界终态与结果层视口锚定](adr/ADR-052-wheel-animation-bounded-terminal-convergence.md)
 - [Battle Tick 告警自动闭环](adr/ADR-053-battle-tick-alert-lifecycle.md)
+- [Ably 浏览器 CSP 端点白名单](adr/ADR-054-ably-browser-csp-endpoint-allowlist.md)
