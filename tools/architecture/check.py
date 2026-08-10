@@ -447,6 +447,27 @@ def verify_first_screen_runtime_boundaries() -> None:
     if global_css.exists():
         raise SystemExit("global.css must remain deleted")
 
+    foundation_css = (WEB_ROOT / "shared/styles/foundation.css").read_text(
+        encoding="utf-8"
+    )
+    gacha_css = (WEB_ROOT / "shared/styles/gacha-page.css").read_text(
+        encoding="utf-8"
+    )
+    global_vip_terms = (
+        ".app-shell .vip-daily-benefits {",
+        ".app-shell .vip-benefit-grid {",
+        ".app-shell .vip-benefit-grid .vip-benefit-tile {",
+        "@keyframes vip-benefit-ready",
+    )
+    missing_global_vip_terms = [
+        term for term in global_vip_terms if term not in foundation_css
+    ]
+    if missing_global_vip_terms or any(term in gacha_css for term in global_vip_terms):
+        raise SystemExit(
+            "Global VIP benefit styles must be owned by foundation.css: "
+            f"missing={missing_global_vip_terms}"
+        )
+
     ui_barrel = WEB_ROOT / "shared/ui/index.tsx"
     if ui_barrel.exists():
         raise SystemExit("Shared UI barrel must remain deleted")
