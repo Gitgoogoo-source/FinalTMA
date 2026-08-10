@@ -44,6 +44,8 @@ TMA 首屏同步闭包固定为入口、默认开盒页、首屏契约及各自�
 
 当前 waiting 分享尝试的 callback 或 sent/failed 事件按 [ADR-057](adr/ADR-057-battle-native-share-presence-resumption.md) 进入同一权威 presence 恢复入口：`/game` 已可见时立即消费，完成信号先到时保留到紧随其后的可见、页面显示、聚焦或激活事件；两种顺序都不依赖额外 `activated` 或即时更新的 `isActive`，同一尝试最多触发一次恢复，分享前已经结束的旧 lease 不得复用。
 
+Battle 队伍选择与有效邀请接受页按 [ADR-058](adr/ADR-058-battle-team-options-loading-state.md) 复用同一 `teamOptionsRequired` 条件启用本人队伍查询并决定首次加载状态；请求完成前显示行内读取状态且禁用确定动作，不能把尚未返回的数据渲染成真实无藏品。
+
 五个主导航页面在当前登录会话内首次访问后保持挂载。切换页面只恢复各自滚动、筛选和页内状态，同时按 [ADR-037](adr/ADR-037-persistent-page-query-activity.md) 暂停隐藏页面查询；切页前已开始的读取允许完成。返回页面时，新鲜且未失效的缓存不读取，超过 20 秒或被业务刷新范围标记失效的查询按键回正一次；已有缓存回正失败时保留内容并显示非阻塞重试。业务结果把契约范围全部标记失效，只立即刷新当前页面和全局活动查询；后台连续五分钟后回到前台只静默回正顶部摘要与当前页面。交易页按 [ADR-029](adr/ADR-029-market-sold-device-inbox.md) 在可见期间每 10 秒同步本人挂售与新成交事件，当前设备只持久保存按内部用户隔离的事件游标和未隐藏 SOLD 提醒，并由同一待展示集合驱动“管理”页签红点。市场首页、单模板和本人挂售读取按 [ADR-041](adr/ADR-041-market-transactional-supply-read-model.md) 只访问事务维护的两级供给汇总与有界成交游标，不随已售罄或已取消历史增长；原始 FIFO 挂单继续独占购买、下架、reservation 与结算裁决。
 
 身份读取按 [ADR-049](adr/ADR-049-identity-initial-state-and-summary-read-model.md) 分成入口 `identity.initial` 与日常 `identity.summary`。完成入口交接的认证在登录事务提交后由同一 Function 取得初始状态，并随令牌一并返回；临时读取失败返回空值，Web 保留 session 并命令式重试。`summary` 写入 React Query，`recovery` 只写入当前 session generation 内存；顶部人工刷新、前台恢复、业务 `refreshScopes`、页面返回和 Battle 终局只允许回正 `identity.summary`，不得重新读取 `identity.initial`。
@@ -140,3 +142,4 @@ TMA 首屏同步闭包固定为入口、默认开盒页、首屏契约及各自�
 - [Ably 浏览器 CSP 端点白名单](adr/ADR-054-ably-browser-csp-endpoint-allowlist.md)
 - [Battle 实时客户端安全诊断](adr/ADR-055-battle-realtime-client-diagnostics.md)
 - [Battle 原生分享返回后的 Presence 恢复](adr/ADR-057-battle-native-share-presence-resumption.md)
+- [Battle 队伍候选首次加载状态](adr/ADR-058-battle-team-options-loading-state.md)

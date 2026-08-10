@@ -2,7 +2,7 @@
 
 ## Web
 
-Battle 队伍选择页同时提交好友创建和公开随机匹配意图。公开匹配不新增浏览器队列运行时：Web 点击后立即锁定表单，`battle.matchmake` 的权威响应直接落到 `public_match/waiting` 或不可撤销的 `lobby_countdown`；公开 waiting 与邀请 waiting 共用 room snapshot、presence 和 2 秒 REST 回正，但按 `room_mode` 分别展示 120 秒匹配或 30 分钟分享界面。匹配成功后页面 presence 只用于回正显示，不得阻止、取消或重置 3 秒倒计时。
+Battle 队伍选择页同时提交好友创建和公开随机匹配意图。Web 只在 `team_select` 或可接受邀请需要本人队伍时启用 `battle.team_options`；首次读取期间把该查询并入页面 loading，保留“正在读取本人可用藏品”并禁用确定动作，不能把尚未返回的空数组渲染成真实无藏品。公开匹配不新增浏览器队列运行时：Web 点击后立即锁定表单，`battle.matchmake` 的权威响应直接落到 `public_match/waiting` 或不可撤销的 `lobby_countdown`；公开 waiting 与邀请 waiting 共用 room snapshot、presence 和 2 秒 REST 回正，但按 `room_mode` 分别展示 120 秒匹配或 30 分钟分享界面。匹配成功后页面 presence 只用于回正显示，不得阻止、取消或重置 3 秒倒计时。
 
 `apps/web` 使用 React、Vite 与 TypeScript。`app` 拥有启动、账号门禁、Provider、恢复协调、路由选择、顶部资产栏、全局弹窗和五个主导航壳层；`platform/navigation` 以浏览器 History API、单一 `popstate` 监听和 `useSyncExternalStore` 提供活动 Web 的轻量导航状态。五个主页面首次访问后在当前 session generation 内保持挂载，路由只切换 `hidden`/`inert`、本页查询参数和独立滚动位置，图鉴作为临时详情路由覆盖其上。`pages` 是跨领域 UI 的唯一组合层；`domains` 只拥有本领域 UI 与实际使用的类型；`workflows` 管理会话、操作与支付恢复；`platform` 封装 Telegram、浏览器导航、HTTP 与 React Query；`shared` 保存跨领域纯 UI。钱包、Mint 与 TON 平台文件继续保留为休眠源码，但不进入当前 Web 路由、弹窗或恢复协调器。
 

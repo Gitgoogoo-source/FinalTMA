@@ -612,12 +612,13 @@ export function BattleView(): ReactNode {
           (candidate) => candidate.id === flow.tier,
         ) ?? null)
       : null;
+  const teamOptionsRequired =
+    pageState === "team_select" ||
+    (pageState === "accept" && inviteRoom?.invite_status === "available");
   const teamOptions = useApiQuery(
     "battle.team_options",
     {},
-    pageActive &&
-      (pageState === "team_select" ||
-        (pageState === "accept" && inviteRoom?.invite_status === "available")),
+    pageActive && teamOptionsRequired,
   );
   const balance = identity.data?.assets.kcoin.available ?? null;
 
@@ -1394,6 +1395,7 @@ export function BattleView(): ReactNode {
   const loading =
     bootstrap.isLoading ||
     identity.isLoading ||
+    (teamOptionsRequired && teamOptions.isLoading) ||
     (battleEntry && !forceHome
       ? invite.isLoading
       : roomId
