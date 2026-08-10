@@ -197,6 +197,8 @@ export function BattleView(): ReactNode {
   const actionCursor = useRef<number | null>(null);
   const presentationEventIds = useRef(new Set<string>());
   const shareAttemptRef = useRef<ShareAttempt | null>(null);
+  const completedNativeShareAttempt = useRef<ShareAttempt | null>(null);
+  const resumedNativeShareAttempt = useRef<ShareAttempt | null>(null);
   const presenceLifecycle = useRef<PresenceLifecycle | null>(null);
   const heartbeatRequests = useRef(new Set<AbortController>());
   const lifecycleRun = useRef(0);
@@ -455,6 +457,8 @@ export function BattleView(): ReactNode {
 
   useEffect(() => {
     shareAttemptRef.current = null;
+    completedNativeShareAttempt.current = null;
+    resumedNativeShareAttempt.current = null;
     let cancelled = false;
     queueMicrotask(() => {
       if (cancelled) return;
@@ -581,8 +585,13 @@ export function BattleView(): ReactNode {
       attempt &&
       (attempt.generation !== sessionGeneration ||
         attempt.roomId !== shareRoomId)
-    )
+    ) {
       shareAttemptRef.current = null;
+      if (completedNativeShareAttempt.current === attempt)
+        completedNativeShareAttempt.current = null;
+      if (resumedNativeShareAttempt.current === attempt)
+        resumedNativeShareAttempt.current = null;
+    }
     let cancelled = false;
     queueMicrotask(() => {
       if (cancelled) return;
@@ -863,6 +872,40 @@ export function BattleView(): ReactNode {
     setLifecycleReady(true);
   }, [pageActive, sessionGeneration]);
 
+  const resumePresence = useCallback(
+    (confirmed: boolean) => {
+      hostActiveRef.current =
+        confirmed || telegram()?.isActive !== false || document.hasFocus();
+      if (hostActiveRef.current) void restorePresence();
+    },
+    [restorePresence],
+  );
+
+  const resumeCompletedNativeShareAttempt = useCallback((): boolean => {
+    const attempt = completedNativeShareAttempt.current;
+    if (
+      !attempt ||
+      resumedNativeShareAttempt.current === attempt ||
+      shareAttemptRef.current !== attempt ||
+      !pageActive ||
+      document.visibilityState !== "visible"
+    )
+      return false;
+    resumedNativeShareAttempt.current = attempt;
+    resumePresence(true);
+    return true;
+  }, [pageActive, resumePresence]);
+
+  const completeNativeShareAttempt = useCallback(
+    (attempt: ShareAttempt, message: string): boolean => {
+      if (!applyShareAttemptFeedback(attempt, message)) return false;
+      completedNativeShareAttempt.current = attempt;
+      resumeCompletedNativeShareAttempt();
+      return true;
+    },
+    [applyShareAttemptFeedback, resumeCompletedNativeShareAttempt],
+  );
+
   useEffect(() => {
     const suspend = () => {
       hostActiveRef.current = false;
@@ -873,9 +916,7 @@ export function BattleView(): ReactNode {
       markOffline();
     };
     const resume = (confirmed: boolean) => {
-      hostActiveRef.current =
-        confirmed || telegram()?.isActive !== false || document.hasFocus();
-      if (hostActiveRef.current) void restorePresence();
+      if (!resumeCompletedNativeShareAttempt()) resumePresence(confirmed);
     };
     const activated = () => resume(true);
     const deactivated = () => suspend();
@@ -919,7 +960,14 @@ export function BattleView(): ReactNode {
       window.removeEventListener("focus", focus);
       markOffline();
     };
-  }, [markOffline, pageActive, prepareRecovery, restorePresence]);
+  }, [
+    markOffline,
+    pageActive,
+    prepareRecovery,
+    restorePresence,
+    resumeCompletedNativeShareAttempt,
+    resumePresence,
+  ]);
 
   useEffect(() => {
     const presenceRoomId = presenceRoomRef.current;
@@ -1053,7 +1101,7 @@ export function BattleView(): ReactNode {
           attempt?.generation === context.generation &&
           attempt.roomId === context.roomId
         )
-          applyShareAttemptFeedback(
+          completeNativeShareAttempt(
             attempt,
             "挑战卡已发送，房间继续等待首位有效对手",
           );
@@ -1063,7 +1111,7 @@ export function BattleView(): ReactNode {
         if (
           attempt?.generation === context.generation &&
           attempt.roomId === context.roomId &&
-          applyShareAttemptFeedback(attempt, shareFailureText(failure)) &&
+          completeNativeShareAttempt(attempt, shareFailureText(failure)) &&
           failure === "MESSAGE_EXPIRED"
         )
           void refetchRef.current();
@@ -1075,7 +1123,7 @@ export function BattleView(): ReactNode {
     room?.side,
     room?.status,
     sessionGeneration,
-    applyShareAttemptFeedback,
+    completeNativeShareAttempt,
   ]);
 
   const create = async () => {
@@ -1321,13 +1369,15 @@ export function BattleView(): ReactNode {
     )
       return;
     const attempt = { generation: sessionGeneration, roomId: room.room_id };
+    completedNativeShareAttempt.current = null;
+    resumedNativeShareAttempt.current = null;
     shareAttemptRef.current = attempt;
     setShareState({
       ...attempt,
       message: "已打开 Telegram 分享面板，房间仍保持等待",
     });
     const opened = sharePreparedMessage(room.prepared_message_id, (shared) => {
-      applyShareAttemptFeedback(
+      completeNativeShareAttempt(
         attempt,
         shared
           ? "挑战卡已发送，房间继续等待首位有效对手"

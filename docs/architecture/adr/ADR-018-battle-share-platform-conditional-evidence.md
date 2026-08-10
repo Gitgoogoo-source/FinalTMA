@@ -21,7 +21,7 @@ Battle 另有一条发生在房间进入 `waiting` 之前的 Prepared inline mes
 | `MESSAGE_SEND_FAILED` 或 Telegram 官方等价明确失败事件 | 显示既定失败/重试反馈；不改变房间、资产或业务裁决            | `PLATFORM_CONDITIONAL`                |
 | 固定时限内没有 callback                                | Telegram 官方没有定义该结果                                  | `NOT_APPLICABLE_BY_PLATFORM_CONTRACT` |
 
-Web 只接受当前 session generation、当前创建者 `waiting` room 且由本房间实际发起分享的 callback 或全局事件。切换房间、进入终态、离开再进入 `/game` 或重新认证时使旧尝试失效；分享反馈只保存在内存，不进入 API、数据库、资产刷新、分享状态机或 Battle 业务成功判定。
+Web 只接受当前 session generation、当前创建者 `waiting` room 且由本房间实际发起分享的 callback 或全局事件。切换房间、进入终态、离开再进入 `/game` 或重新认证时使旧尝试失效；分享反馈只保存在内存，不进入 API、数据库、资产刷新、分享状态机或 Battle 业务成功判定。有效 callback 或 sent/failed 事件作为原生面板完成信号时，允许按 [ADR-057](ADR-057-battle-native-share-presence-resumption.md) 触发既有 room REST 回正与新 lease 恢复；这是 presence 生命周期恢复，不把反馈写入业务状态。
 
 不得为取得运行证据新增 waiting 分享 timeout、用户可见 unknown、测试 API、mock、故障注入开关、断网验收、Bot/群权限篡改或临时代码。Prepared inline message 创建阶段的 60 秒恢复及安全控制保持不变。
 
