@@ -3,12 +3,14 @@ import { useEffect } from "react";
 import type { PaymentOrder } from "../../domains/topup/index.ts";
 import { useAppNavigate } from "../../platform/navigation/index.tsx";
 import { usePageModulePreparation } from "../../shared/navigation/pageModulePreparation.ts";
+import type { GachaResumeAuthorization, TopupRequest } from "./context.ts";
 
 const resumedPayments = new Set<string>();
 
 export function useNavigationIntentResume(
   orders: readonly PaymentOrder[] | undefined,
-  onResume: () => void,
+  currentTopupRequest: TopupRequest | null,
+  onResume: (gachaResume: GachaResumeAuthorization | null) => void,
 ): void {
   const navigate = useAppNavigate();
   const preparePage = usePageModulePreparation();
@@ -17,11 +19,18 @@ export function useNavigationIntentResume(
       (candidate) =>
         candidate.status === "delivered" &&
         candidate.intent &&
+        (candidate.intent.kind !== "gacha" ||
+          (currentTopupRequest?.orderId === candidate.id &&
+            currentTopupRequest.intent.kind === "gacha")) &&
         !resumedPayments.has(candidate.id),
     );
     if (!order?.intent) return;
     resumedPayments.add(order.id);
-    onResume();
+    onResume(
+      order.intent.kind === "gacha"
+        ? { orderId: order.id, intent: order.intent }
+        : null,
+    );
     const params = new URLSearchParams({ resume: order.id });
     if (order.intent.kind === "gacha") {
       params.set("tier", order.intent.tier);
@@ -53,5 +62,5 @@ export function useNavigationIntentResume(
     const path = `/tasks?${params.toString()}`;
     preparePage(path);
     navigate(path);
-  }, [navigate, onResume, orders, preparePage]);
+  }, [currentTopupRequest, navigate, onResume, orders, preparePage]);
 }

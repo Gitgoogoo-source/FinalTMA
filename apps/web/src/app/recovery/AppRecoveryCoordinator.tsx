@@ -2,7 +2,10 @@ import { useCallback, type ReactNode } from "react";
 
 import { useApiQuery } from "../../platform/query/index.ts";
 import { useIdentityRecovery } from "../../platform/session/store.ts";
-import { useNavigationIntent } from "../../workflows/payment-recovery/context.ts";
+import {
+  useNavigationIntent,
+  type GachaResumeAuthorization,
+} from "../../workflows/payment-recovery/context.ts";
 import { useNavigationIntentResume } from "../../workflows/payment-recovery/useNavigationIntentResume.ts";
 import { useStarsPaymentRecovery } from "../../workflows/payment-recovery/useStarsPaymentRecovery.ts";
 import { useBlockingOperationRecovery } from "../../workflows/operation-recovery/useBlockingOperationRecovery.ts";
@@ -18,7 +21,8 @@ export function AppRecoveryCoordinator({
 }): ReactNode {
   const recovery = useIdentityRecovery();
   const pendingPayments = useApiQuery("topup.bootstrap");
-  const { clearTopupRequest } = useNavigationIntent();
+  const { activateGachaResume, clearTopupRequest, topupRequest } =
+    useNavigationIntent();
   const recoveryPayments =
     pendingPayments.data?.orders ?? recovery?.payment_recovery_orders;
   const openPaymentRecovery = useCallback(
@@ -26,13 +30,21 @@ export function AppRecoveryCoordinator({
       openDialog(kind === "vip" ? "vip" : "topup"),
     [openDialog],
   );
-  const resumeNavigation = useCallback(() => {
-    clearTopupRequest();
-    closeDialogs();
-  }, [clearTopupRequest, closeDialogs]);
+  const resumeNavigation = useCallback(
+    (gachaResume: GachaResumeAuthorization | null) => {
+      if (gachaResume) activateGachaResume(gachaResume);
+      clearTopupRequest();
+      closeDialogs();
+    },
+    [activateGachaResume, clearTopupRequest, closeDialogs],
+  );
   useBlockingOperationRecovery(recovery?.blocking_operations);
   useRecoverableOperationDiscovery(recovery?.authority_cursor);
   useStarsPaymentRecovery(recoveryPayments, openPaymentRecovery);
-  useNavigationIntentResume(pendingPayments.data?.orders, resumeNavigation);
+  useNavigationIntentResume(
+    pendingPayments.data?.orders,
+    topupRequest,
+    resumeNavigation,
+  );
   return null;
 }

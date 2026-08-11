@@ -1495,6 +1495,9 @@ def verify_security_finding_closures() -> None:
 
 def verify_game_page_boundary() -> None:
     game_page = GAME_PAGE.read_text(encoding="utf-8")
+    gacha_view = (WEB_ROOT / "domains/gacha/ui/GachaView.tsx").read_text(
+        encoding="utf-8"
+    )
     if (
         'import { BattleView } from "../../domains/battle/index.ts";'
         not in game_page
@@ -1708,6 +1711,11 @@ def verify_game_page_boundary() -> None:
         or 'task.category !== "mint"' not in task_visibility
         or "/tasks?focus=wheel" not in task_highlight
         or "const path = `/tasks?${params.toString()}`;" not in payment_resume
+        or 'candidate.intent.kind !== "gacha"' not in payment_resume
+        or "currentTopupRequest?.orderId === candidate.id" not in payment_resume
+        or "requestedResumeOrderId === gachaResume?.orderId" not in gacha_view
+        or "requestedTier === gachaResume.intent.tier" not in gacha_view
+        or "resumedCount === gachaResume.intent.draw_count" not in gacha_view
         or "preparePage(path);" not in payment_resume
         or "navigate(path);" not in payment_resume
     ):

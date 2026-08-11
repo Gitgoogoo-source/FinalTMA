@@ -21,7 +21,10 @@ import { telegram } from "../../../platform/telegram/index.ts";
 import { AppModal } from "../../../shared/ui/AppModal.tsx";
 import { Button } from "../../../shared/ui/Button.tsx";
 import { useOperationCommands } from "../../../workflows/operation-recovery/context.ts";
-import type { TopupRequest } from "../../../workflows/payment-recovery/context.ts";
+import {
+  useNavigationIntent,
+  type TopupRequest,
+} from "../../../workflows/payment-recovery/context.ts";
 import "../../../shared/styles/shell-dialogs.css";
 import type { PaymentOrder } from "../index.ts";
 
@@ -52,6 +55,7 @@ export function TopupDialog({
   const closing = useRef(false);
   const status = useApiQuery("topup.bootstrap");
   const { run } = useOperationCommands();
+  const { bindTopupOrder } = useNavigationIntent();
   const recoveryOrder = status.data?.orders.find(
     (order) =>
       order.kind === "kcoin_topup" &&
@@ -216,6 +220,7 @@ export function TopupDialog({
         return;
       }
       setCreating(false);
+      bindTopupOrder(result.id);
       setActiveOrder(result);
       openInvoice(result);
     } catch (cause) {
@@ -236,6 +241,7 @@ export function TopupDialog({
             candidate.status === "payment_identity_conflict"),
       );
       if (processing) {
+        bindTopupOrder(processing.id);
         setActiveOrder(processing);
         setSubmitted(true);
         setCreateError(null);

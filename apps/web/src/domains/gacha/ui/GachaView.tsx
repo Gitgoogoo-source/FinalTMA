@@ -76,7 +76,7 @@ export function GachaView(): ReactNode {
   const identity = useApiQuery("identity.summary");
   const session = useSession();
   const { preload, run } = useOperationCommands();
-  const { requestTopup } = useNavigationIntent();
+  const { clearGachaResume, gachaResume, requestTopup } = useNavigationIntent();
   const blocked = useOperationBlocked("gacha.open");
   const pageActive = usePageActive();
   const [params, setParams] = usePageSearchParams();
@@ -84,9 +84,15 @@ export function GachaView(): ReactNode {
   const requestedRarity = params.get("rarity");
   const targetRarity = isRarity(requestedRarity) ? requestedRarity : null;
   const requestedFocus = params.get("focus");
-  const resumedTier =
-    params.get("resume") && isBoxTier(requestedTier) ? requestedTier : null;
+  const requestedResumeOrderId = params.get("resume");
   const resumedCount = params.get("count") === "10" ? 10 : 1;
+  const resumedTier =
+    requestedResumeOrderId === gachaResume?.orderId &&
+    requestedTier === gachaResume.intent.tier &&
+    resumedCount === gachaResume.intent.draw_count &&
+    isBoxTier(requestedTier)
+      ? requestedTier
+      : null;
   const remembered = session ? viewStates.get(session.userId) : undefined;
   const autoSelectRare =
     Number(boxes.data?.entitlements.free_rare_box) > 0 &&
@@ -296,10 +302,12 @@ export function GachaView(): ReactNode {
             disabled={blocked || !rulesComplete}
             onPrepare={() => preload("gacha.open")}
             onClose={() => {
+              clearGachaResume();
               selectTier(resumedTier);
               setParams({});
             }}
             onConfirm={() => {
+              clearGachaResume();
               selectTier(resumedTier);
               setParams({});
               open(resumedTier, resumedCount);
