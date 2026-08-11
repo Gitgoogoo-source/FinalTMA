@@ -21,7 +21,7 @@ export function VipDailyBenefits(): ReactNode {
   const vip = useApiQuery("vip.get");
   const navigate = useAppNavigate();
   const preparePage = usePageModulePreparation();
-  const { run } = useOperationCommands();
+  const { present, run } = useOperationCommands();
   const [pending, setPending] = useState<Partial<Record<Benefit, boolean>>>({});
   const [feedback, setFeedback] = useState<Partial<Record<Benefit, Feedback>>>(
     {},
@@ -95,14 +95,20 @@ export function VipDailyBenefits(): ReactNode {
   };
   const claim = async (benefit: Benefit) => {
     if (pending[benefit]) return;
+    const routeId =
+      benefit === "fgems" ? "vip.claim_fgems" : "vip.claim_free_box";
     setPending((current) => ({ ...current, [benefit]: true }));
     setFeedback((current) => ({ ...current, [benefit]: undefined }));
     const result = await run(
       benefit === "fgems"
         ? "正在领取 VIP 每日 100 Fgems"
         : "正在领取 VIP 免费稀有盲盒资格",
-      benefit === "fgems" ? "vip.claim_fgems" : "vip.claim_free_box",
+      routeId,
       {},
+      {
+        dialog: false,
+        retainOnFailure: true,
+      },
     );
     setPending((current) => ({ ...current, [benefit]: false }));
     setFeedback((current) => ({
@@ -113,6 +119,7 @@ export function VipDailyBenefits(): ReactNode {
       },
     }));
     if (result && benefit === "freeBox") notifyFreeRareClaimed();
+    present(routeId);
   };
 
   const active = Boolean(data?.active);

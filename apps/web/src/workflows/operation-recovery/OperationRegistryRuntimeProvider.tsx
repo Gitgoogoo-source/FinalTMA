@@ -91,6 +91,9 @@ type GachaImagePreparationState = {
 type GachaResult = RouteOutput<"gacha.open">;
 type WheelResult = RouteOutput<"wheel.spin">;
 type AlbumClaimResult = RouteOutput<"album.claim">;
+type VipClaimResult =
+  | RouteOutput<"vip.claim_fgems">
+  | RouteOutput<"vip.claim_free_box">;
 type DecompositionResult = RouteOutput<"inventory.decompose">;
 type EvolutionResult = RouteOutput<"inventory.evolve">;
 type EvolutionInput = RouteInput<"inventory.evolve">;
@@ -102,6 +105,11 @@ type ValidatedDedicatedOperation =
   | { id: string; routeId: "gacha.open"; result: GachaResult | null }
   | { id: string; routeId: "wheel.spin"; result: WheelResult | null }
   | { id: string; routeId: "album.claim"; result: AlbumClaimResult | null }
+  | {
+      id: string;
+      routeId: "vip.claim_fgems" | "vip.claim_free_box";
+      result: VipClaimResult | null;
+    }
   | {
       id: string;
       routeId: "market.purchase";
@@ -134,6 +142,8 @@ const serverAcknowledgementRouteIds = new Set<RecoverableRouteId>([
 const navigationLockedThroughResultRouteIds = new Set<RecoverableRouteId>([
   "gacha.open",
   "inventory.decompose",
+  "vip.claim_fgems",
+  "vip.claim_free_box",
   "wheel.spin",
 ]);
 const autoPollingRouteIds = new Set<RecoverableRouteId>([
@@ -155,8 +165,6 @@ const externallyRenderedSuccessRouteIds = new Set<RecoverableRouteId>([
   "topup.create_order",
   "topup.fail_order",
   "vip.cancel_order",
-  "vip.claim_fgems",
-  "vip.claim_free_box",
   "vip.create_order",
 ]);
 const playerFacingMarketListingErrorCodes = new Set([
@@ -280,6 +288,11 @@ export function OperationRegistryRuntimeProvider({
     validatedActive?.routeId === "wheel.spin" ? validatedActive.result : null;
   const albumClaimResult =
     validatedActive?.routeId === "album.claim" ? validatedActive.result : null;
+  const vipClaimResult =
+    validatedActive?.routeId === "vip.claim_fgems" ||
+    validatedActive?.routeId === "vip.claim_free_box"
+      ? validatedActive.result
+      : null;
   const decompositionResult =
     validatedActive?.routeId === "inventory.decompose"
       ? validatedActive.result
@@ -329,8 +342,18 @@ export function OperationRegistryRuntimeProvider({
     !validationPending &&
     !albumClaimResult,
   );
+  const invalidVipClaimSuccess = Boolean(
+    (active?.routeId === "vip.claim_fgems" ||
+      active?.routeId === "vip.claim_free_box") &&
+    active.phase === "succeeded" &&
+    !validationPending &&
+    !vipClaimResult,
+  );
   const invalidDedicatedSuccess =
-    invalidGachaSuccess || invalidWheelSuccess || invalidAlbumClaimSuccess;
+    invalidGachaSuccess ||
+    invalidWheelSuccess ||
+    invalidAlbumClaimSuccess ||
+    invalidVipClaimSuccess;
   const unresolved = Object.values(operations).filter((operation) =>
     unresolvedPhases.has(operation.phase),
   );
@@ -1413,6 +1436,10 @@ export function OperationRegistryRuntimeProvider({
     loadedPresentation?.kind === "album"
       ? loadedPresentation.module.AlbumClaimResultDialog
       : null;
+  const VipDailyClaimResultDialog =
+    loadedPresentation?.kind === "vip"
+      ? loadedPresentation.module.VipDailyClaimResultDialog
+      : null;
   const dedicatedPresentationPending = Boolean(
     active &&
     hasDedicatedPresentation(active.routeId) &&
@@ -1455,7 +1482,9 @@ export function OperationRegistryRuntimeProvider({
                           ? "app-shell market-listing-failure-backdrop market-purchase-failure-backdrop"
                           : wheelResult
                             ? "app-shell result-sheet-backdrop wheel-result-backdrop"
-                            : ""
+                            : vipClaimResult
+                              ? "app-shell result-sheet-backdrop vip-claim-result-backdrop"
+                              : ""
           }`}
           role="dialog"
           aria-modal="true"
@@ -1481,9 +1510,11 @@ export function OperationRegistryRuntimeProvider({
                           ? "gacha-result-title"
                           : wheelResult
                             ? "wheel-result-title"
-                            : albumClaimResult
-                              ? "album-claim-result-title"
-                              : "operation-dialog-title"
+                            : vipClaimResult
+                              ? "vip-claim-result-title"
+                              : albumClaimResult
+                                ? "album-claim-result-title"
+                                : "operation-dialog-title"
           }
           tabIndex={-1}
           onKeyDown={trapDialogFocus}
@@ -1629,6 +1660,11 @@ export function OperationRegistryRuntimeProvider({
               result={wheelResult}
               onConfirm={() => remove(active.id)}
             />
+          ) : vipClaimResult && VipDailyClaimResultDialog ? (
+            <VipDailyClaimResultDialog
+              result={vipClaimResult}
+              onConfirm={() => remove(active.id)}
+            />
           ) : albumClaimResult && AlbumClaimResultDialog ? (
             <AlbumClaimResultDialog
               result={albumClaimResult}
@@ -1741,7 +1777,9 @@ function hasDedicatedPresentation(routeId: RecoverableRouteId): boolean {
     routeId === "market.create_listing" ||
     routeId === "market.purchase" ||
     routeId === "wheel.spin" ||
-    routeId === "album.claim"
+    routeId === "album.claim" ||
+    routeId === "vip.claim_fgems" ||
+    routeId === "vip.claim_free_box"
   );
 }
 
@@ -1752,7 +1790,9 @@ function requiresDedicatedValidation(routeId: RecoverableRouteId): boolean {
     routeId === "inventory.decompose" ||
     routeId === "market.purchase" ||
     routeId === "wheel.spin" ||
-    routeId === "album.claim"
+    routeId === "album.claim" ||
+    routeId === "vip.claim_fgems" ||
+    routeId === "vip.claim_free_box"
   );
 }
 
@@ -1769,6 +1809,8 @@ function presentationMatchesRoute(
     return presentation.kind === "market";
   if (routeId === "wheel.spin") return presentation.kind === "wheel";
   if (routeId === "album.claim") return presentation.kind === "album";
+  if (routeId === "vip.claim_fgems" || routeId === "vip.claim_free_box")
+    return presentation.kind === "vip";
   return false;
 }
 
@@ -1800,6 +1842,21 @@ async function validateDedicatedOperation(
     };
   }
   if (operation.routeId === "album.claim") {
+    const route = await loadClientRoute(operation.routeId);
+    const parsed =
+      operation.phase === "succeeded"
+        ? route.output.safeParse(operation.result)
+        : null;
+    return {
+      id: operation.id,
+      routeId: operation.routeId,
+      result: parsed?.success ? parsed.data : null,
+    };
+  }
+  if (
+    operation.routeId === "vip.claim_fgems" ||
+    operation.routeId === "vip.claim_free_box"
+  ) {
     const route = await loadClientRoute(operation.routeId);
     const parsed =
       operation.phase === "succeeded"

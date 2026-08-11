@@ -1,0 +1,236 @@
+.app-shell.operation-dialog-backdrop.vip-claim-result-backdrop {
+  background: rgba(29, 32, 37, 0.62);
+  backdrop-filter: blur(13px) saturate(88%);
+  -webkit-backdrop-filter: blur(13px) saturate(88%);
+}
+
+.app-shell .vip-claim-result-modal {
+  gap: clamp(14px, 1.9dvh, 18px);
+  padding: clamp(64px, 8dvh, 76px) 18px calc(var(--safe-bottom) + 48px);
+  overflow: visible;
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(255, 207, 112, 0.24),
+      transparent 32%
+    ),
+    linear-gradient(180deg, #fff7e8 0%, #fffdf8 46%, #fffefa 100%);
+  animation: vip-claim-result-rise 0.36s cubic-bezier(0.22, 0.78, 0.24, 1);
+}
+
+.app-shell .vip-claim-result-scene {
+  position: absolute;
+  top: clamp(-320px, -35dvh, -272px);
+  left: 50%;
+  width: min(104vw, 408px);
+  aspect-ratio: 1.18;
+  transform: translateX(-50%);
+  pointer-events: none;
+  user-select: none;
+}
+
+.app-shell .vip-claim-result-gift {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 19px 20px rgba(255, 143, 0, 0.16));
+  transform: translateY(8px) scale(1.22);
+}
+
+.app-shell .vip-claim-result-reward {
+  position: absolute;
+  z-index: 1;
+  top: 56%;
+  left: 50%;
+  width: clamp(142px, 46vw, 184px);
+  aspect-ratio: 1;
+  border-radius: 24px;
+  object-fit: contain;
+  filter: drop-shadow(0 14px 18px rgba(94, 55, 148, 0.28));
+  transform: translate(-50%, -50%) rotate(-7deg);
+  animation: vip-claim-reward-settle 0.5s cubic-bezier(0.2, 0.9, 0.22, 1.1) both;
+}
+
+.app-shell .vip-claim-result-modal.reward-fgems .vip-claim-result-reward {
+  filter: drop-shadow(0 14px 18px rgba(24, 139, 225, 0.28));
+  transform: translate(-50%, -50%) rotate(0deg);
+}
+
+.app-shell .vip-claim-result-handle {
+  position: relative;
+  z-index: 2;
+  width: 48px;
+  height: 6px;
+  justify-self: center;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, #ffad45, #ff7421);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68);
+}
+
+.app-shell .vip-claim-result-badge {
+  position: relative;
+  z-index: 1;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-self: center;
+  gap: 7px;
+  padding: 5px 14px;
+  border: 1px solid rgba(214, 145, 19, 0.18);
+  border-radius: var(--radius-pill);
+  color: #9a5a08;
+  background: linear-gradient(180deg, #fff0aa, #ffd96a);
+  box-shadow:
+    0 8px 18px rgba(188, 123, 16, 0.11),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0.01em;
+}
+
+.app-shell .vip-claim-result-badge svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.6;
+}
+
+.app-shell .vip-claim-result-heading {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+
+.app-shell .vip-claim-result-heading h2 {
+  min-width: 0;
+  margin: 0;
+  color: #51361f;
+  font-size: clamp(25px, 7.6vw, 32px);
+  font-weight: 950;
+  letter-spacing: -0.045em;
+  line-height: 1.08;
+  text-align: center;
+}
+
+.app-shell .vip-claim-result-heading svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  color: #ff9d26;
+  fill: rgba(255, 180, 42, 0.18);
+}
+
+.app-shell .vip-claim-result-summary {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 4px 0 10px;
+  text-align: center;
+}
+
+.app-shell .vip-claim-result-summary strong {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 7px;
+  color: #5a3b22;
+  font-size: clamp(17px, 5.1vw, 21px);
+  font-weight: 950;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+.app-shell .vip-claim-result-summary strong span {
+  color: #f2761d;
+  font-size: 0.9em;
+  font-variant-numeric: tabular-nums;
+}
+
+.app-shell .vip-claim-result-summary p {
+  min-width: min(74vw, 270px);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #9a8065;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+}
+
+.app-shell .vip-claim-result-summary p::before,
+.app-shell .vip-claim-result-summary p::after {
+  width: 28px;
+  height: 1px;
+  content: "";
+  background: rgba(179, 133, 76, 0.22);
+}
+
+.app-shell .vip-claim-result-confirm.button {
+  position: relative;
+  z-index: 1;
+  min-height: 54px;
+  margin-top: 10px;
+  border-radius: 18px;
+  font-size: 15px;
+  font-weight: 950;
+  box-shadow:
+    0 13px 25px rgba(255, 112, 0, 0.23),
+    inset 0 1px 0 rgba(255, 255, 255, 0.52);
+}
+
+@keyframes vip-claim-result-rise {
+  from {
+    opacity: 0;
+    transform: translateY(36px);
+  }
+}
+
+@keyframes vip-claim-reward-settle {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -70%) rotate(-11deg) scale(0.72);
+  }
+}
+
+@media (max-height: 700px) {
+  .app-shell .vip-claim-result-modal {
+    gap: 9px;
+    padding-top: 54px;
+    padding-bottom: calc(var(--safe-bottom) + 30px);
+  }
+
+  .app-shell .vip-claim-result-scene {
+    top: -250px;
+    width: 340px;
+  }
+
+  .app-shell .vip-claim-result-reward {
+    width: 146px;
+  }
+
+  .app-shell .vip-claim-result-heading h2 {
+    font-size: 23px;
+  }
+
+  .app-shell .vip-claim-result-confirm.button {
+    min-height: 48px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell .vip-claim-result-modal,
+  .app-shell .vip-claim-result-reward {
+    animation-duration: 0.01ms;
+  }
+}

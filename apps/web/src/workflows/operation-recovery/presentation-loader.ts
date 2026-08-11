@@ -8,6 +8,7 @@ type DecompositionModule =
 type MarketModule = typeof import("./presentations/MarketPresentation.ts");
 type WheelModule = typeof import("./presentations/WheelPresentation.ts");
 type AlbumModule = typeof import("./presentations/AlbumPresentation.ts");
+type VipModule = typeof import("./presentations/VipPresentation.ts");
 
 export type LoadedOperationPresentation =
   | { kind: "gacha"; module: GachaModule }
@@ -15,7 +16,8 @@ export type LoadedOperationPresentation =
   | { kind: "decomposition"; module: DecompositionModule }
   | { kind: "market"; module: MarketModule }
   | { kind: "wheel"; module: WheelModule }
-  | { kind: "album"; module: AlbumModule };
+  | { kind: "album"; module: AlbumModule }
+  | { kind: "vip"; module: VipModule };
 
 type PresentationKind = LoadedOperationPresentation["kind"];
 type PresentationModule = LoadedOperationPresentation["module"];
@@ -32,6 +34,7 @@ const loaders: Record<PresentationKind, PresentationLoader> = {
   market: cachedLoader(() => import("./presentations/MarketPresentation.ts")),
   wheel: cachedLoader(() => import("./presentations/WheelPresentation.ts")),
   album: cachedLoader(() => import("./presentations/AlbumPresentation.ts")),
+  vip: cachedLoader(() => import("./presentations/VipPresentation.ts")),
 };
 
 export function preloadOperationPresentation(
@@ -54,6 +57,8 @@ function presentationKind(
     return "market";
   if (routeId === "wheel.spin") return "wheel";
   if (routeId === "album.claim") return "album";
+  if (routeId === "vip.claim_fgems" || routeId === "vip.claim_free_box")
+    return "vip";
   return null;
 }
 
