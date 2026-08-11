@@ -81,6 +81,13 @@ type RegisteredOperation = {
 };
 
 type EvolutionResultAction = "inventory" | "album" | "acknowledge";
+type GachaImagePreparationStatus = "loading" | "ready" | "failed";
+type GachaImagePreparationState = {
+  operationId: string;
+  status: GachaImagePreparationStatus;
+  retryEpoch: number;
+  hasFailed: boolean;
+};
 type GachaResult = RouteOutput<"gacha.open">;
 type WheelResult = RouteOutput<"wheel.spin">;
 type AlbumClaimResult = RouteOutput<"album.claim">;
@@ -195,6 +202,8 @@ export function OperationRegistryRuntimeProvider({
   const [revealedGachaAnimationId, setRevealedGachaAnimationId] = useState<
     string | null
   >(null);
+  const [gachaImagePreparation, setGachaImagePreparation] =
+    useState<GachaImagePreparationState | null>(null);
   const [wheelPresentationEpoch, setWheelPresentationEpoch] = useState(0);
   const [hydrationEpoch, setHydrationEpoch] = useState(0);
   const hydrationEpochRef = useRef(0);
@@ -341,9 +350,28 @@ export function OperationRegistryRuntimeProvider({
   const gachaPresentationReady =
     animatedGachaOperationId === null ||
     revealedGachaAnimationId === animatedGachaOperationId;
+  const activeGachaImagePreparation =
+    gachaImagePreparation?.operationId === active?.id
+      ? gachaImagePreparation
+      : null;
+  const gachaImagesReady = activeGachaImagePreparation?.status === "ready";
+  const gachaImageRetryEpoch = activeGachaImagePreparation?.retryEpoch ?? 0;
+  const gachaImageHasFailed = activeGachaImagePreparation?.hasFailed === true;
+  const showGachaImageUnavailable = Boolean(
+    active?.routeId === "gacha.open" &&
+    gachaResult &&
+    gachaPresentationReady &&
+    gachaImageHasFailed &&
+    !gachaImagesReady,
+  );
   const showGachaAnimation = Boolean(
     active?.routeId === "gacha.open" &&
-    (!gachaPresentationReady || unresolvedPhases.has(active.phase)),
+    (!gachaPresentationReady ||
+      unresolvedPhases.has(active.phase) ||
+      (gachaResult && !gachaImagesReady && !gachaImageHasFailed)),
+  );
+  const gachaResultVisible = Boolean(
+    gachaResult && gachaPresentationReady && gachaImagesReady,
   );
   const hideMarketProgress = Boolean(
     (active?.routeId === "market.create_listing" ||
@@ -412,6 +440,7 @@ export function OperationRegistryRuntimeProvider({
         setGachaActionId(null);
         setGachaActionError(null);
         setRevealedGachaAnimationId(null);
+        setGachaImagePreparation(null);
         setMountedGachaAnimationId(null);
         setPresentationState(null);
         setValidationState(null);
@@ -493,6 +522,9 @@ export function OperationRegistryRuntimeProvider({
     setActiveId((current) =>
       current === id ? (Object.keys(next)[0] ?? null) : current,
     );
+    setGachaImagePreparation((current) =>
+      current?.operationId === id ? null : current,
+    );
   }, []);
 
   const refreshAuthorityAfterLeave = useCallback(() => {
@@ -549,6 +581,9 @@ export function OperationRegistryRuntimeProvider({
     );
     setRevealedGachaAnimationId((id) =>
       id && discardedGachaIds.has(id) ? null : id,
+    );
+    setGachaImagePreparation((current) =>
+      current && discardedGachaIds.has(current.operationId) ? null : current,
     );
   }, []);
 
@@ -1286,7 +1321,7 @@ export function OperationRegistryRuntimeProvider({
       event.currentTarget.querySelectorAll<HTMLElement>(
         'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
       ),
-    );
+    ).filter((control) => !control.closest("[inert]"));
     if (!controls.length) {
       event.preventDefault();
       event.currentTarget.focus();
@@ -1307,9 +1342,54 @@ export function OperationRegistryRuntimeProvider({
     if (active?.routeId === "gacha.open") setMountedGachaAnimationId(active.id);
   }, [active]);
 
+  const handleGachaImageStatusChange = useCallback(
+    (operationId: string, status: GachaImagePreparationStatus) => {
+      setGachaImagePreparation((current) => {
+        const previous =
+          current?.operationId === operationId
+            ? current
+            : {
+                operationId,
+                status: "loading" as const,
+                retryEpoch: 0,
+                hasFailed: false,
+              };
+        const hasFailed = previous.hasFailed || status === "failed";
+        if (previous.status === status && previous.hasFailed === hasFailed)
+          return previous;
+        return { ...previous, status, hasFailed };
+      });
+    },
+    [],
+  );
+
+  const retryGachaImages = useCallback((operationId: string) => {
+    setGachaImagePreparation((current) => {
+      const previous =
+        current?.operationId === operationId
+          ? current
+          : {
+              operationId,
+              status: "failed" as const,
+              retryEpoch: 0,
+              hasFailed: true,
+            };
+      return {
+        ...previous,
+        status: "loading",
+        retryEpoch: previous.retryEpoch + 1,
+        hasFailed: true,
+      };
+    });
+  }, []);
+
   const GachaHatchAnimation =
     loadedPresentation?.kind === "gacha"
       ? loadedPresentation.module.GachaHatchAnimation
+      : null;
+  const GachaImageUnavailable =
+    loadedPresentation?.kind === "gacha"
+      ? loadedPresentation.module.GachaImageUnavailable
       : null;
   const GachaResultDialog =
     loadedPresentation?.kind === "gacha"
@@ -1356,7 +1436,7 @@ export function OperationRegistryRuntimeProvider({
           ref={dialogRef}
           className={`modal-backdrop operation-dialog-backdrop ${
             active.routeId === "gacha.open"
-              ? `gacha-operation-backdrop phase-${active.phase}${showGachaAnimation ? " gacha-hatching-backdrop" : gachaResult ? " gacha-result-backdrop" : ""}`
+              ? `gacha-operation-backdrop phase-${active.phase}${showGachaAnimation || showGachaImageUnavailable ? " gacha-hatching-backdrop" : gachaResultVisible ? " gacha-result-backdrop" : ""}`
               : active.routeId === "inventory.decompose"
                 ? `decomposition-operation-backdrop phase-${active.phase}`
                 : active.routeId === "inventory.evolve"
@@ -1383,25 +1463,27 @@ export function OperationRegistryRuntimeProvider({
           aria-labelledby={
             showGachaAnimation
               ? undefined
-              : active.routeId === "market.create_listing"
-                ? active.phase === "succeeded"
-                  ? "market-listing-success-title"
-                  : "market-listing-failure-title"
-                : active.routeId === "market.purchase"
-                  ? active.phase === "succeeded" && marketPurchaseResult
-                    ? "market-purchase-success-title"
-                    : "market-purchase-failure-title"
-                  : active.routeId === "inventory.decompose"
-                    ? "decomposition-result-title"
-                    : active.routeId === "inventory.evolve"
-                      ? "evolution-result-title"
-                      : gachaResult
-                        ? "gacha-result-title"
-                        : wheelResult
-                          ? "wheel-result-title"
-                          : albumClaimResult
-                            ? "album-claim-result-title"
-                            : "operation-dialog-title"
+              : showGachaImageUnavailable
+                ? "gacha-image-unavailable-title"
+                : active.routeId === "market.create_listing"
+                  ? active.phase === "succeeded"
+                    ? "market-listing-success-title"
+                    : "market-listing-failure-title"
+                  : active.routeId === "market.purchase"
+                    ? active.phase === "succeeded" && marketPurchaseResult
+                      ? "market-purchase-success-title"
+                      : "market-purchase-failure-title"
+                    : active.routeId === "inventory.decompose"
+                      ? "decomposition-result-title"
+                      : active.routeId === "inventory.evolve"
+                        ? "evolution-result-title"
+                        : gachaResult
+                          ? "gacha-result-title"
+                          : wheelResult
+                            ? "wheel-result-title"
+                            : albumClaimResult
+                              ? "album-claim-result-title"
+                              : "operation-dialog-title"
           }
           tabIndex={-1}
           onKeyDown={trapDialogFocus}
@@ -1494,6 +1576,46 @@ export function OperationRegistryRuntimeProvider({
                 void acknowledgeEvolutionResult(active, "acknowledge")
               }
             />
+          ) : active.routeId === "gacha.open" &&
+            gachaResult &&
+            GachaResultDialog ? (
+            <>
+              <GachaResultDialog
+                key={active.id}
+                operationId={active.id}
+                result={gachaResult}
+                busy={gachaActionId === active.id}
+                error={
+                  gachaActionError?.operationId === active.id
+                    ? gachaActionError.message
+                    : null
+                }
+                visible={gachaResultVisible}
+                retryEpoch={gachaImageRetryEpoch}
+                onImageStatusChange={handleGachaImageStatusChange}
+                onRepeat={() => void repeatGacha(active)}
+                onInventory={() => {
+                  remove(active.id);
+                  preparePage("/inventory");
+                  navigate("/inventory");
+                }}
+                onConfirm={() => remove(active.id)}
+              />
+              {showGachaAnimation && GachaHatchAnimation ? (
+                <GachaHatchAnimation
+                  tier={
+                    active.animationTier ??
+                    gachaAnimationTier(active.input, gachaResult)
+                  }
+                  onMounted={handleGachaPresentationMounted}
+                />
+              ) : showGachaImageUnavailable && GachaImageUnavailable ? (
+                <GachaImageUnavailable
+                  busy={activeGachaImagePreparation?.status === "loading"}
+                  onRetry={() => retryGachaImages(active.id)}
+                />
+              ) : null}
+            </>
           ) : showGachaAnimation && GachaHatchAnimation ? (
             <GachaHatchAnimation
               tier={
@@ -1501,23 +1623,6 @@ export function OperationRegistryRuntimeProvider({
                 gachaAnimationTier(active.input, gachaResult)
               }
               onMounted={handleGachaPresentationMounted}
-            />
-          ) : gachaResult && GachaResultDialog ? (
-            <GachaResultDialog
-              result={gachaResult}
-              busy={gachaActionId === active.id}
-              error={
-                gachaActionError?.operationId === active.id
-                  ? gachaActionError.message
-                  : null
-              }
-              onRepeat={() => void repeatGacha(active)}
-              onInventory={() => {
-                remove(active.id);
-                preparePage("/inventory");
-                navigate("/inventory");
-              }}
-              onConfirm={() => remove(active.id)}
             />
           ) : wheelResult && WheelResultDialog ? (
             <WheelResultDialog

@@ -1,7 +1,9 @@
 import {
   useCallback,
+  useEffect,
   useLayoutEffect,
   useRef,
+  useState,
   type CSSProperties,
   type KeyboardEvent,
   type ReactNode,
@@ -10,7 +12,10 @@ import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 
 import { selectionHaptic } from "../../platform/telegram/index.ts";
 import { Button } from "../../shared/ui/Button.tsx";
-import { CatalogImage } from "../../shared/ui/CatalogImage.tsx";
+import {
+  CatalogImage,
+  type CatalogImageStatus,
+} from "../../shared/ui/CatalogImage.tsx";
 
 type GachaResult = RouteOutput<"gacha.open">;
 type ResultItem = GachaResult["results"][number];
@@ -52,16 +57,24 @@ function interpolateCarouselLayer(
 }
 
 export function GachaResultDialog({
+  operationId,
   result,
   busy,
   error,
+  visible,
+  retryEpoch,
+  onImageStatusChange,
   onRepeat,
   onInventory,
   onConfirm,
 }: {
+  operationId: string;
   result: GachaResult;
   busy: boolean;
   error: string | null;
+  visible: boolean;
+  retryEpoch: number;
+  onImageStatusChange(operationId: string, status: CatalogImageStatus): void;
   onRepeat(): void;
   onInventory(): void;
   onConfirm(): void;
@@ -72,10 +85,49 @@ export function GachaResultDialog({
       left.order - right.order,
   );
   const single = result.draw_count === 1;
+  const imageKeys = rankedResults.map(
+    (item) => `${item.order}-${item.template_id}`,
+  );
+  const preparationKey = `${single ? "single" : "ten"}:${imageKeys.join("|")}:${retryEpoch}`;
+  const [preparation, setPreparation] = useState<{
+    key: string;
+    statuses: Record<string, CatalogImageStatus>;
+  }>({ key: "", statuses: {} });
+  const statuses =
+    preparation.key === preparationKey ? preparation.statuses : {};
+  const imageStatus: CatalogImageStatus = imageKeys.every(
+    (key) => statuses[key] === "ready",
+  )
+    ? "ready"
+    : imageKeys.some((key) => statuses[key] === "failed")
+      ? "failed"
+      : "loading";
+
+  useEffect(() => {
+    onImageStatusChange(operationId, imageStatus);
+  }, [imageStatus, onImageStatusChange, operationId]);
+
+  const updateImageStatus = (imageKey: string, status: CatalogImageStatus) => {
+    setPreparation((current) => {
+      const currentStatuses =
+        current.key === preparationKey ? current.statuses : {};
+      if (
+        currentStatuses[imageKey] === status &&
+        current.key === preparationKey
+      )
+        return current;
+      return {
+        key: preparationKey,
+        statuses: { ...currentStatuses, [imageKey]: status },
+      };
+    });
+  };
 
   return (
     <div
-      className={`modal gacha-moon-result ${single ? "is-single" : "is-ten"}`}
+      className={`modal gacha-moon-result ${single ? "is-single" : "is-ten"}${visible ? "" : " is-preparing"}`}
+      aria-hidden={!visible}
+      inert={!visible}
     >
       <img
         className="gacha-moon-result-background"
@@ -89,9 +141,18 @@ export function GachaResultDialog({
       </header>
 
       {single ? (
-        <SingleResult item={rankedResults[0]!} />
+        <SingleResult
+          item={rankedResults[0]!}
+          imageKey={imageKeys[0]!}
+          retryEpoch={retryEpoch}
+          onImageStatusChange={updateImageStatus}
+        />
       ) : (
-        <TenDrawResults results={rankedResults} />
+        <TenDrawResults
+          results={rankedResults}
+          retryEpoch={retryEpoch}
+          onImageStatusChange={updateImageStatus}
+        />
       )}
 
       {error ? <p className="operation-ack-error">{error}</p> : null}
@@ -110,17 +171,29 @@ export function GachaResultDialog({
   );
 }
 
-function SingleResult({ item }: { item: ResultItem }): ReactNode {
+function SingleResult({
+  item,
+  imageKey,
+  retryEpoch,
+  onImageStatusChange,
+}: {
+  item: ResultItem;
+  imageKey: string;
+  retryEpoch: number;
+  onImageStatusChange(imageKey: string, status: CatalogImageStatus): void;
+}): ReactNode {
   return (
     <article className={`gacha-moon-single rarity-${item.rarity}`}>
       <strong className="gacha-moon-rarity">{rarityLabels[item.rarity]}</strong>
       <div className="gacha-moon-art">
         <CatalogImage
+          key={`${imageKey}:${retryEpoch}`}
           url={item.image_detail_url}
           alt={item.name}
           variant="detail"
           loading="eager"
           fetchPriority="high"
+          onStatusChange={(status) => onImageStatusChange(imageKey, status)}
         />
         <span className="gacha-moon-new">NEW</span>
       </div>
@@ -128,7 +201,15 @@ function SingleResult({ item }: { item: ResultItem }): ReactNode {
   );
 }
 
-function TenDrawResults({ results }: { results: ResultItem[] }): ReactNode {
+function TenDrawResults({
+  results,
+  retryEpoch,
+  onImageStatusChange,
+}: {
+  results: ResultItem[];
+  retryEpoch: number;
+  onImageStatusChange(imageKey: string, status: CatalogImageStatus): void;
+}): ReactNode {
   const carouselResults: ResultItem[] = [];
   results.forEach((item, rank) => {
     carouselResults[tenDrawRankPositions[rank] ?? rank] = item;
@@ -287,13 +368,18 @@ function TenDrawResults({ results }: { results: ResultItem[] }): ReactNode {
             <span className="gacha-moon-new">NEW</span>
             <div className="gacha-moon-art">
               <CatalogImage
-                url={item.image_detail_url}
+                key={`${item.order}-${item.template_id}:${retryEpoch}`}
+                url={item.image_thumbnail_url}
                 alt={item.name}
-                variant="detail"
-                loading={
-                  Math.abs(index - initialCarouselIndex) <= 1 ? "eager" : "lazy"
-                }
+                variant="thumbnail"
+                loading="eager"
                 fetchPriority={index === initialCarouselIndex ? "high" : "auto"}
+                onStatusChange={(status) =>
+                  onImageStatusChange(
+                    `${item.order}-${item.template_id}`,
+                    status,
+                  )
+                }
               />
             </div>
           </li>

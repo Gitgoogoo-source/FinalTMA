@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 
 import { selectionHaptic } from "../../platform/telegram/index.ts";
+import { Button } from "../../shared/ui/Button.tsx";
 import type { GachaHatchTier } from "./context.ts";
 
 export type { GachaHatchTier } from "./context.ts";
@@ -51,6 +52,39 @@ export function GachaHatchAnimation({
       <p className="gacha-moon-ritual-copy" aria-hidden="true">
         静候灵契显现
       </p>
+    </section>
+  );
+}
+
+export function GachaImageUnavailable({
+  busy,
+  onRetry,
+}: {
+  busy: boolean;
+  onRetry(): void;
+}): ReactNode {
+  return (
+    <section
+      className="gacha-moon-ritual gacha-moon-image-unavailable"
+      aria-labelledby="gacha-image-unavailable-title"
+    >
+      <img
+        className="gacha-moon-ritual-background gacha-moon-image-unavailable-background"
+        src={RITUAL_OPEN_BACKGROUND}
+        alt=""
+        aria-hidden="true"
+      />
+
+      <header className="gacha-moon-ritual-heading">
+        <small>月下灵契</small>
+        <h2 id="gacha-image-unavailable-title">灵契尚未显现</h2>
+      </header>
+
+      <div className="gacha-moon-image-unavailable-action">
+        <Button disabled={busy} onClick={onRetry}>
+          {busy ? "显现中" : "再试一次"}
+        </Button>
+      </div>
     </section>
   );
 }

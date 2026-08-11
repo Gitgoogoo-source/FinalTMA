@@ -115,6 +115,36 @@
   overscroll-behavior: none;
 }
 
+.gacha-moon-result.is-preparing {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.gacha-moon-image-unavailable-background {
+  opacity: 1;
+  animation: none;
+}
+
+.gacha-moon-image-unavailable-action {
+  position: absolute;
+  z-index: 4;
+  right: 24px;
+  bottom: calc(var(--safe-bottom) + 48px);
+  left: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.gacha-moon-image-unavailable-action .button {
+  width: min(100%, 280px);
+  min-height: 54px;
+  border-color: #ff9c00;
+  color: #fffdfa;
+  background: #ff9c00;
+}
+
 .gacha-moon-heading {
   position: relative;
   z-index: 4;
