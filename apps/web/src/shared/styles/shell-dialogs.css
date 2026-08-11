@@ -111,6 +111,280 @@
   min-height: 44px;
 }
 
+/* K-coin recharge sheet --------------------------------------------------- */
+.app-shell.topup-sheet-backdrop {
+  place-items: end center;
+  padding: max(var(--safe-top), 10px) 0 0;
+  overflow: hidden;
+  background: rgba(34, 37, 38, 0.48);
+  -webkit-backdrop-filter: blur(11px) saturate(90%);
+  backdrop-filter: blur(11px) saturate(90%);
+}
+
+.app-shell.topup-sheet-backdrop .topup-sheet {
+  position: relative;
+  width: min(100%, var(--app-width));
+  min-height: min(55dvh, 480px);
+  max-height: calc(
+    var(--tg-viewport-stable-height, 100dvh) - max(var(--safe-top), 10px)
+  );
+  align-content: start;
+  gap: 14px;
+  padding: 34px 18px calc(var(--safe-bottom) + 22px);
+  overflow: visible;
+  border: 1px solid rgba(255, 255, 255, 0.97);
+  border-bottom: 0;
+  border-radius: 34px 34px 0 0;
+  color: #43311f;
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(255, 205, 112, 0.2),
+      transparent 32%
+    ),
+    linear-gradient(180deg, #fff7e8 0%, #fffdf8 44%, #fffefa 100%);
+  box-shadow:
+    0 -24px 70px rgba(31, 29, 22, 0.24),
+    inset 0 1px 0 #fff;
+  animation: topup-sheet-rise 0.34s cubic-bezier(0.22, 0.78, 0.24, 1);
+}
+
+.app-shell .topup-sheet-coins {
+  position: absolute;
+  z-index: 0;
+  bottom: calc(100% - 7px);
+  left: 50%;
+  width: min(105vw, 448px);
+  max-width: none;
+  display: block;
+  object-fit: contain;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 14px 18px rgba(255, 145, 0, 0.16));
+  pointer-events: none;
+  user-select: none;
+}
+
+.app-shell .topup-sheet-handle {
+  position: relative;
+  z-index: 1;
+  width: 50px;
+  height: 8px;
+  justify-self: center;
+  color: #ff9247;
+  stroke-linecap: round;
+  stroke-width: 5;
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.72));
+}
+
+.app-shell .topup-sheet-heading {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 3px;
+}
+
+.app-shell .topup-sheet-heading h2 {
+  margin: 0;
+  color: #51361f;
+  font-size: clamp(25px, 7vw, 30px);
+  font-weight: 950;
+  letter-spacing: -0.04em;
+  line-height: 1.08;
+  text-align: center;
+}
+
+.app-shell .topup-sheet-heading svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  color: #ffad28;
+  fill: rgba(255, 190, 58, 0.2);
+}
+
+.app-shell .topup-sheet-description {
+  position: relative;
+  z-index: 1;
+  max-width: 350px;
+  justify-self: center;
+  margin: 0;
+  color: #897764;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.app-shell .topup-sheet .amount-grid {
+  position: relative;
+  z-index: 1;
+  gap: 8px;
+}
+
+.app-shell .topup-sheet .amount-grid button {
+  min-width: 0;
+  min-height: 54px;
+  padding: 9px 5px;
+  border: 1px solid rgba(108, 83, 52, 0.1);
+  border-radius: 15px;
+  color: #4f3b28;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow:
+    0 7px 15px rgba(91, 69, 40, 0.055),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98);
+  font-size: 13px;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.app-shell .topup-sheet .amount-grid button:active {
+  transform: scale(0.97);
+}
+
+.app-shell .topup-sheet .amount-grid button.selected {
+  border-color: #ff8a32;
+  color: #e95e0b;
+  background: linear-gradient(180deg, #fff1e3, #ffe8d1);
+  box-shadow:
+    0 8px 17px rgba(255, 122, 0, 0.12),
+    inset 0 0 0 1px rgba(255, 151, 60, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98);
+}
+
+.app-shell .topup-sheet .payment-recovery {
+  position: relative;
+  z-index: 1;
+  gap: 5px;
+  padding: 13px 14px;
+  border: 1px solid rgba(255, 164, 28, 0.2);
+  border-radius: 16px;
+  color: #75470f;
+  background: rgba(255, 239, 195, 0.68);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  text-align: center;
+}
+
+.app-shell .topup-sheet .payment-recovery strong {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.app-shell .topup-sheet .payment-recovery small {
+  color: #9a7548;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.app-shell .topup-sheet > p:not(.topup-sheet-description) {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding: 13px 14px;
+  border: 1px solid rgba(108, 83, 52, 0.08);
+  border-radius: 16px;
+  color: #8d7b69;
+  background: rgba(255, 255, 255, 0.64);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.app-shell .topup-sheet-error {
+  position: relative;
+  z-index: 1;
+  padding: 8px 10px;
+  border: 1px solid rgba(190, 75, 49, 0.15);
+  border-radius: 12px;
+  color: #a34432;
+  background: rgba(255, 232, 224, 0.72);
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.app-shell .topup-sheet .button-row {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.12fr);
+  gap: 10px;
+  margin-top: 3px;
+}
+
+.app-shell .topup-sheet .button {
+  min-width: 0;
+  min-height: 54px;
+  border-radius: 17px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.app-shell .topup-sheet .button:not(.secondary) {
+  box-shadow:
+    0 13px 25px rgba(255, 112, 0, 0.23),
+    inset 0 1px 0 rgba(255, 255, 255, 0.52);
+}
+
+.app-shell .topup-sheet .button.secondary {
+  border-color: rgba(91, 76, 58, 0.09);
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow:
+    0 8px 18px rgba(68, 55, 39, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+}
+
+@keyframes topup-sheet-rise {
+  from {
+    opacity: 0;
+    transform: translateY(34px);
+  }
+}
+
+@media (max-height: 700px) {
+  .app-shell.topup-sheet-backdrop .topup-sheet {
+    min-height: 0;
+    gap: 9px;
+    padding-top: 24px;
+    padding-bottom: calc(var(--safe-bottom) + 10px);
+  }
+
+  .app-shell .topup-sheet-coins {
+    bottom: calc(100% - 5px);
+    width: min(92vw, 390px);
+  }
+
+  .app-shell .topup-sheet-heading h2 {
+    font-size: 23px;
+  }
+
+  .app-shell .topup-sheet-description {
+    font-size: 10px;
+  }
+
+  .app-shell .topup-sheet .amount-grid button {
+    min-height: 43px;
+  }
+
+  .app-shell .topup-sheet .button {
+    min-height: 46px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.topup-sheet-backdrop .topup-sheet {
+    animation-duration: 0.01ms;
+  }
+}
+
 .gacha-operation-backdrop:is(
     .gacha-hatching-backdrop,
     .gacha-result-backdrop

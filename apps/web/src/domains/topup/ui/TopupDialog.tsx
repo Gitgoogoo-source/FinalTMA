@@ -1,4 +1,4 @@
-import { Coins, ExternalLink, RefreshCw } from "lucide-react";
+import { Coins, ExternalLink, Minus, RefreshCw, Sparkles } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -317,13 +317,24 @@ export function TopupDialog({
 
   return (
     <AppModal
+      className="topup-sheet-backdrop"
       labelledBy="topup-dialog-title"
       onClose={locked ? undefined : closeDialog}
     >
-      <div className="modal topup">
-        <Coins size={38} />
-        <h2 id="topup-dialog-title">K-coin 充值</h2>
-        <p>
+      <div className="modal topup topup-sheet">
+        <img
+          className="topup-sheet-coins"
+          src="/assets/topup/kcoin-cluster.webp"
+          alt=""
+          aria-hidden="true"
+        />
+        <Minus className="topup-sheet-handle" aria-hidden="true" />
+        <header className="topup-sheet-heading">
+          <Sparkles aria-hidden="true" />
+          <h2 id="topup-dialog-title">K-coin 充值</h2>
+          <Sparkles aria-hidden="true" />
+        </header>
+        <p className="topup-sheet-description">
           {request
             ? `原操作预计还差 ${request.estimatedGap} K-coin；最新差额与可用档位将重新确认。`
             : "选择充值档位。Stars 金额和 K-coin 到账值以支付结果为准。"}
@@ -381,7 +392,9 @@ export function TopupDialog({
             ))}
           </div>
         )}
-        {createError && !locked ? <small>{createError}</small> : null}
+        {createError && !locked ? (
+          <small className="topup-sheet-error">{createError}</small>
+        ) : null}
         <div className="button-row">
           <Button className="secondary" disabled={locked} onClick={closeDialog}>
             返回
