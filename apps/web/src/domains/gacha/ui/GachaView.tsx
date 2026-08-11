@@ -1,5 +1,7 @@
 import { Gift, Sparkles } from "lucide-react";
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -63,6 +65,11 @@ registerSensitiveStateResetter(() => {
 });
 
 const pityLoadError = new Error("保底进度加载失败，请重试");
+const GachaResumeDialog = lazy(() =>
+  import("./GachaResumeDialog.tsx").then((module) => ({
+    default: module.GachaResumeDialog,
+  })),
+);
 
 export function GachaView(): ReactNode {
   const boxes = useApiQuery("gacha.bootstrap");
@@ -116,6 +123,22 @@ export function GachaView(): ReactNode {
     visibleItems.find((box) => box.tier === selectedTier) ??
     visibleItems[0] ??
     items[0];
+  const resumedBox = resumedTier
+    ? items.find((box) => box.tier === resumedTier)
+    : undefined;
+  const resumedFreeSingleCount =
+    resumedTier === "normal"
+      ? boxes.data?.entitlements.free_normal_box
+      : resumedTier === "rare"
+        ? boxes.data?.entitlements.free_rare_box
+        : null;
+  const resumedFreeSingle =
+    resumedCount === 1 && Number(resumedFreeSingleCount) > 0;
+  const resumedCost = resumedBox
+    ? resumedCount === 10
+      ? resumedBox.ten_price
+      : resumedBox.single_price
+    : undefined;
   const firstScreenReady =
     pageActive &&
     Boolean(session?.generation) &&
@@ -230,6 +253,7 @@ export function GachaView(): ReactNode {
       balance !== undefined &&
       balance < cost
     ) {
+      void import("./GachaResumeDialog.tsx");
       requestTopup({ kind: "gacha", tier, draw_count: count }, cost - balance);
       return;
     }
@@ -261,24 +285,27 @@ export function GachaView(): ReactNode {
           </Button>
         </Card>
       )}
-      {resumedTier && (
-        <Card className="resume-intent">
-          <strong>充值已到账</strong>
-          <p>
-            已恢复原开盒选择。价格、余额、资格与保底将按当前真实状态重新确认，不会自动开盒。
-          </p>
-          <Button
+      {resumedTier && resumedBox && resumedCost !== undefined && (
+        <Suspense fallback={null}>
+          <GachaResumeDialog
+            tier={resumedBox.tier}
+            displayName={resumedBox.display_name}
+            drawCount={resumedCount}
+            cost={resumedCost}
+            freeSingle={resumedFreeSingle}
             disabled={blocked || !rulesComplete}
-            aria-disabled={blocked || !rulesComplete}
-            onClick={() => {
+            onPrepare={() => preload("gacha.open")}
+            onClose={() => {
+              selectTier(resumedTier);
+              setParams({});
+            }}
+            onConfirm={() => {
               selectTier(resumedTier);
               setParams({});
               open(resumedTier, resumedCount);
             }}
-          >
-            重新确认{resumedCount === 10 ? "十连" : "单抽"}
-          </Button>
-        </Card>
+          />
+        </Suspense>
       )}
       <PageState
         loading={boxes.isLoading}
