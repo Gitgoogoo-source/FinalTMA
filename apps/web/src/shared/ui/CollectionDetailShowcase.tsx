@@ -23,6 +23,8 @@ type CollectionDetailSkill = {
   damage: number;
 };
 
+const MAX_COLLECTION_SKILLS = 4;
+
 const rarityLabels: Record<CollectionDetailItem["rarity"], string> = {
   common: "普通",
   rare: "稀有",
@@ -75,10 +77,13 @@ export function CollectionDetailShowcase({
 
       <div className="inventory-hero-art">
         {skills.length > 0 ? (
-          <CollectionSkillRail key={item.template_id} skills={skills} />
+          <CollectionSkillRail
+            key={`skills:${item.template_id}`}
+            skills={skills}
+          />
         ) : null}
         <CollectionHeroImage
-          key={item.template_id}
+          key={`image:${item.template_id}`}
           item={item}
           onImageAvailability={onImageAvailability}
         />
@@ -159,8 +164,9 @@ function CollectionSkillRail({
 }: {
   skills: readonly CollectionDetailSkill[];
 }): ReactNode {
+  const renderedSkills = skills.slice(0, MAX_COLLECTION_SKILLS);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const selectedSkill = skills[selectedIndex] ?? skills[0];
+  const selectedSkill = renderedSkills[selectedIndex] ?? renderedSkills[0];
 
   if (!selectedSkill) {
     return null;
@@ -177,7 +183,7 @@ function CollectionSkillRail({
       </div>
 
       <div className="inventory-skill-tabs">
-        {skills.map((skill, index) => {
+        {renderedSkills.map((skill, index) => {
           const selected = index === selectedIndex;
           return (
             <button

@@ -1,0 +1,27 @@
+# ADR-064：藏品技能条唯一身份与四技能上限
+
+- 状态：已接受
+- 日期：2026-08-12
+
+## 背景
+
+真实 iPhone Telegram 藏品页中，砾甲龟的大图左侧同时出现了 5 条彩色条。Safari Web Inspector 确认当前模板实际只有 2 个技能，单个技能轨也只生成 2 个按钮；但同一 `.inventory-hero-art` 中残留了 3 个 `.inventory-skill-rail`，三组条的纵坐标交错后形成 5 个可见位置。当时 DOM 中共有 7 个 `.inventory-skill-bar`，不是服务端、数据库或产品数据返回了第五个技能。
+
+旧修复曾通过为整个主视觉容器设置 `template_id` key，保证切换模板时清除旧技能轨。[ADR-063](ADR-063-inventory-hero-image-continuity.md) 为保持主图预览与详情层的连续显示而取消了父容器 key，同时技能轨和主图两个同级 React 子节点仍共用同一 `template_id` key。同级 key 不唯一使 React 无法稳定识别新旧技能与图片节点，快速切换模板后产生技能轨残留。
+
+## 决策
+
+`.inventory-hero-art` 继续保持稳定，不恢复整体按模板重建，以保留 ADR-063 的主图连续显示边界。技能轨与主图的 React key 分别固定为 `skills:<template_id>` 和 `image:<template_id>`；两者在同级中永远唯一，模板改变时各自销毁旧状态并创建新状态。技能轨因此默认回到当前模板第一个技能，不保留上一模板的选中位置或 DOM。
+
+藏品详情的技能渲染边界固定只消费输入数组的前 4 项。每项恰好生成 1 个 `.inventory-skill-tab` 和 1 个 `.inventory-skill-bar`，不生成锁定槽、空槽、占位条或第五种颜色。当前产品数据 210 个模板的技能数量仍严格为 2、3、4，本显示上限不改变 Battle 技能归属、API、数据库或产品数据。
+
+## 不变量
+
+- 同一当前藏品的 `.inventory-hero-art` 恰好只有 1 个 `.inventory-skill-rail`。
+- 彩色条数量等于当前模板实际渲染技能数，且始终为 1—4；当前正式模板固定为 2、3 或 4。
+- 技能条点选只改变当前技能名、伤害文字和本地选中长度，不读取 API、不写数据库、不提交战斗动作。
+- 主图的缩略图预览、详情图解码替换、迟到结果隔离和当前页低优先级预热继续遵守 ADR-063。
+
+## 验收
+
+静态影响域必须通过 Prettier、ESLint、Web TypeScript、架构检查和生产构建；发布前执行全量 `validate:static`。真实 iPhone Telegram 与 Safari Web Inspector 必须在同一部署 SHA 上连续切换 1、2、3 阶宠物，逐次证明只有 1 个技能轨且分别恰好有 2、3、4 个技能条。A→B→C 快速切换、切离后返回藏品页和重开 Mini App 后均不得出现旧技能节点、第五条、空槽或错误的选中技能；同时复核主图预览与详情图连续显示未回归。

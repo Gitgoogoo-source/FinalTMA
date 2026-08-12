@@ -152,3 +152,4 @@ operation 准入与保留按 [ADR-059](adr/ADR-059-bounded-operation-admission-a
 - [开盒充值继续操作的运行期边界](adr/ADR-061-gacha-topup-continuation-runtime-boundary.md)
 - [Battle 首页战场卡片运行时美术尺寸](adr/ADR-062-battle-room-art-runtime-sizing.md)
 - [藏品主图连续显示与当前页详情图预热](adr/ADR-063-inventory-hero-image-continuity.md)
+- [藏品技能条唯一身份与四技能上限](adr/ADR-064-inventory-skill-rail-identity.md)
