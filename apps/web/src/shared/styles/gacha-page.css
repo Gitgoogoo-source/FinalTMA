@@ -206,6 +206,8 @@
 .app-shell .gacha-rarity-previews .preview-art {
   width: 46px;
   height: 46px;
+  display: grid;
+  place-items: center;
   padding: 2px;
   border: 1px solid rgba(223, 218, 207, 0.72);
   border-radius: 50%;
@@ -218,10 +220,17 @@
 .app-shell .gacha-rarity-previews .gacha-rarity-image,
 .app-shell .gacha-rarity-previews .image-missing {
   width: 100%;
-  height: 100%;
   border-radius: 50%;
   object-fit: cover;
   object-position: center top;
+}
+.app-shell .gacha-rarity-previews .gacha-rarity-image {
+  height: auto;
+  aspect-ratio: 1;
+  display: block;
+}
+.app-shell .gacha-rarity-previews .image-missing {
+  height: 100%;
 }
 .app-shell .gacha-rarity-previews article > strong {
   font-size: 7px;
