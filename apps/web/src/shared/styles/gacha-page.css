@@ -208,14 +208,12 @@
   height: 46px;
   display: grid;
   place-items: center;
-  padding: 2px;
-  border: 1px solid rgba(223, 218, 207, 0.72);
+  padding: 0;
+  border: 0;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.86);
-  box-shadow:
-    0 8px 16px rgba(54, 45, 38, 0.1),
-    inset 0 1px 0 #fff;
-  overflow: hidden;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
 }
 .app-shell .gacha-rarity-previews .gacha-rarity-image,
 .app-shell .gacha-rarity-previews .image-missing {

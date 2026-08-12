@@ -1,8 +1,8 @@
-import commonImage from "./gacha-rarity/common.webp";
-import epicImage from "./gacha-rarity/epic.webp";
-import legendaryImage from "./gacha-rarity/legendary.webp";
-import mythicImage from "./gacha-rarity/mythic.webp";
-import rareImage from "./gacha-rarity/rare.webp";
+import commonImage from "./gacha-rarity/common-v2.webp";
+import epicImage from "./gacha-rarity/epic-v2.webp";
+import legendaryImage from "./gacha-rarity/legendary-v2.webp";
+import mythicImage from "./gacha-rarity/mythic-v2.webp";
+import rareImage from "./gacha-rarity/rare-v2.webp";
 
 export type GachaRarity = "common" | "rare" | "epic" | "legendary" | "mythic";
 export type GachaTier = "normal" | "rare" | "legendary";
@@ -21,27 +21,27 @@ export const gachaRarityPresentation = {
   common: {
     label: "普通",
     imageSrc: commonImage,
-    imageAlt: "普通级白色幼龙代表图",
+    imageAlt: "普通级白色幼龙收藏徽章",
   },
   rare: {
     label: "稀有",
     imageSrc: rareImage,
-    imageAlt: "稀有级绿色飞龙代表图",
+    imageAlt: "稀有级绿色飞龙收藏徽章",
   },
   epic: {
     label: "史诗",
     imageSrc: epicImage,
-    imageAlt: "史诗级橙色飞龙代表图",
+    imageAlt: "史诗级橙紫飞龙收藏徽章",
   },
   legendary: {
     label: "传说",
     imageSrc: legendaryImage,
-    imageAlt: "传说级红色飞龙代表图",
+    imageAlt: "传说级红色飞龙收藏徽章",
   },
   mythic: {
     label: "神话",
     imageSrc: mythicImage,
-    imageAlt: "神话级黑金雷龙代表图",
+    imageAlt: "神话级黑金雷龙收藏徽章",
   },
 } as const satisfies Record<
   GachaRarity,
