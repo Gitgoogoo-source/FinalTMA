@@ -153,3 +153,4 @@ operation 准入与保留按 [ADR-059](adr/ADR-059-bounded-operation-admission-a
 - [Battle 首页战场卡片运行时美术尺寸](adr/ADR-062-battle-room-art-runtime-sizing.md)
 - [藏品主图连续显示与当前页详情图预热](adr/ADR-063-inventory-hero-image-continuity.md)
 - [藏品技能条唯一身份与四技能上限](adr/ADR-064-inventory-skill-rail-identity.md)
+- [藏品操作聚焦层与三等宽布局](adr/ADR-065-inventory-action-target-layout.md)
