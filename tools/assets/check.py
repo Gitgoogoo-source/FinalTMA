@@ -49,6 +49,9 @@ BRAND_ASSETS = {
     "apps/web/public/assets/ton/tonconnect-icon.png": ("png", 180, 180),
 }
 RESPONSIVE_STATIC_ASSETS = {
+    "apps/web/public/assets/battle/rooms/battle-room-20.webp": ((800, 373), 80 * 1024, False),
+    "apps/web/public/assets/battle/rooms/battle-room-100.webp": ((800, 373), 80 * 1024, False),
+    "apps/web/public/assets/battle/rooms/battle-room-500.webp": ((800, 373), 80 * 1024, False),
     "apps/web/public/assets/boxes/responsive/normal-128.webp": ((128, 128), 10 * 1024, True),
     "apps/web/public/assets/boxes/responsive/normal-192.webp": ((192, 192), 15 * 1024, True),
     "apps/web/public/assets/boxes/responsive/normal-384.webp": ((384, 384), 30 * 1024, True),
