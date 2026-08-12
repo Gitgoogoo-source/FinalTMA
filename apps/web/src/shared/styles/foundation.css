@@ -1728,11 +1728,10 @@ html[data-app-shell-active] #root {
   height: 60px;
   padding: 6px 5px;
   border-radius: 27px;
-  background: rgba(255, 255, 255, 0.54);
-  box-shadow:
-    0 18px 40px rgba(20, 74, 55, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.72),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.18);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .app-shell .bottom-nav button {
