@@ -152,6 +152,7 @@ export function InventoryView({
             visibleThumbnailPage.indexOf(right) - selectedThumbnailIndex,
           ),
     )
+    .slice(0, thumbnailPageSize - 1)
     .map((candidate) => candidate.image_detail_url);
   useInventoryDetailPrewarm({
     enabled: pageActive && imageReady,
