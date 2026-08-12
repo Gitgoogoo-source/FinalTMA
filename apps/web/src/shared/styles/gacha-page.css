@@ -933,7 +933,7 @@
   height: 54px;
   grid-template-columns: 1fr 1.05fr;
   gap: 14px;
-  margin-top: 16px;
+  margin-top: 6px;
 }
 
 .app-shell .gacha-actions .button {
@@ -941,8 +941,13 @@
   height: 54px;
   padding: 5px 12px;
   border-radius: 28px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.48);
   font-size: 18px;
   line-height: 21px;
+}
+
+.app-shell .gacha-actions .button:not(:disabled):active {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
 }
 
 .app-shell .gacha-actions .button > span {
