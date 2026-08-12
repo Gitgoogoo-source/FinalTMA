@@ -357,7 +357,19 @@
   font-size: 1.08em;
   font-weight: 900;
 }
-.app-shell .inventory-hero-art .catalog-image,
+.app-shell .inventory-hero-image-stack,
+.app-shell .inventory-hero-image-layer {
+  position: absolute;
+  inset: 0;
+}
+.app-shell .inventory-hero-image-stack {
+  z-index: 2;
+  pointer-events: none;
+}
+.app-shell .inventory-hero-image-layer[data-visible="false"] {
+  visibility: hidden;
+}
+.app-shell .inventory-hero-image-layer .catalog-image,
 .app-shell .inventory-hero-art .image-missing {
   position: absolute;
   z-index: 2;

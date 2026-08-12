@@ -6,10 +6,13 @@ import {
   type ReactNode,
 } from "react";
 
+import {
+  validatePublicPetUrl,
+  type CatalogImageVariant,
+} from "./catalogImageUrl.ts";
+
 const FALLBACK = "/assets/pets/pet-silhouette.svg";
 const RETRY_DELAYS = [1_000, 3_000] as const;
-const PUBLIC_PET_PATH =
-  /^\/storage\/v1\/object\/public\/pet-runtime\/catalog\/v[12]\/(thumb|detail)\/pet-[nat]-\d{3}-[123]\.[0-9a-f]{64}\.webp$/;
 
 type LoadState = {
   attempt: number;
@@ -22,7 +25,7 @@ export type CatalogImageStatus = "loading" | "ready" | "failed";
 type CatalogImageProps = {
   url: unknown;
   alt: string;
-  variant: "thumbnail" | "detail";
+  variant: CatalogImageVariant;
   loading?: "eager" | "lazy";
   fetchPriority?: "high" | "low" | "auto";
   onAvailability?: (available: boolean) => void;
@@ -32,7 +35,7 @@ type CatalogImageProps = {
 type CatalogImageSourceProps = {
   validUrl: string | null;
   alt: string;
-  variant: "thumbnail" | "detail";
+  variant: CatalogImageVariant;
   loading: "eager" | "lazy" | undefined;
   fetchPriority: "high" | "low" | "auto" | undefined;
   onAvailability: ((available: boolean) => void) | undefined;
@@ -185,29 +188,6 @@ function CatalogImageSource({
       }}
     />
   );
-}
-
-function validatePublicPetUrl(
-  value: string,
-  variant: "thumbnail" | "detail",
-): string | null {
-  try {
-    const parsed = new URL(value);
-    const match = PUBLIC_PET_PATH.exec(parsed.pathname);
-    const expected = variant === "thumbnail" ? "thumb" : "detail";
-    return parsed.protocol === "https:" &&
-      parsed.hostname.endsWith(".supabase.co") &&
-      parsed.port === "" &&
-      parsed.username === "" &&
-      parsed.password === "" &&
-      parsed.search === "" &&
-      parsed.hash === "" &&
-      match?.[1] === expected
-      ? parsed.toString()
-      : null;
-  } catch {
-    return null;
-  }
 }
 
 function retryUrl(value: string, attempt: number): string {

@@ -10,7 +10,10 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useAppNavigate } from "../../../platform/navigation/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { useCatalogQuery } from "../../../platform/query/useCatalogQuery.ts";
-import { usePageSearchParams } from "../../../shared/navigation/pageActivity.tsx";
+import {
+  usePageActive,
+  usePageSearchParams,
+} from "../../../shared/navigation/pageActivity.tsx";
 import { usePageModulePreparation } from "../../../shared/navigation/pageModulePreparation.ts";
 import { Badge } from "../../../shared/ui/Badge.tsx";
 import { Button } from "../../../shared/ui/Button.tsx";
@@ -21,6 +24,7 @@ import { PageState } from "../../../shared/ui/PageState.tsx";
 import { useNewMarkers } from "../../../workflows/new-markers/context.ts";
 import { getCollectionSkills } from "../collectionSkills.ts";
 import type { InventoryItem } from "../types.ts";
+import { useInventoryDetailPrewarm } from "../useInventoryDetailPrewarm.ts";
 
 const rarityLabels: Record<InventoryItem["rarity"], string> = {
   common: "普通",
@@ -68,6 +72,7 @@ export function InventoryView({
   const { templateIds: newTemplateIds, clearNew } = useNewMarkers();
   const navigate = useAppNavigate();
   const preparePage = usePageModulePreparation();
+  const pageActive = usePageActive();
   const ownedItems = (query.data?.items ?? []).filter((item) => item.total > 0);
   const selectableItems = ownedItems.filter((item) => item.available > 0);
   const [selection, setSelection] = useState({
@@ -87,6 +92,7 @@ export function InventoryView({
   const [chainTypeFilter, setChainTypeFilter] = useState<
     InventoryItem["chain_type"] | null
   >(null);
+  const [thumbnailPageIndex, setThumbnailPageIndex] = useState(0);
   const detailRef = useRef<HTMLDivElement>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
   const missingTargetRef = useRef<HTMLElement>(null);
@@ -126,6 +132,32 @@ export function InventoryView({
         (index + 1) * thumbnailPageSize,
       ),
   );
+  const visibleThumbnailPageIndex = Math.min(
+    thumbnailPageIndex,
+    Math.max(thumbnailPages.length - 1, 0),
+  );
+  const visibleThumbnailPage = thumbnailPages[visibleThumbnailPageIndex] ?? [];
+  const selectedThumbnailIndex = visibleThumbnailPage.findIndex(
+    (candidate) => candidate.template_id === effectiveId,
+  );
+  const detailPrewarmUrls = visibleThumbnailPage
+    .filter((candidate) => candidate.template_id !== effectiveId)
+    .toSorted((left, right) =>
+      selectedThumbnailIndex < 0
+        ? 0
+        : Math.abs(
+            visibleThumbnailPage.indexOf(left) - selectedThumbnailIndex,
+          ) -
+          Math.abs(
+            visibleThumbnailPage.indexOf(right) - selectedThumbnailIndex,
+          ),
+    )
+    .map((candidate) => candidate.image_detail_url);
+  useInventoryDetailPrewarm({
+    enabled: pageActive && imageReady,
+    selectedUrl: item?.image_detail_url ?? "",
+    urls: detailPrewarmUrls,
+  });
   useEffect(() => {
     if (!item || targetId !== item.template_id || targetAction === "evolve")
       return;
@@ -226,7 +258,28 @@ export function InventoryView({
                 onChainTypeChange={setChainTypeFilter}
               />
 
-              <div className="inventory-thumbnail-viewport">
+              <div
+                className="inventory-thumbnail-viewport"
+                onScroll={(event) => {
+                  const viewport = event.currentTarget;
+                  const pageCount = thumbnailPages.length;
+                  if (pageCount < 2) {
+                    setThumbnailPageIndex(0);
+                    return;
+                  }
+                  const stride =
+                    (viewport.scrollWidth - viewport.clientWidth) /
+                    (pageCount - 1);
+                  if (stride <= 0) return;
+                  const nextIndex = Math.min(
+                    pageCount - 1,
+                    Math.max(0, Math.round(viewport.scrollLeft / stride)),
+                  );
+                  setThumbnailPageIndex((current) =>
+                    current === nextIndex ? current : nextIndex,
+                  );
+                }}
+              >
                 {thumbnailPages.length > 0 ? (
                   <div className="inventory-thumbnail-pages">
                     {thumbnailPages.map((page, pageIndex) => (

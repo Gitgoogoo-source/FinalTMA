@@ -1,12 +1,13 @@
 import { useState, type ReactNode, type Ref } from "react";
 
-import { CatalogImage } from "./CatalogImage.tsx";
+import { CatalogImage, type CatalogImageStatus } from "./CatalogImage.tsx";
 
 export type CollectionDetailItem = {
   template_id: string;
   name: string;
   rarity: "common" | "rare" | "epic" | "legendary" | "mythic";
   stage: number;
+  image_thumbnail_url: string;
   image_detail_url: string;
   combat_power: number;
   available: number;
@@ -72,20 +73,14 @@ export function CollectionDetailShowcase({
         </div>
       </div>
 
-      <div key={item.template_id} className="inventory-hero-art">
+      <div className="inventory-hero-art">
         {skills.length > 0 ? (
           <CollectionSkillRail key={item.template_id} skills={skills} />
         ) : null}
-        <CatalogImage
+        <CollectionHeroImage
           key={item.template_id}
-          url={item.image_detail_url}
-          alt={item.name}
-          variant="detail"
-          loading="eager"
-          fetchPriority="high"
-          {...(onImageAvailability
-            ? { onAvailability: onImageAvailability }
-            : {})}
+          item={item}
+          onImageAvailability={onImageAvailability}
         />
       </div>
 
@@ -105,6 +100,57 @@ export function CollectionDetailShowcase({
       <InventoryQuantitySummary item={item} />
       {children}
     </section>
+  );
+}
+
+function CollectionHeroImage({
+  item,
+  onImageAvailability,
+}: {
+  item: CollectionDetailItem;
+  onImageAvailability?: ((ready: boolean) => void) | undefined;
+}): ReactNode {
+  const [detailStatus, setDetailStatus] =
+    useState<CatalogImageStatus>("loading");
+  const showDetail = detailStatus !== "loading";
+
+  return (
+    <div
+      className="inventory-hero-image-stack"
+      role="img"
+      aria-label={item.name}
+    >
+      <div
+        className="inventory-hero-image-layer inventory-hero-image-preview"
+        data-visible={!showDetail}
+        aria-hidden="true"
+      >
+        <CatalogImage
+          url={item.image_thumbnail_url}
+          alt=""
+          variant="thumbnail"
+          loading="eager"
+          fetchPriority="high"
+        />
+      </div>
+      <div
+        className="inventory-hero-image-layer inventory-hero-image-detail"
+        data-visible={showDetail}
+        aria-hidden="true"
+      >
+        <CatalogImage
+          url={item.image_detail_url}
+          alt=""
+          variant="detail"
+          loading="eager"
+          fetchPriority="high"
+          onStatusChange={(status) => {
+            setDetailStatus(status);
+            onImageAvailability?.(status === "ready");
+          }}
+        />
+      </div>
+    </div>
   );
 }
 
