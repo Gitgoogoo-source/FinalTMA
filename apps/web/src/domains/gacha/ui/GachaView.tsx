@@ -447,8 +447,8 @@ export function GachaView(): ReactNode {
                             className="gacha-rarity-image"
                             src={presentation.imageSrc}
                             alt={presentation.imageAlt}
-                            width={256}
-                            height={256}
+                            width={176}
+                            height={176}
                             loading="eager"
                             decoding="async"
                           />

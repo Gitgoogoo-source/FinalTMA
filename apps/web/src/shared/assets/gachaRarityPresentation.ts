@@ -21,27 +21,27 @@ export const gachaRarityPresentation = {
   common: {
     label: "普通",
     imageSrc: commonImage,
-    imageAlt: "普通级代表徽记",
+    imageAlt: "普通级白色幼龙代表图",
   },
   rare: {
     label: "稀有",
     imageSrc: rareImage,
-    imageAlt: "稀有级代表徽记",
+    imageAlt: "稀有级绿色飞龙代表图",
   },
   epic: {
     label: "史诗",
     imageSrc: epicImage,
-    imageAlt: "史诗级代表徽记",
+    imageAlt: "史诗级橙色飞龙代表图",
   },
   legendary: {
     label: "传说",
     imageSrc: legendaryImage,
-    imageAlt: "传说级代表徽记",
+    imageAlt: "传说级红色飞龙代表图",
   },
   mythic: {
     label: "神话",
     imageSrc: mythicImage,
-    imageAlt: "神话级代表徽记",
+    imageAlt: "神话级黑金雷龙代表图",
   },
 } as const satisfies Record<
   GachaRarity,
