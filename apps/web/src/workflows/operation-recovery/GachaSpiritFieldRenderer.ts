@@ -77,7 +77,7 @@ void main() {
   vec3 night = vec3(0.018, 0.052, 0.078);
   vec3 ivory = vec3(1.0, 0.986, 0.93);
   vec3 lightColor = mix(u_color, ivory, 0.28);
-  float light = coreHot * pulse * 1.35 + coreHalo * 0.2
+  float light = coreHot * pulse * 0.82 + coreHalo * 0.17
     + ripples * 0.7 + tail * 0.44 + shock * 0.92;
   vec3 color = night + lightColor * light;
   float alpha = clamp(cleanplate + coreHalo * 0.2 + ripples * 0.35 + shock * 0.4, 0.0, 1.0);
@@ -172,10 +172,10 @@ void main() {
   float grain = mix(0.68, 1.0, hash(floor(t * 230.0) + path * 37.0));
   float breakup = 0.82 + 0.18 * sin(t * 44.0 + side * 9.0 + path);
   float alpha = (
-    body * 0.16
-    + outerEdge * 0.22
-    + innerEdge * 0.12
-    + fibers * 0.26
+    body * 0.24
+    + outerEdge * 0.28
+    + innerEdge * 0.16
+    + fibers * 0.22
   ) * taper * grain * breakup * u_alpha;
   alpha *= 1.0 - u_reveal * 0.58;
 
@@ -221,7 +221,10 @@ void main() {
   position += burstDirection * u_reveal * (0.05 + seed * 0.42);
 
   float endFade = smoothstep(0.0, 0.055, travel) * smoothstep(0.0, 0.055, 1.0 - travel);
-  v_alpha = endFade * mix(0.34, 1.0, u_build) * (1.0 - u_reveal * 0.84);
+  float coreDistance = abs(travel - 0.5);
+  float coreParticleFade = mix(0.28, 1.0, smoothstep(0.055, 0.24, coreDistance));
+  v_alpha = endFade * coreParticleFade * mix(0.34, 1.0, u_build)
+    * (1.0 - u_reveal * 0.84);
   v_seed = seed;
   v_tint = vec3(radial, travel, path / 5.0);
   gl_PointSize = (2.0 + a_particle_extra.x * 7.2 + u_reveal * 3.2)
