@@ -117,9 +117,8 @@ export function GachaRitualCanvas({
       const ribbonAlpha = revealing
         ? Math.max(0, 1 - revealProgress * 0.9)
         : 0.34 + buildProgress * 0.66;
-      [0, 1, 2].forEach((ribbon) => {
-        drawSpiritSilk(
-          context,
+      const ribbonPoints = [0, 1, 2].map((ribbon) =>
+        createRibbonPoints(
           centerX,
           centerY,
           span,
@@ -128,6 +127,15 @@ export function GachaRitualCanvas({
           ribbon,
           buildProgress,
           revealEase,
+        ),
+      );
+      ribbonPoints.forEach((points, ribbon) => {
+        drawSpiritSilk(
+          context,
+          points,
+          width,
+          ribbon,
+          buildProgress,
           ribbonAlpha,
           activeColor,
         );
@@ -136,11 +144,8 @@ export function GachaRitualCanvas({
       drawSparks(
         context,
         sparks,
-        centerX,
-        centerY,
-        span,
+        ribbonPoints,
         width,
-        height,
         revealing ? 3_300 + elapsed : elapsed,
         buildProgress,
         revealEase,
@@ -186,8 +191,8 @@ function drawDarkCleanplate(
 ): void {
   context.save();
   context.translate(centerX, centerY);
-  context.scale(1, 1.24);
-  const radius = Math.min(width * 0.52, height * 0.27);
+  context.scale(1, 1.18);
+  const radius = Math.min(width * 0.64, height * 0.34);
   const gradient = context.createRadialGradient(
     0,
     0,
@@ -196,9 +201,12 @@ function drawDarkCleanplate(
     0,
     radius,
   );
-  gradient.addColorStop(0, `rgba(7, 18, 29, ${0.88 + buildProgress * 0.08})`);
-  gradient.addColorStop(0.5, `rgba(9, 24, 37, ${0.78 + buildProgress * 0.12})`);
-  gradient.addColorStop(0.78, "rgba(13, 31, 43, 0.48)");
+  gradient.addColorStop(0, `rgba(7, 18, 29, ${0.94 + buildProgress * 0.04})`);
+  gradient.addColorStop(
+    0.56,
+    `rgba(9, 24, 37, ${0.92 + buildProgress * 0.05})`,
+  );
+  gradient.addColorStop(0.82, "rgba(13, 31, 43, 0.82)");
   gradient.addColorStop(1, "rgba(13, 31, 43, 0)");
   context.fillStyle = gradient;
   context.beginPath();
@@ -209,79 +217,80 @@ function drawDarkCleanplate(
 
 function drawSpiritSilk(
   context: CanvasRenderingContext2D,
-  centerX: number,
-  centerY: number,
-  span: number,
+  points: Point[],
   width: number,
-  height: number,
   ribbon: number,
   buildProgress: number,
-  revealEase: number,
   alpha: number,
   color: [number, number, number],
 ): void {
-  const points = createRibbonPoints(
-    centerX,
-    centerY,
-    span,
-    width,
-    height,
-    ribbon,
-    buildProgress,
-    revealEase,
+  const halfWidths = points.map((_, index) => {
+    const t = index / Math.max(1, points.length - 1);
+    const taper = Math.pow(Math.sin(t * Math.PI), 0.58);
+    const breathing = 0.9 + Math.sin(t * Math.PI * 3 + ribbon) * 0.1;
+    return width * (ribbon === 1 ? 0.058 : 0.051) * taper * breathing;
+  });
+  const depth = ribbon === 1 ? 1 : ribbon === 0 ? 0.86 : 0.76;
+  const first = points[0] ?? { x: 0, y: 0 };
+  const last = points.at(-1) ?? first;
+  const bodyGradient = context.createLinearGradient(
+    first.x,
+    first.y,
+    last.x,
+    last.y,
   );
-  const broadWidth = width * (ribbon === 1 ? 0.072 : 0.058);
-  const interiorWidth = broadWidth * 0.72;
-  const edgeOffset = broadWidth * 0.34;
-  const depth = ribbon === 1 ? 0.92 : ribbon === 0 ? 0.78 : 0.68;
+  bodyGradient.addColorStop(0, "rgba(255, 253, 250, 0)");
+  bodyGradient.addColorStop(
+    0.18,
+    `rgba(255, 253, 250, ${0.5 * alpha * depth})`,
+  );
+  bodyGradient.addColorStop(
+    0.5,
+    `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${0.25 * alpha * depth})`,
+  );
+  bodyGradient.addColorStop(
+    0.78,
+    `rgba(241, 244, 237, ${0.4 * alpha * depth})`,
+  );
+  bodyGradient.addColorStop(1, "rgba(255, 253, 250, 0)");
 
   context.save();
   context.lineCap = "round";
   context.lineJoin = "round";
   context.globalCompositeOperation = "screen";
-  context.shadowBlur = 18 + buildProgress * 8;
-  context.shadowColor = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${0.42 * alpha})`;
-  strokePoints(
+  context.shadowBlur = 20 + buildProgress * 10;
+  context.shadowColor = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${0.36 * alpha})`;
+  fillRibbon(
     context,
     points,
-    0,
-    broadWidth,
-    `rgba(232, 241, 243, ${0.12 * alpha * depth})`,
+    halfWidths.map((value) => value * 1.28),
+    `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${0.09 * alpha})`,
   );
-
-  context.globalCompositeOperation = "source-over";
-  context.shadowBlur = 0;
-  strokePoints(
-    context,
-    points,
-    0,
-    interiorWidth,
-    `rgba(20, 37, 54, ${0.42 * alpha})`,
-  );
-
-  context.globalCompositeOperation = "screen";
   context.shadowBlur = 8;
-  context.shadowColor = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${0.72 * alpha})`;
-  strokePoints(
+  fillRibbon(context, points, halfWidths, bodyGradient);
+  strokeRibbonEdge(
     context,
     points,
-    edgeOffset,
-    Math.max(1.1, width * 0.0048),
-    `rgba(255, 253, 250, ${0.7 * alpha * depth})`,
+    halfWidths,
+    1,
+    Math.max(1.1, width * 0.0045),
+    `rgba(255, 253, 250, ${0.72 * alpha * depth})`,
   );
-  strokePoints(
+  strokeRibbonEdge(
     context,
     points,
-    -edgeOffset,
-    Math.max(0.9, width * 0.0037),
-    `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${0.68 * alpha * depth})`,
+    halfWidths,
+    -1,
+    Math.max(0.9, width * 0.0034),
+    `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${0.6 * alpha * depth})`,
   );
-  strokePoints(
+  strokeRibbonEdge(
     context,
     points,
-    0,
-    Math.max(0.7, width * 0.0025),
-    `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${0.46 * alpha})`,
+    halfWidths.map((value) => value * 0.22),
+    ribbon === 1 ? -1 : 1,
+    Math.max(0.7, width * 0.0022),
+    `rgba(255, 253, 250, ${0.28 * alpha})`,
   );
   context.restore();
 }
@@ -296,67 +305,94 @@ function createRibbonPoints(
   buildProgress: number,
   revealEase: number,
 ): Point[] {
-  const phase = [0.18, 2.26, 4.34][ribbon] ?? 0;
-  const direction = ribbon === 1 ? -1 : 1;
-  const tighten = 1.12 - buildProgress * 0.24;
+  const phase = [-0.5, 1.58, 3.76][ribbon] ?? 0;
+  const tighten = 1.08 - buildProgress * 0.12;
   const points: Point[] = [];
-  for (let index = 0; index <= 64; index += 1) {
-    const t = (index / 64 - 0.5) * 2;
-    const edge = Math.pow(Math.abs(t), 0.64);
+  for (let index = 0; index <= 52; index += 1) {
+    const t = index / 52;
     const angle =
       phase +
-      direction * t * Math.PI * 1.42 +
-      direction * buildProgress * 1.08 +
-      direction * revealEase * 0.92;
-    const baseRadius = span * (0.035 + edge * (0.34 + ribbon * 0.018));
-    const whip = 1 + revealEase * (0.72 + edge * 1.55);
-    const asymmetricX = t * width * 0.038 * (ribbon - 1);
+      t * Math.PI * (0.92 + buildProgress * 0.14) +
+      buildProgress * 0.64 +
+      revealEase * (0.48 + t * 0.42) +
+      Math.sin(t * Math.PI * 2 + ribbon * 0.7) * 0.08;
+    const baseRadius = span * (0.022 + t * (0.39 + ribbon * 0.012));
+    const whip = 1 + revealEase * (0.46 + t * 1.38);
+    const asymmetricX = Math.sin(t * Math.PI) * width * 0.018 * (ribbon - 1);
     const asymmetricY =
-      Math.sin(t * Math.PI) * height * 0.022 * (ribbon === 1 ? -1 : 1);
+      Math.sin(t * Math.PI * 1.4) * height * 0.012 * (ribbon === 1 ? -1 : 1);
     points.push({
       x: centerX + Math.cos(angle) * baseRadius * tighten * whip + asymmetricX,
       y:
         centerY +
-        Math.sin(angle) * baseRadius * 0.74 * tighten * whip +
-        asymmetricY +
-        t * height * 0.018 * (ribbon - 1),
+        Math.sin(angle) * baseRadius * 0.8 * tighten * whip +
+        asymmetricY,
     });
   }
   return points;
 }
 
-function strokePoints(
+function fillRibbon(
   context: CanvasRenderingContext2D,
   points: Point[],
-  offset: number,
+  halfWidths: number[],
+  fillStyle: string | CanvasGradient,
+): void {
+  const positive = offsetRibbonPoints(points, halfWidths, 1);
+  const negative = offsetRibbonPoints(points, halfWidths, -1).reverse();
+  context.beginPath();
+  [...positive, ...negative].forEach((point, index) => {
+    if (index === 0) context.moveTo(point.x, point.y);
+    else context.lineTo(point.x, point.y);
+  });
+  context.closePath();
+  context.fillStyle = fillStyle;
+  context.fill();
+}
+
+function strokeRibbonEdge(
+  context: CanvasRenderingContext2D,
+  points: Point[],
+  halfWidths: number[],
+  side: 1 | -1,
   lineWidth: number,
   strokeStyle: string,
 ): void {
+  const edge = offsetRibbonPoints(points, halfWidths, side);
   context.beginPath();
-  points.forEach((point, index) => {
-    const previous = points[Math.max(0, index - 1)] ?? point;
-    const next = points[Math.min(points.length - 1, index + 1)] ?? point;
-    const dx = next.x - previous.x;
-    const dy = next.y - previous.y;
-    const length = Math.max(0.001, Math.hypot(dx, dy));
-    const x = point.x - (dy / length) * offset;
-    const y = point.y + (dx / length) * offset;
-    if (index === 0) context.moveTo(x, y);
-    else context.lineTo(x, y);
+  edge.forEach((point, index) => {
+    if (index === 0) context.moveTo(point.x, point.y);
+    else context.lineTo(point.x, point.y);
   });
   context.lineWidth = lineWidth;
   context.strokeStyle = strokeStyle;
   context.stroke();
 }
 
+function offsetRibbonPoints(
+  points: Point[],
+  offsets: number[],
+  side: 1 | -1,
+): Point[] {
+  return points.map((point, index) => {
+    const previous = points[Math.max(0, index - 1)] ?? point;
+    const next = points[Math.min(points.length - 1, index + 1)] ?? point;
+    const dx = next.x - previous.x;
+    const dy = next.y - previous.y;
+    const length = Math.max(0.001, Math.hypot(dx, dy));
+    const offset = (offsets[index] ?? 0) * side;
+    return {
+      x: point.x - (dy / length) * offset,
+      y: point.y + (dx / length) * offset,
+    };
+  });
+}
+
 function drawSparks(
   context: CanvasRenderingContext2D,
   sparks: Spark[],
-  centerX: number,
-  centerY: number,
-  span: number,
+  ribbons: Point[][],
   width: number,
-  height: number,
   elapsed: number,
   buildProgress: number,
   revealEase: number,
@@ -365,18 +401,25 @@ function drawSparks(
   context.save();
   context.globalCompositeOperation = "screen";
   sparks.forEach((spark, index) => {
-    const direction = spark.ribbon === 1 ? -1 : 1;
-    const angle =
-      spark.angle +
-      direction * (elapsed * 0.0002 * spark.speed + buildProgress * 2.6);
-    const pull = 1.05 - buildProgress * 0.26;
-    const burst = 1 + revealEase * (1.1 + spark.distance * 1.8);
-    const orbit = span * (0.11 + spark.distance * 0.38) * pull * burst;
-    const x = centerX + Math.cos(angle) * orbit;
-    const y =
-      centerY +
-      Math.sin(angle) * orbit * 0.72 -
-      Math.sin(spark.phase * Math.PI * 2) * height * 0.02;
+    const ribbon = ribbons[spark.ribbon] ?? ribbons[0] ?? [];
+    if (ribbon.length < 2) return;
+    const travel =
+      ((spark.distance + elapsed * 0.000032 * spark.speed) % 0.94) + 0.03;
+    const pointIndex = Math.min(
+      ribbon.length - 1,
+      Math.floor(travel * (ribbon.length - 1)),
+    );
+    const point = ribbon[pointIndex] ?? ribbon[0];
+    const previous = ribbon[Math.max(0, pointIndex - 1)] ?? point;
+    const next = ribbon[Math.min(ribbon.length - 1, pointIndex + 1)] ?? point;
+    if (!point || !previous || !next) return;
+    const dx = next.x - previous.x;
+    const dy = next.y - previous.y;
+    const length = Math.max(0.001, Math.hypot(dx, dy));
+    const angle = Math.atan2(dy, dx);
+    const scatter = (spark.phase - 0.5) * width * (0.045 + revealEase * 0.12);
+    const x = point.x - (dy / length) * scatter;
+    const y = point.y + (dx / length) * scatter;
     const fade = revealingFade(revealEase);
     const alpha = (0.18 + buildProgress * 0.62) * fade;
     const radius = spark.radius * (1 + revealEase * 1.5);
