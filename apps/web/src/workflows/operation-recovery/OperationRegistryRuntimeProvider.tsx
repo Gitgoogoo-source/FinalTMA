@@ -28,6 +28,7 @@ import {
   apiRequest,
   newIdempotencyKey,
 } from "../../platform/api/client.ts";
+import { prepareGachaRitualAudio } from "../../platform/audio/gachaRitualAudio.ts";
 import { useAppNavigate } from "../../platform/navigation/index.tsx";
 import {
   fetchApiQuery,
@@ -210,6 +211,12 @@ export function OperationRegistryRuntimeProvider({
   const [revealedGachaAnimationId, setRevealedGachaAnimationId] = useState<
     string | null
   >(null);
+  const [gachaTensionReadyId, setGachaTensionReadyId] = useState<string | null>(
+    null,
+  );
+  const [revealingGachaAnimationId, setRevealingGachaAnimationId] = useState<
+    string | null
+  >(null);
   const [gachaImagePreparation, setGachaImagePreparation] =
     useState<GachaImagePreparationState | null>(null);
   const [wheelPresentationEpoch, setWheelPresentationEpoch] = useState(0);
@@ -380,6 +387,14 @@ export function OperationRegistryRuntimeProvider({
   const gachaImagesReady = activeGachaImagePreparation?.status === "ready";
   const gachaImageRetryEpoch = activeGachaImagePreparation?.retryEpoch ?? 0;
   const gachaImageHasFailed = activeGachaImagePreparation?.hasFailed === true;
+  const gachaRevealRarity =
+    gachaResult && gachaImagesReady
+      ? highestGachaResultRarity(gachaResult)
+      : null;
+  const gachaIsRevealing =
+    animatedGachaOperationId !== null &&
+    revealingGachaAnimationId === animatedGachaOperationId &&
+    !gachaPresentationReady;
   const showGachaImageUnavailable = Boolean(
     active?.routeId === "gacha.open" &&
     gachaResult &&
@@ -463,6 +478,8 @@ export function OperationRegistryRuntimeProvider({
         setGachaActionId(null);
         setGachaActionError(null);
         setRevealedGachaAnimationId(null);
+        setGachaTensionReadyId(null);
+        setRevealingGachaAnimationId(null);
         setGachaImagePreparation(null);
         setMountedGachaAnimationId(null);
         setPresentationState(null);
@@ -487,20 +504,58 @@ export function OperationRegistryRuntimeProvider({
     )
       return;
     const operationId = animatedGachaOperationId;
-    let timer: number | undefined;
-    const finishCycle = () => {
-      const operation = operationsRef.current[operationId];
-      if (operation?.phase === "succeeded" || operation?.phase === "failed") {
-        setRevealedGachaAnimationId(operationId);
-        return;
-      }
-      timer = window.setTimeout(finishCycle, 3_000);
-    };
-    timer = window.setTimeout(finishCycle, 3_000);
-    return () => {
-      if (timer !== undefined) window.clearTimeout(timer);
-    };
+    const timer = window.setTimeout(
+      () => setGachaTensionReadyId(operationId),
+      3_300,
+    );
+    return () => window.clearTimeout(timer);
   }, [animatedGachaOperationId, mountedGachaAnimationId]);
+
+  useEffect(() => {
+    if (
+      !animatedGachaOperationId ||
+      gachaTensionReadyId !== animatedGachaOperationId ||
+      revealingGachaAnimationId === animatedGachaOperationId ||
+      revealedGachaAnimationId === animatedGachaOperationId ||
+      active?.id !== animatedGachaOperationId
+    )
+      return;
+    const outcomeReady =
+      active.phase === "failed" ||
+      (active.phase === "succeeded" &&
+        Boolean(gachaResult) &&
+        (gachaImagesReady || gachaImageHasFailed));
+    if (!outcomeReady) return;
+    const operationId = animatedGachaOperationId;
+    const timer = window.setTimeout(
+      () => setRevealingGachaAnimationId(operationId),
+      0,
+    );
+    return () => window.clearTimeout(timer);
+  }, [
+    active,
+    animatedGachaOperationId,
+    gachaImageHasFailed,
+    gachaImagesReady,
+    gachaResult,
+    gachaTensionReadyId,
+    revealedGachaAnimationId,
+    revealingGachaAnimationId,
+  ]);
+
+  useEffect(() => {
+    if (
+      !animatedGachaOperationId ||
+      revealingGachaAnimationId !== animatedGachaOperationId
+    )
+      return;
+    const operationId = animatedGachaOperationId;
+    const timer = window.setTimeout(
+      () => setRevealedGachaAnimationId(operationId),
+      700,
+    );
+    return () => window.clearTimeout(timer);
+  }, [animatedGachaOperationId, revealingGachaAnimationId]);
 
   useLayoutEffect(() => {
     if (!activeId || !dialogRef.current) return;
@@ -548,6 +603,12 @@ export function OperationRegistryRuntimeProvider({
     setGachaImagePreparation((current) =>
       current?.operationId === id ? null : current,
     );
+    setGachaTensionReadyId((current) => (current === id ? null : current));
+    setRevealingGachaAnimationId((current) =>
+      current === id ? null : current,
+    );
+    setRevealedGachaAnimationId((current) => (current === id ? null : current));
+    setMountedGachaAnimationId((current) => (current === id ? null : current));
   }, []);
 
   const refreshAuthorityAfterLeave = useCallback(() => {
@@ -603,6 +664,12 @@ export function OperationRegistryRuntimeProvider({
       error && discardedGachaIds.has(error.operationId) ? null : error,
     );
     setRevealedGachaAnimationId((id) =>
+      id && discardedGachaIds.has(id) ? null : id,
+    );
+    setGachaTensionReadyId((id) =>
+      id && discardedGachaIds.has(id) ? null : id,
+    );
+    setRevealingGachaAnimationId((id) =>
       id && discardedGachaIds.has(id) ? null : id,
     );
     setGachaImagePreparation((current) =>
@@ -1163,6 +1230,7 @@ export function OperationRegistryRuntimeProvider({
         gachaActionId
       )
         return;
+      prepareGachaRitualAudio();
       const generation = operation.sessionGeneration;
       const route = await loadClientRoute("gacha.open");
       const parsedResult = route.output.safeParse(operation.result);
@@ -1362,8 +1430,9 @@ export function OperationRegistryRuntimeProvider({
   };
 
   const handleGachaPresentationMounted = useCallback(() => {
-    if (active?.routeId === "gacha.open") setMountedGachaAnimationId(active.id);
-  }, [active]);
+    if (activeId && operationsRef.current[activeId]?.routeId === "gacha.open")
+      setMountedGachaAnimationId(activeId);
+  }, [activeId]);
 
   const handleGachaImageStatusChange = useCallback(
     (operationId: string, status: GachaImagePreparationStatus) => {
@@ -1638,6 +1707,8 @@ export function OperationRegistryRuntimeProvider({
                     active.animationTier ??
                     gachaAnimationTier(active.input, gachaResult)
                   }
+                  revealRarity={gachaIsRevealing ? gachaRevealRarity : null}
+                  revealing={gachaIsRevealing}
                   onMounted={handleGachaPresentationMounted}
                 />
               ) : showGachaImageUnavailable && GachaImageUnavailable ? (
@@ -1653,6 +1724,8 @@ export function OperationRegistryRuntimeProvider({
                 active.animationTier ??
                 gachaAnimationTier(active.input, gachaResult)
               }
+              revealRarity={gachaIsRevealing ? gachaRevealRarity : null}
+              revealing={gachaIsRevealing}
               onMounted={handleGachaPresentationMounted}
             />
           ) : wheelResult && WheelResultDialog ? (
@@ -1934,6 +2007,23 @@ function gachaAnimationTier(
       return tier;
   }
   return "normal";
+}
+
+function highestGachaResultRarity(
+  result: GachaResult,
+): GachaResult["results"][number]["rarity"] {
+  const ranks: Record<GachaResult["results"][number]["rarity"], number> = {
+    common: 0,
+    rare: 1,
+    epic: 2,
+    legendary: 3,
+    mythic: 4,
+  };
+  return result.results.reduce<GachaResult["results"][number]["rarity"]>(
+    (highest, item) =>
+      ranks[item.rarity] > ranks[highest] ? item.rarity : highest,
+    "common",
+  );
 }
 
 function recoveredMessage(operation: RecoverableOperationSummary): string {

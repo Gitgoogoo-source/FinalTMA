@@ -13,6 +13,7 @@ import {
 } from "react";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
+import { prepareGachaRitualAudio } from "../../../platform/audio/gachaRitualAudio.ts";
 import {
   registerSensitiveStateResetter,
   useSession,
@@ -263,6 +264,7 @@ export function GachaView(): ReactNode {
       requestTopup({ kind: "gacha", tier, draw_count: count }, cost - balance);
       return;
     }
+    prepareGachaRitualAudio();
     void run(count === 10 ? "正在准备十连开盒" : "正在开启盲盒", "gacha.open", {
       tier,
       draw_count: count,

@@ -135,6 +135,12 @@ export function selectionHaptic(): void {
     attemptTelegramMethod(() => feedback.selectionChanged?.());
 }
 
+export function impactHaptic(style: "light" | "medium" | "heavy"): void {
+  const feedback = telegram()?.HapticFeedback;
+  if (feedback?.impactOccurred)
+    attemptTelegramMethod(() => feedback.impactOccurred(style));
+}
+
 export function sharePreparedMessage(
   messageId: string,
   callback?: (shared: boolean) => void,
