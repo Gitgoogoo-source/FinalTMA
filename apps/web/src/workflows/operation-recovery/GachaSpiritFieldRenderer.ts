@@ -44,18 +44,18 @@ float ring(float radius, float target, float width) {
 void main() {
   vec2 p = v_uv * 2.0 - 1.0;
   vec2 core = vec2(0.0, -0.035);
-  float cleanplateRadius = length(vec2(p.x / 0.74, (p.y + 0.04) / 0.82));
-  float cleanplate = (1.0 - smoothstep(0.62, 1.02, cleanplateRadius))
-    * mix(0.88, 0.97, u_build);
+  float cleanplateRadius = length(vec2(p.x / 0.82, (p.y + 0.04) / 0.92));
+  float cleanplate = (1.0 - smoothstep(0.68, 1.12, cleanplateRadius))
+    * mix(0.94, 1.0, u_build);
 
   float coreDistance = length((p - core) * vec2(1.08, 1.0));
   float coreHot = exp(-coreDistance * mix(21.0, 15.0, u_reveal));
   float coreHalo = exp(-coreDistance * 5.2);
   float pulse = 0.86 + 0.14 * sin(u_time * 5.4);
 
-  vec2 waterPoint = vec2(p.x, (p.y + 0.67) * 6.2);
+  vec2 waterPoint = vec2(p.x, (p.y + 0.5) * 6.2);
   float waterRadius = length(waterPoint);
-  float waterFade = exp(-abs(p.y + 0.67) * 26.0)
+  float waterFade = exp(-abs(p.y + 0.5) * 26.0)
     * (1.0 - smoothstep(0.28, 0.78, abs(p.x)));
   float ripples = 0.0;
   ripples += ring(waterRadius, 0.13 + u_build * 0.015, 68.0);
@@ -90,16 +90,16 @@ const float PI = 3.14159265359;
 vec2 flowCurve(float t, float path) {
   float z = t * 2.0 - 1.0;
   float radial = pow(abs(z), 0.68);
-  float phase = -1.12 + path * 0.448;
+  float phase = -1.28 + path * 0.512;
   float direction = mod(path, 2.0) < 1.0 ? 1.0 : -1.0;
-  float angle = direction * z * 2.45 + phase + u_build * 0.48
+  float angle = direction * z * 2.68 + phase + u_build * 0.5
     + u_time * (0.045 + path * 0.003);
-  float lobe = 0.16 + radial * (0.30 + 0.018 * mod(path, 3.0));
+  float lobe = 0.22 + radial * (0.31 + 0.022 * mod(path, 3.0));
   vec2 position = vec2(
     sin(angle) * lobe * radial,
-    -0.035 + z * 0.57 + cos(angle) * (0.045 + radial * 0.13) * radial
+    -0.035 + z * 0.52 + cos(angle) * (0.065 + radial * 0.15) * radial
   );
-  position.x += sin(z * 6.2 + phase * 1.7) * 0.028 * radial;
+  position.x += sin(z * 6.2 + phase * 1.7) * 0.045 * radial;
   vec2 core = vec2(0.0, -0.035);
   float loosen = 1.14 - u_build * 0.12;
   float release = 1.0 + u_reveal * (0.42 + radial * 0.98);
@@ -132,7 +132,7 @@ void main() {
   float radial = pow(abs(z), 0.68);
   float taper = smoothstep(0.0, 0.1, t) * smoothstep(0.0, 0.1, 1.0 - t);
   float breathing = 0.84 + 0.16 * sin(t * 17.0 + path * 1.9 + u_time * 0.36);
-  float width = (0.042 + radial * 0.045) * taper * breathing;
+  float width = (0.078 + radial * 0.074) * taper * breathing;
   vec2 position = center + normal * side * width;
   gl_Position = vec4(position, 0.0, 1.0);
   v_ribbon = vec3(t, side, path);
@@ -159,25 +159,28 @@ void main() {
   float side = abs(v_ribbon.y);
   float path = v_ribbon.z;
   float taper = smoothstep(0.0, 0.11, t) * smoothstep(0.0, 0.11, 1.0 - t);
-  float body = pow(max(0.0, 1.0 - side), 1.55);
-  float outerEdge = exp(-pow((side - 0.82) * 11.0, 2.0));
-  float innerEdge = exp(-pow((side - 0.28) * 15.0, 2.0));
-  float fiberWave = sin(side * 31.0 + t * 86.0 + path * 4.7 + u_time * 0.8);
-  float fibers = pow(max(0.0, fiberWave * 0.5 + 0.5), 13.0);
-  float grain = mix(0.54, 1.0, hash(floor(t * 210.0) + path * 37.0));
-  float breakup = 0.72 + 0.28 * sin(t * 44.0 + side * 9.0 + path);
+  float body = pow(max(0.0, 1.0 - side), 1.35);
+  float outerEdge = exp(-pow((side - 0.84) * 9.2, 2.0));
+  float innerEdge = exp(-pow((side - 0.3) * 13.0, 2.0));
+  float fiberWaveA = sin(side * 38.0 + t * 82.0 + path * 4.7 + u_time * 0.8);
+  float fiberWaveB = sin(side * 69.0 - t * 121.0 + path * 7.3 - u_time * 0.42);
+  float fibersA = pow(max(0.0, fiberWaveA * 0.5 + 0.5), 9.0);
+  float fibersB = pow(max(0.0, fiberWaveB * 0.5 + 0.5), 16.0);
+  float fibers = max(fibersA, fibersB * 0.82);
+  float grain = mix(0.68, 1.0, hash(floor(t * 230.0) + path * 37.0));
+  float breakup = 0.82 + 0.18 * sin(t * 44.0 + side * 9.0 + path);
   float alpha = (
-    body * 0.07
-    + outerEdge * 0.3
-    + innerEdge * 0.09
-    + fibers * 0.19
+    body * 0.2
+    + outerEdge * 0.27
+    + innerEdge * 0.14
+    + fibers * 0.34
   ) * taper * grain * breakup * u_alpha;
   alpha *= 1.0 - u_reveal * 0.58;
 
   vec3 ivory = vec3(1.0, 0.992, 0.955);
   float whiteWeight = clamp(0.42 + outerEdge * 0.48 + fibers * 0.3, 0.0, 1.0);
   vec3 color = mix(u_color, ivory, whiteWeight);
-  color *= 0.82 + outerEdge * 0.55 + fibers * 0.46;
+  color *= 0.94 + outerEdge * 0.64 + fibers * 0.62;
   out_color = vec4(color, alpha);
 }`;
 
@@ -210,16 +213,16 @@ void main() {
   float z = travel * 2.0 - 1.0;
   float radial = pow(abs(z), 0.68);
   float drift = sin(u_time * (0.9 + seed) + seed * 31.0) * 0.012;
-  vec2 position = center + normal * (a_particle.z * (0.045 + radial * 0.15) + drift);
+  vec2 position = center + normal * (a_particle.z * (0.075 + radial * 0.22) + drift);
   vec2 core = vec2(0.0, -0.035);
   vec2 burstDirection = normalize(position - core + vec2(0.0001));
   position += burstDirection * u_reveal * (0.05 + seed * 0.42);
 
   float endFade = smoothstep(0.0, 0.055, travel) * smoothstep(0.0, 0.055, 1.0 - travel);
-  v_alpha = endFade * mix(0.22, 0.94, u_build) * (1.0 - u_reveal * 0.84);
+  v_alpha = endFade * mix(0.34, 1.0, u_build) * (1.0 - u_reveal * 0.84);
   v_seed = seed;
   v_tint = vec3(radial, travel, path / 5.0);
-  gl_PointSize = (1.25 + a_particle_extra.x * 4.4 + u_reveal * 2.6)
+  gl_PointSize = (2.0 + a_particle_extra.x * 7.2 + u_reveal * 3.2)
     * u_pixel_ratio;
   gl_Position = vec4(position, 0.0, 1.0);
 }`;
@@ -308,7 +311,7 @@ class WebGlSpiritField implements SpiritFieldRenderer {
   ) {
     this.#canvas = canvas;
     this.#gl = gl;
-    this.#pixelRatioLimit = options.lowPower ? 1 : 1.35;
+    this.#pixelRatioLimit = options.lowPower ? 1.25 : 1.5;
     this.#field = createProgramBundle(
       gl,
       FULLSCREEN_VERTEX_SHADER,
@@ -346,10 +349,10 @@ class WebGlSpiritField implements SpiritFieldRenderer {
     enableAttribute(gl, this.#ribbon, "a_ribbon", 3, 12, 0);
 
     this.#particleCount = options.reducedMotion
-      ? 90
+      ? 120
       : options.lowPower
-        ? 320
-        : 520;
+        ? 620
+        : 900;
     const particleData = createParticleData(this.#particleCount);
     this.#particleVao = requireResource(gl.createVertexArray());
     this.#particleBuffer = requireResource(gl.createBuffer());
@@ -588,10 +591,10 @@ function createCanvasFallback(
   const context = canvas.getContext("2d");
   if (!context) return createNoopRenderer();
   const particleCount = options.reducedMotion
-    ? 36
+    ? 48
     : options.lowPower
-      ? 120
-      : 180;
+      ? 200
+      : 260;
   const particles = Array.from({ length: particleCount }, (_, index) => ({
     lateral: ((index * 37) % 101) / 100 - 0.5,
     path: index % 6,
@@ -644,7 +647,7 @@ function createCanvasFallback(
       context.save();
       context.globalCompositeOperation = "lighter";
       for (let path = 0; path < 6; path += 1) {
-        for (let fiber = 0; fiber < 4; fiber += 1) {
+        for (let fiber = 0; fiber < 6; fiber += 1) {
           context.beginPath();
           for (let step = 0; step <= 64; step += 1) {
             const t = step / 64;
@@ -662,7 +665,7 @@ function createCanvasFallback(
             if (step === 0) context.moveTo(point.x + wobble, point.y);
             else context.lineTo(point.x + wobble, point.y);
           }
-          context.lineWidth = width * (0.004 + fiber * 0.0025);
+          context.lineWidth = width * (0.005 + fiber * 0.003);
           context.strokeStyle = `rgba(255, ${232 + fiber * 5}, ${188 + fiber * 13}, ${(0.07 + fiber * 0.025) * (0.35 + build * 0.65) * (1 - reveal * 0.6)})`;
           context.stroke();
         }
@@ -707,23 +710,23 @@ function fallbackCurve(
 ): { x: number; y: number } {
   const z = t * 2 - 1;
   const radial = Math.pow(Math.abs(z), 0.68);
-  const phase = -1.12 + path * 0.448;
+  const phase = -1.28 + path * 0.512;
   const direction = path % 2 === 0 ? 1 : -1;
   const angle =
-    direction * z * 2.45 + phase + build * 0.48 + time * (0.045 + path * 0.003);
-  const lobe = 0.16 + radial * (0.3 + 0.018 * (path % 3));
+    direction * z * 2.68 + phase + build * 0.5 + time * (0.045 + path * 0.003);
+  const lobe = 0.22 + radial * (0.31 + 0.022 * (path % 3));
   const release = (1.14 - build * 0.12) * (1 + reveal * (0.42 + radial * 0.98));
   return {
     x:
       width *
       (0.5 +
         (Math.sin(angle) * lobe * radial +
-          Math.sin(z * 6.2 + phase * 1.7) * 0.028 * radial) *
+          Math.sin(z * 6.2 + phase * 1.7) * 0.045 * radial) *
           release),
     y:
       height *
       (0.515 -
-        (z * 0.285 + Math.cos(angle) * (0.022 + radial * 0.065) * radial) *
+        (z * 0.26 + Math.cos(angle) * (0.0325 + radial * 0.075) * radial) *
           release),
   };
 }
