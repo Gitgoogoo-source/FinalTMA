@@ -243,7 +243,13 @@ export function OperationRegistryRuntimeProvider({
   const activePresentationRouteId = active?.routeId;
   const activePresentationState =
     presentationState?.operationId === active?.id ? presentationState : null;
-  const loadedPresentation = activePresentationState?.loaded ?? null;
+  const loadedPresentation =
+    activePresentationState?.loaded ??
+    (active &&
+    presentationState?.loaded &&
+    presentationMatchesRoute(presentationState.loaded, active.routeId)
+      ? presentationState.loaded
+      : null);
   const presentationLoadFailed = activePresentationState?.failed ?? false;
   const validatedOperation =
     validationState && validationState.source === active
