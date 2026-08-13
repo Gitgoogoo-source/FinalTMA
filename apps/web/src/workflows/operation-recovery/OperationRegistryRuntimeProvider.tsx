@@ -1719,15 +1719,18 @@ export function OperationRegistryRuntimeProvider({
               ) : null}
             </>
           ) : showGachaAnimation && GachaHatchAnimation ? (
-            <GachaHatchAnimation
-              tier={
-                active.animationTier ??
-                gachaAnimationTier(active.input, gachaResult)
-              }
-              revealRarity={gachaIsRevealing ? gachaRevealRarity : null}
-              revealing={gachaIsRevealing}
-              onMounted={handleGachaPresentationMounted}
-            />
+            <>
+              {null}
+              <GachaHatchAnimation
+                tier={
+                  active.animationTier ??
+                  gachaAnimationTier(active.input, gachaResult)
+                }
+                revealRarity={gachaIsRevealing ? gachaRevealRarity : null}
+                revealing={gachaIsRevealing}
+                onMounted={handleGachaPresentationMounted}
+              />
+            </>
           ) : wheelResult && WheelResultDialog ? (
             <WheelResultDialog
               result={wheelResult}
