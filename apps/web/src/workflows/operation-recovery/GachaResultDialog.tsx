@@ -36,6 +36,13 @@ const rarityLabels: Record<Rarity, string> = {
   legendary: "传说",
   mythic: "神话",
 };
+const raritySigilCounts: Record<Rarity, number> = {
+  common: 1,
+  rare: 2,
+  epic: 3,
+  legendary: 4,
+  mythic: 5,
+};
 const tenDrawRankPositions = [4, 5, 3, 6, 2, 7, 1, 8, 0, 9] as const;
 const initialCarouselIndex = tenDrawRankPositions[0];
 const carouselLayerOffsets = [0, 0.24, 0.34, 0.42, 0.48, 0.53] as const;
@@ -83,6 +90,7 @@ export function GachaResultDialog({
       left.order - right.order,
   );
   const single = result.draw_count === 1;
+  const highestRarity = rankedResults[0]?.rarity ?? "common";
   const imageKeys = rankedResults.map(
     (item) => `${item.order}-${item.template_id}`,
   );
@@ -123,13 +131,13 @@ export function GachaResultDialog({
 
   return (
     <div
-      className={`modal gacha-astral-result ${single ? "is-single" : "is-ten"}${visible ? "" : " is-preparing"}`}
+      className={`modal gacha-astral-result ${single ? "is-single" : "is-ten"} rarity-${highestRarity}${visible ? "" : " is-preparing"}`}
       aria-hidden={!visible}
       inert={!visible}
     >
       <GachaAstralBackdrop calm />
       <header className="gacha-astral-heading">
-        <small>{single ? "灵契抵达" : "十连抵达"}</small>
+        <small>{single ? "灵契降临" : "群星共鸣"}</small>
         <h2 id="gacha-result-title">召唤结果</h2>
       </header>
 
@@ -177,10 +185,10 @@ function SingleResult({
 }): ReactNode {
   return (
     <article className={`gacha-astral-single rarity-${item.rarity}`}>
-      <strong className="gacha-astral-rarity">
-        {rarityLabels[item.rarity]}
-      </strong>
+      <ResultIdentity item={item} />
       <div className="gacha-astral-art">
+        <span className="gacha-astral-aura" aria-hidden="true" />
+        <span className="gacha-astral-pedestal" aria-hidden="true" />
         <CatalogImage
           key={`${imageKey}:${retryEpoch}`}
           url={item.image_detail_url}
@@ -350,6 +358,7 @@ function TenDrawResults({
                   carouselLayerOpacities,
                 ),
                 zIndex: 100 - Math.abs(index - initialCarouselIndex) * 10,
+                "--result-index": index,
               } as CSSProperties
             }
             aria-label={`${rarityLabels[item.rarity]}藏品：${item.name}，NEW`}
@@ -357,11 +366,11 @@ function TenDrawResults({
             aria-posinset={index + 1}
             aria-setsize={carouselResults.length}
           >
-            <strong className="gacha-astral-rarity">
-              {rarityLabels[item.rarity]}
-            </strong>
+            <ResultIdentity item={item} />
             <span className="gacha-astral-new">NEW</span>
             <div className="gacha-astral-art">
+              <span className="gacha-astral-aura" aria-hidden="true" />
+              <span className="gacha-astral-pedestal" aria-hidden="true" />
               <CatalogImage
                 key={`${item.order}-${item.template_id}:${retryEpoch}`}
                 url={item.image_thumbnail_url}
@@ -398,5 +407,24 @@ function TenDrawResults({
         ))}
       </div>
     </section>
+  );
+}
+
+function ResultIdentity({ item }: { item: ResultItem }): ReactNode {
+  return (
+    <div className="gacha-astral-identity">
+      <strong className="gacha-astral-rarity">
+        {rarityLabels[item.rarity]}
+      </strong>
+      <span
+        className="gacha-astral-sigils"
+        aria-label={`${raritySigilCounts[item.rarity]} 枚稀有度星印`}
+      >
+        {Array.from({ length: raritySigilCounts[item.rarity] }, (_, index) => (
+          <i key={index} aria-hidden="true" />
+        ))}
+      </span>
+      <h3>{item.name}</h3>
+    </div>
   );
 }

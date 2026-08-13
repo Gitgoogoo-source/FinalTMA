@@ -21,6 +21,8 @@
 .gacha-astral-result {
   --gacha-reveal-color: #f9fbff;
   --gacha-reveal-rgb: 249, 251, 255;
+  --item-accent: #f9fbff;
+  --item-accent-rgb: 249, 251, 255;
   position: relative;
   isolation: isolate;
   width: min(100%, 430px);
@@ -31,24 +33,36 @@
   background: #07111f;
 }
 
-.gacha-astral-ritual.rarity-rare {
+.gacha-astral-ritual.rarity-rare,
+.gacha-astral-result.rarity-rare {
   --gacha-reveal-color: #1ce204;
   --gacha-reveal-rgb: 28, 226, 4;
+  --item-accent: #79ec93;
+  --item-accent-rgb: 121, 236, 147;
 }
 
-.gacha-astral-ritual.rarity-epic {
+.gacha-astral-ritual.rarity-epic,
+.gacha-astral-result.rarity-epic {
   --gacha-reveal-color: #a166ff;
   --gacha-reveal-rgb: 161, 102, 255;
+  --item-accent: #c4a7ff;
+  --item-accent-rgb: 196, 167, 255;
 }
 
-.gacha-astral-ritual.rarity-legendary {
+.gacha-astral-ritual.rarity-legendary,
+.gacha-astral-result.rarity-legendary {
   --gacha-reveal-color: #ff4a30;
   --gacha-reveal-rgb: 255, 74, 48;
+  --item-accent: #ff8875;
+  --item-accent-rgb: 255, 136, 117;
 }
 
-.gacha-astral-ritual.rarity-mythic {
+.gacha-astral-ritual.rarity-mythic,
+.gacha-astral-result.rarity-mythic {
   --gacha-reveal-color: #ffa32e;
   --gacha-reveal-rgb: 255, 163, 46;
+  --item-accent: #ffc66a;
+  --item-accent-rgb: 255, 198, 106;
 }
 
 .gacha-astral-backdrop {
@@ -223,6 +237,10 @@
 
 .gacha-ritual-code-stage,
 .gacha-astral-field-canvas,
+.gacha-ritual-warp-bloom,
+.gacha-ritual-reveal-meteor,
+.gacha-ritual-burst-rays,
+.gacha-ritual-impact-ring,
 .gacha-ritual-flash,
 .gacha-ritual-vignette {
   position: absolute;
@@ -239,6 +257,96 @@
 
 .gacha-astral-field-canvas {
   z-index: 2;
+}
+
+.gacha-ritual-warp-bloom {
+  z-index: 2;
+  background:
+    radial-gradient(
+      ellipse at 50% 45%,
+      rgba(249, 251, 255, 0.24) 0 2%,
+      rgba(98, 221, 255, 0.18) 5%,
+      transparent 26%
+    ),
+    conic-gradient(
+      from 0deg at 50% 45%,
+      transparent 0 8%,
+      rgba(98, 221, 255, 0.08) 9% 10%,
+      transparent 11% 24%,
+      rgba(196, 167, 255, 0.07) 25% 26%,
+      transparent 27% 100%
+    );
+  opacity: 0;
+  animation: gacha-ritual-warp-bloom 3.3s cubic-bezier(0.18, 0.7, 0.2, 1) both;
+}
+
+.gacha-ritual-reveal-meteor {
+  z-index: 5;
+  top: auto;
+  right: auto;
+  bottom: -18%;
+  left: 2%;
+  width: min(92vw, 390px);
+  height: 16px;
+  border-radius: 999px;
+  opacity: 0;
+  transform: rotate(-54deg) scaleX(0.24);
+  transform-origin: 100% 50%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(var(--gacha-reveal-rgb), 0.16) 18%,
+    rgba(var(--gacha-reveal-rgb), 0.92) 72%,
+    #fff 100%
+  );
+  box-shadow:
+    0 0 13px rgba(var(--gacha-reveal-rgb), 0.88),
+    0 0 34px rgba(var(--gacha-reveal-rgb), 0.58),
+    0 0 72px rgba(var(--gacha-reveal-rgb), 0.34);
+  filter: blur(0.2px);
+}
+
+.gacha-ritual-burst-rays {
+  z-index: 5;
+  top: 45%;
+  left: 50%;
+  width: min(116vw, 500px);
+  height: min(116vw, 500px);
+  border-radius: 50%;
+  opacity: 0;
+  translate: -50% -50%;
+  background: repeating-conic-gradient(
+    from 7deg,
+    rgba(var(--gacha-reveal-rgb), 0.72) 0 1deg,
+    transparent 1.8deg 9deg
+  );
+  -webkit-mask-image: radial-gradient(
+    circle,
+    transparent 0 8%,
+    #000 24%,
+    transparent 72%
+  );
+  mask-image: radial-gradient(
+    circle,
+    transparent 0 8%,
+    #000 24%,
+    transparent 72%
+  );
+}
+
+.gacha-ritual-impact-ring {
+  z-index: 6;
+  top: 45%;
+  left: 50%;
+  width: 72px;
+  height: 72px;
+  border: 3px solid rgba(var(--gacha-reveal-rgb), 0.94);
+  border-radius: 50%;
+  opacity: 0;
+  translate: -50% -50%;
+  box-shadow:
+    0 0 18px rgba(var(--gacha-reveal-rgb), 0.92),
+    inset 0 0 16px rgba(249, 251, 255, 0.72);
 }
 
 .gacha-ritual-vignette {
@@ -273,6 +381,19 @@
 
 .gacha-astral-ritual.is-revealing .gacha-ritual-flash {
   animation: gacha-ritual-flash-reveal 700ms ease-out both;
+}
+
+.gacha-astral-ritual.is-revealing .gacha-ritual-reveal-meteor {
+  animation: gacha-ritual-reveal-meteor 700ms cubic-bezier(0.16, 0.78, 0.2, 1)
+    both;
+}
+
+.gacha-astral-ritual.is-revealing .gacha-ritual-burst-rays {
+  animation: gacha-ritual-burst-rays 700ms ease-out both;
+}
+
+.gacha-astral-ritual.is-revealing .gacha-ritual-impact-ring {
+  animation: gacha-ritual-impact-ring 700ms ease-out both;
 }
 
 .gacha-astral-ritual.is-revealing .gacha-ritual-vignette {
@@ -340,7 +461,7 @@
 }
 
 .gacha-astral-result {
-  --gacha-astral-focus-item-size: min(54vw, 230px);
+  --gacha-astral-focus-item-size: min(70vw, 270px);
   max-width: 430px;
   max-height: none;
   display: grid;
@@ -390,6 +511,16 @@
   text-shadow: 0 4px 24px rgba(0, 8, 22, 0.95);
 }
 
+.gacha-astral-result .gacha-astral-heading small {
+  color: var(--item-accent);
+  text-shadow: 0 0 18px rgba(var(--item-accent-rgb), 0.78);
+}
+
+.gacha-astral-result:not(.is-preparing) .gacha-astral-heading {
+  animation: gacha-astral-title-arrive 520ms cubic-bezier(0.18, 0.86, 0.26, 1)
+    both;
+}
+
 .gacha-astral-heading h2 {
   font-size: clamp(34px, 10.8vw, 46px);
   line-height: 1.06;
@@ -407,9 +538,116 @@
   padding: 18px 22px 4px;
 }
 
+.gacha-astral-identity {
+  position: relative;
+  z-index: 5;
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  text-align: center;
+}
+
+.gacha-astral-identity h3 {
+  max-width: min(82vw, 340px);
+  overflow: hidden;
+  margin: 0;
+  color: #f9fbff;
+  font-family: "Songti SC", STSong, "Noto Serif CJK SC", serif;
+  font-size: clamp(20px, 6.2vw, 27px);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  text-shadow:
+    0 3px 18px rgba(0, 8, 22, 0.96),
+    0 0 22px rgba(var(--item-accent-rgb), 0.36);
+  white-space: nowrap;
+}
+
+.gacha-astral-sigils {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  min-height: 12px;
+}
+
+.gacha-astral-sigils i {
+  width: 11px;
+  height: 11px;
+  display: block;
+  background: var(--item-accent);
+  clip-path: polygon(
+    50% 0,
+    61% 37%,
+    100% 50%,
+    61% 63%,
+    50% 100%,
+    39% 63%,
+    0 50%,
+    39% 37%
+  );
+  filter: drop-shadow(0 0 5px rgba(var(--item-accent-rgb), 0.9));
+}
+
+.gacha-astral-result:not(.is-preparing)
+  .gacha-astral-single
+  .gacha-astral-identity {
+  animation: gacha-astral-identity-arrive 560ms 100ms
+    cubic-bezier(0.16, 0.82, 0.22, 1) both;
+}
+
 .gacha-astral-art {
   position: relative;
   min-width: 0;
+}
+
+.gacha-astral-aura,
+.gacha-astral-pedestal {
+  position: absolute;
+  pointer-events: none;
+}
+
+.gacha-astral-aura {
+  z-index: 0;
+  inset: -14%;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle,
+      rgba(249, 251, 255, 0.2) 0 8%,
+      rgba(var(--item-accent-rgb), 0.28) 22%,
+      rgba(var(--item-accent-rgb), 0.08) 46%,
+      transparent 70%
+    ),
+    repeating-conic-gradient(
+      from 0deg,
+      rgba(var(--item-accent-rgb), 0.42) 0 1deg,
+      transparent 2deg 15deg
+    );
+  opacity: 0.84;
+  -webkit-mask-image: radial-gradient(circle, #000 0 56%, transparent 76%);
+  mask-image: radial-gradient(circle, #000 0 56%, transparent 76%);
+}
+
+.gacha-astral-pedestal {
+  z-index: 1;
+  right: 4%;
+  bottom: -2%;
+  left: 4%;
+  height: 22%;
+  border: 1px solid rgba(var(--item-accent-rgb), 0.76);
+  border-radius: 50%;
+  opacity: 0.82;
+  background: radial-gradient(
+    ellipse,
+    rgba(var(--item-accent-rgb), 0.34),
+    rgba(var(--item-accent-rgb), 0.08) 54%,
+    transparent 72%
+  );
+  box-shadow:
+    0 0 20px rgba(var(--item-accent-rgb), 0.45),
+    inset 0 0 18px rgba(249, 251, 255, 0.18);
 }
 
 .gacha-astral-single .gacha-astral-art {
@@ -419,6 +657,8 @@
 
 .gacha-astral-art .catalog-image,
 .gacha-astral-art .image-missing {
+  position: relative;
+  z-index: 2;
   width: 100%;
   height: 100%;
   border: 0;
@@ -427,6 +667,17 @@
   object-fit: contain;
   filter: drop-shadow(0 18px 16px rgba(0, 8, 22, 0.78))
     drop-shadow(0 0 18px rgba(98, 221, 255, 0.25));
+}
+
+.gacha-astral-result:not(.is-preparing) .gacha-astral-single .gacha-astral-art {
+  animation: gacha-astral-hero-arrive 720ms 70ms
+    cubic-bezier(0.12, 0.82, 0.2, 1) both;
+}
+
+.gacha-astral-result:not(.is-preparing)
+  .gacha-astral-single
+  .gacha-astral-aura {
+  animation: gacha-astral-aura-arrive 900ms 120ms ease-out both;
 }
 
 .gacha-astral-single .gacha-astral-art .gacha-astral-new {
@@ -448,20 +699,29 @@
   text-shadow: 0 3px 18px rgba(0, 8, 22, 0.96);
 }
 
+.rarity-common {
+  --item-accent: #f9fbff;
+  --item-accent-rgb: 249, 251, 255;
+}
+
 .rarity-rare {
   --item-accent: #79ec93;
+  --item-accent-rgb: 121, 236, 147;
 }
 
 .rarity-epic {
   --item-accent: #c4a7ff;
+  --item-accent-rgb: 196, 167, 255;
 }
 
 .rarity-legendary {
   --item-accent: #ff8875;
+  --item-accent-rgb: 255, 136, 117;
 }
 
 .rarity-mythic {
   --item-accent: #ffc66a;
+  --item-accent-rgb: 255, 198, 106;
 }
 
 .gacha-astral-single .gacha-astral-rarity {
@@ -529,9 +789,16 @@
 .gacha-astral-actions .button:first-child {
   grid-column: 1 / -1;
   min-height: 56px;
-  color: #f9fbff;
-  background: linear-gradient(135deg, #167dac, #42cceb);
-  box-shadow: 0 12px 30px rgba(25, 157, 204, 0.32);
+  border-color: rgba(var(--item-accent-rgb), 0.78);
+  color: #06111f;
+  background: linear-gradient(
+    135deg,
+    rgba(var(--item-accent-rgb), 0.74),
+    rgb(var(--item-accent-rgb))
+  );
+  box-shadow:
+    0 12px 30px rgba(var(--item-accent-rgb), 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.44);
 }
 
 .gacha-astral-actions .button.secondary {
@@ -546,6 +813,10 @@
 
 .gacha-astral-actions .button:disabled {
   opacity: 0.66;
+}
+
+.gacha-astral-result:not(.is-preparing) .gacha-astral-actions {
+  animation: gacha-astral-actions-arrive 460ms 260ms ease-out both;
 }
 
 .gacha-astral-result .operation-ack-error {
@@ -620,6 +891,134 @@
   }
 }
 
+@keyframes gacha-ritual-warp-bloom {
+  0% {
+    opacity: 0.18;
+    transform: scale(0.72) rotate(-3deg);
+  }
+  46% {
+    opacity: 0.48;
+  }
+  100% {
+    opacity: 0.86;
+    transform: scale(1.18) rotate(5deg);
+  }
+}
+
+@keyframes gacha-ritual-reveal-meteor {
+  0% {
+    opacity: 0;
+    transform: translate3d(-24%, 20%, 0) rotate(-54deg) scaleX(0.2);
+  }
+  12% {
+    opacity: 1;
+  }
+  48% {
+    opacity: 1;
+    transform: translate3d(34%, -62%, 0) rotate(-54deg) scaleX(1.08);
+  }
+  58%,
+  100% {
+    opacity: 0;
+    transform: translate3d(48%, -82%, 0) rotate(-54deg) scaleX(0.26);
+  }
+}
+
+@keyframes gacha-ritual-burst-rays {
+  0%,
+  34% {
+    opacity: 0;
+    transform: scale(0.18) rotate(-8deg);
+  }
+  48% {
+    opacity: 0.86;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.44) rotate(18deg);
+  }
+}
+
+@keyframes gacha-ritual-impact-ring {
+  0%,
+  32% {
+    opacity: 0;
+    transform: scale(0.18);
+  }
+  46% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(8.6);
+  }
+}
+
+@keyframes gacha-astral-title-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gacha-astral-identity-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes gacha-astral-hero-arrive {
+  0% {
+    opacity: 0;
+    filter: blur(12px) brightness(2.3);
+    transform: translateY(34px) scale(0.58);
+  }
+  48% {
+    opacity: 1;
+    filter: blur(0) brightness(1.52);
+    transform: translateY(-8px) scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0) brightness(1);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes gacha-astral-aura-arrive {
+  from {
+    opacity: 0;
+    transform: scale(0.24) rotate(-24deg);
+  }
+  62% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.84;
+    transform: scale(1) rotate(8deg);
+  }
+}
+
+@keyframes gacha-astral-actions-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes gacha-ritual-copy-exit {
   to {
     opacity: 0;
@@ -670,7 +1069,7 @@
 
 @media (max-height: 700px) {
   .gacha-astral-result {
-    --gacha-astral-focus-item-size: min(52vw, 212px);
+    --gacha-astral-focus-item-size: min(62vw, 232px);
   }
 
   .gacha-astral-ritual-heading {
@@ -709,5 +1108,18 @@
   .gacha-astral-ritual:not(.gacha-astral-image-unavailable)
     .gacha-ritual-vignette {
     opacity: 0;
+  }
+
+  .gacha-astral-result:not(.is-preparing)
+    :is(
+      .gacha-astral-heading,
+      .gacha-astral-identity,
+      .gacha-astral-art,
+      .gacha-astral-aura,
+      .gacha-astral-actions
+    ) {
+    opacity: 1;
+    filter: none;
+    transform: none;
   }
 }

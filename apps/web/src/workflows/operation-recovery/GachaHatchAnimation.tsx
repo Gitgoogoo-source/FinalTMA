@@ -67,6 +67,10 @@ export function GachaHatchAnimation({
 
       <div className="gacha-ritual-code-stage" aria-hidden="true">
         <GachaAstralCanvas revealing={revealing} rarity={revealRarity} />
+        <span className="gacha-ritual-warp-bloom" />
+        <span className="gacha-ritual-reveal-meteor" />
+        <span className="gacha-ritual-burst-rays" />
+        <span className="gacha-ritual-impact-ring" />
         <span className="gacha-ritual-flash" />
         <span className="gacha-ritual-vignette" />
       </div>

@@ -53,42 +53,50 @@ void main() {
   p.x *= u_aspect;
   vec2 portal = vec2(0.0, 0.1);
   float build = smoothstep(0.0, 1.0, u_build);
-  float travel = pow(build, 0.76);
-  vec2 origin = vec2(0.0, -0.83);
+  float travel = pow(build, 0.62);
+  vec2 origin = vec2(-0.18, -1.12);
   vec2 comet = mix(origin, portal, travel);
-  comet.x += sin(u_time * 2.4) * 0.012 * (1.0 - build);
+  comet.x += sin(travel * 3.14159265) * 0.24;
+  comet.x += sin(u_time * 3.1) * 0.016 * (1.0 - build);
 
   float portalRadius = length(p - portal);
-  float portalRing = ring(portalRadius, 0.095 + u_reveal * 0.045, 94.0);
-  float portalHalo = exp(-portalRadius * mix(8.0, 4.2, u_reveal));
-  float portalCore = exp(-portalRadius * mix(39.0, 16.0, u_reveal));
+  float portalRing = ring(portalRadius, 0.12 + u_reveal * 0.09, 72.0);
+  float portalHalo = exp(-portalRadius * mix(5.6, 2.6, u_reveal));
+  float portalCore = exp(-portalRadius * mix(31.0, 9.0, u_reveal));
 
-  float cometDistance = length((p - comet) * vec2(1.1, 1.0));
-  float cometCore = exp(-cometDistance * mix(43.0, 24.0, u_reveal));
-  float cometHalo = exp(-cometDistance * 9.0);
+  float cometDistance = length((p - comet) * vec2(1.08, 1.0));
+  float cometCore = exp(-cometDistance * mix(34.0, 17.0, u_reveal));
+  float cometHalo = exp(-cometDistance * 6.2);
   float tailDistance = segmentDistance(p, origin, comet);
-  float tailWindow = smoothstep(-0.88, comet.y, p.y)
-    * (1.0 - smoothstep(comet.y, comet.y + 0.035, p.y));
-  float tail = exp(-tailDistance * 31.0) * tailWindow * smoothstep(0.04, 0.42, build);
+  float tailWindow = smoothstep(-1.14, comet.y, p.y)
+    * (1.0 - smoothstep(comet.y, comet.y + 0.06, p.y));
+  float tail = exp(-tailDistance * 17.0) * tailWindow * smoothstep(0.03, 0.34, build);
+  float speedCorridor = exp(-abs(p.x) * 4.8)
+    * (1.0 - smoothstep(-0.36, 0.24, p.y))
+    * smoothstep(0.22, 0.94, build);
 
-  float shockRadius = u_reveal * 0.88;
-  float shock = ring(portalRadius, shockRadius, 70.0)
+  float shockRadius = u_reveal * 1.12;
+  float shock = ring(portalRadius, shockRadius, 48.0)
     * smoothstep(0.02, 0.14, u_reveal)
-    * (1.0 - smoothstep(0.66, 1.0, u_reveal));
-  float impact = exp(-portalRadius * 2.8)
+    * (1.0 - smoothstep(0.72, 1.0, u_reveal));
+  float impact = exp(-portalRadius * 2.15)
     * sin(clamp(u_reveal, 0.0, 1.0) * 3.14159265)
-    * 0.34;
+    * 0.72;
+  float impactCross = (exp(-abs(p.x) * 24.0) + exp(-abs(p.y - portal.y) * 22.0))
+    * sin(clamp(u_reveal * 1.18, 0.0, 1.0) * 3.14159265)
+    * 0.24;
 
   vec3 ice = vec3(0.325, 0.847, 1.0);
   vec3 ivory = vec3(0.976, 0.988, 1.0);
   vec3 accent = mix(ice, u_color, u_reveal);
   vec3 color = mix(accent, ivory, 0.28);
   float pulse = 0.88 + 0.12 * sin(u_time * 5.2);
-  float light = portalHalo * 0.14 + portalRing * (0.28 + build * 0.34)
-    + portalCore * 0.48 + cometCore * pulse * 0.96 + cometHalo * 0.24
-    + tail * 0.26 + shock * 0.9 + impact;
-  float alpha = clamp(portalHalo * 0.13 + portalRing * 0.48 + portalCore * 0.72
-    + cometCore + cometHalo * 0.34 + tail * 0.31 + shock * 0.7 + impact, 0.0, 1.0);
+  float light = portalHalo * 0.23 + portalRing * (0.42 + build * 0.56)
+    + portalCore * 0.7 + cometCore * pulse * 1.24 + cometHalo * 0.42
+    + tail * 0.58 + speedCorridor * 0.1 + shock * 1.18 + impact + impactCross;
+  float alpha = clamp(portalHalo * 0.2 + portalRing * 0.62 + portalCore * 0.84
+    + cometCore + cometHalo * 0.5 + tail * 0.58 + speedCorridor * 0.08
+    + shock * 0.84 + impact + impactCross, 0.0, 1.0);
   out_color = vec4(color * light, alpha);
 }`;
 
@@ -106,26 +114,26 @@ out float v_alpha;
 out float v_core;
 
 void main() {
-  float buildSpeed = mix(0.045, 0.31, smoothstep(0.08, 0.94, u_build));
+  float buildSpeed = mix(0.06, 0.66, smoothstep(0.06, 0.9, u_build));
   float depth = fract(a_star.z + u_time * buildSpeed * (0.52 + a_star.w * 0.8));
-  float perspective = pow(depth, 1.82);
+  float perspective = pow(depth, 1.56);
   vec2 direction = normalize(a_star.xy);
   float seedRadius = length(a_star.xy);
-  float radius = mix(0.035, 1.56 + seedRadius * 0.48, perspective);
+  float radius = mix(0.025, 1.94 + seedRadius * 0.56, perspective);
   vec2 center = vec2(direction.x * radius / u_aspect, direction.y * radius + 0.1);
 
   vec2 radial = normalize(vec2(direction.x / u_aspect, direction.y));
   vec2 tangent = vec2(-radial.y, radial.x);
-  float streakLength = mix(0.002, 0.025, u_build)
-    + perspective * perspective * mix(0.018, 0.13, u_build);
-  streakLength *= 0.72 + a_star.w * 0.78;
-  float width = (0.0014 + a_star.w * 0.0019 + perspective * 0.0024)
+  float streakLength = mix(0.004, 0.052, u_build)
+    + pow(perspective, 1.6) * mix(0.026, 0.31, u_build);
+  streakLength *= 0.78 + a_star.w * 0.92;
+  float width = (0.0018 + a_star.w * 0.0023 + perspective * 0.0034)
     * u_pixel_ratio;
   vec2 position = center + radial * a_corner.y * streakLength + tangent * a_corner.x * width;
 
   v_alpha = smoothstep(0.01, 0.12, depth) * (1.0 - smoothstep(0.89, 1.0, depth));
-  v_alpha *= mix(0.22, 0.94, u_build) * (0.48 + a_star.w * 0.62);
-  v_alpha *= 1.0 - u_reveal * 0.32;
+  v_alpha *= mix(0.34, 1.18, u_build) * (0.52 + a_star.w * 0.72);
+  v_alpha *= 1.0 - u_reveal * 0.22;
   v_core = 1.0 - abs(a_corner.x);
   gl_Position = vec4(position, 0.0, 1.0);
 }`;
@@ -364,7 +372,7 @@ function createCanvasFallback(
       const build = clamp(frame.buildProgress);
       const reveal = easeOutCubic(clamp(frame.revealProgress));
       const time = frame.elapsedMs / 1_000;
-      const speed = mix(0.045, 0.31, smoothstep(0.08, 0.94, build));
+      const speed = mix(0.06, 0.66, smoothstep(0.06, 0.9, build));
       const centerX = width * 0.5;
       const centerY = height * 0.45;
       const accent = colorToCss(
@@ -378,30 +386,48 @@ function createCanvasFallback(
       stars.forEach((star) => {
         const depth =
           (star.phase + time * speed * (0.52 + star.size * 0.8)) % 1;
-        const perspective = Math.pow(depth, 1.82);
-        const endX = centerX + star.directionX * width * perspective * 0.92;
-        const endY = centerY + star.directionY * height * perspective * 0.92;
-        const trail = (4 + 52 * perspective * perspective * build) * star.size;
+        const perspective = Math.pow(depth, 1.56);
+        const endX = centerX + star.directionX * width * perspective * 1.08;
+        const endY = centerY + star.directionY * height * perspective * 1.08;
+        const trail =
+          (7 + 104 * Math.pow(perspective, 1.6) * build) * star.size;
         const length = Math.hypot(endX - centerX, endY - centerY) || 1;
         const startX = endX - ((endX - centerX) / length) * trail;
         const startY = endY - ((endY - centerY) / length) * trail;
         const alpha =
           smoothstep(0.01, 0.12, depth) * (1 - smoothstep(0.89, 1, depth));
-        context.strokeStyle = `rgba(${accent}, ${alpha * (0.22 + build * 0.68)})`;
-        context.lineWidth = 0.7 + star.size * 1.2;
+        context.strokeStyle = `rgba(${accent}, ${Math.min(1, alpha * (0.34 + build * 0.9))})`;
+        context.lineWidth = 0.9 + star.size * 1.5;
         context.beginPath();
         context.moveTo(startX, startY);
         context.lineTo(endX, endY);
         context.stroke();
       });
 
-      const travel = Math.pow(build, 0.76);
+      const travel = Math.pow(build, 0.62);
       const cometY = mix(height * 0.91, centerY, travel);
+      const cometX =
+        mix(width * 0.41, centerX, travel) +
+        Math.sin(travel * Math.PI) * width * 0.12;
+      const tailGradient = context.createLinearGradient(
+        width * 0.41,
+        height,
+        cometX,
+        cometY,
+      );
+      tailGradient.addColorStop(0, `rgba(${accent}, 0)`);
+      tailGradient.addColorStop(1, `rgba(${accent}, ${0.42 + build * 0.34})`);
+      context.strokeStyle = tailGradient;
+      context.lineWidth = 8 + build * 9;
+      context.beginPath();
+      context.moveTo(width * 0.41, height * 1.02);
+      context.lineTo(cometX, cometY);
+      context.stroke();
       const cometGradient = context.createRadialGradient(
-        centerX,
+        cometX,
         cometY,
         0,
-        centerX,
+        cometX,
         cometY,
         36 + reveal * 34,
       );
@@ -410,13 +436,13 @@ function createCanvasFallback(
       cometGradient.addColorStop(1, `rgba(${accent}, 0)`);
       context.fillStyle = cometGradient;
       context.beginPath();
-      context.arc(centerX, cometY, 36 + reveal * 34, 0, Math.PI * 2);
+      context.arc(cometX, cometY, 36 + reveal * 44, 0, Math.PI * 2);
       context.fill();
 
       context.strokeStyle = `rgba(${accent}, ${0.35 + reveal * 0.45})`;
-      context.lineWidth = 2;
+      context.lineWidth = 3;
       context.beginPath();
-      context.arc(centerX, centerY, 23 + reveal * width * 0.42, 0, Math.PI * 2);
+      context.arc(centerX, centerY, 28 + reveal * width * 0.52, 0, Math.PI * 2);
       context.stroke();
       context.restore();
     },
