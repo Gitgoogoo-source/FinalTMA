@@ -90,7 +90,7 @@ const float PI = 3.14159265359;
 vec2 flowCurve(float t, float path) {
   float z = t * 2.0 - 1.0;
   float radial = pow(abs(z), 0.68);
-  float phase = -1.3 + path * 0.34;
+  float phase = -1.7 + path * 0.58;
   float pathBias = (path - 2.5) / 2.5;
   float angle = z * 2.72 + phase + sin(z * PI) * 0.2 + u_build * 0.5
     + u_time * (0.045 + path * 0.003);
@@ -712,7 +712,7 @@ function fallbackCurve(
 ): { x: number; y: number } {
   const z = t * 2 - 1;
   const radial = Math.pow(Math.abs(z), 0.68);
-  const phase = -1.3 + path * 0.34;
+  const phase = -1.7 + path * 0.58;
   const pathBias = (path - 2.5) / 2.5;
   const angle =
     z * 2.72 +
