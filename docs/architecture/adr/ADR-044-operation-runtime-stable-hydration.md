@@ -5,7 +5,7 @@
 
 ## 背景
 
-轻量 `OperationRegistryProvider` 按 ADR-040 常驻首屏，重型 `OperationRegistryRuntimeProvider` 只在玩家意图或发现真实待恢复 operation 时动态挂载。真实 iPhone Telegram WebView 验收发现：`pending` 或 `unknown` 转盘 operation 重进会正确请求重型 Runtime，但 Runtime 每次发布新的 Context value 都会改变 Facade `hydrate` 的函数身份；消费入口恢复快照中 `blocking_operations` 的 effect 因依赖该函数而再次注入同一 operation，内层状态再发布新 value，最终触发 React maximum update depth。
+轻量 `OperationRegistryProvider` 按 ADR-040 常驻首屏，重型 `OperationRegistryRuntimeProvider` 通常只在玩家意图或发现真实待恢复 operation 时动态挂载；默认开盒页首屏事实就绪后允许按 ADR-021/040 通过同一动态任务提前挂载 Runtime 并准备开盒表现，以消除首次开盒的通用处理闪屏。真实 iPhone Telegram WebView 验收发现：`pending` 或 `unknown` 转盘 operation 重进会正确请求重型 Runtime，但 Runtime 每次发布新的 Context value 都会改变 Facade `hydrate` 的函数身份；消费入口恢复快照中 `blocking_operations` 的 effect 因依赖该函数而再次注入同一 operation，内层状态再发布新 value，最终触发 React maximum update depth。
 
 ## 决策
 

@@ -11,6 +11,7 @@ import {
 import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 
 import { selectionHaptic } from "../../platform/telegram/index.ts";
+import { gachaRitualStageBackground } from "../../shared/assets/gachaRitualStage.ts";
 import { Button } from "../../shared/ui/Button.tsx";
 import {
   CatalogImage,
@@ -40,9 +41,6 @@ const initialCarouselIndex = tenDrawRankPositions[0];
 const carouselLayerOffsets = [0, 0.24, 0.34, 0.42, 0.48, 0.53] as const;
 const carouselLayerScales = [1, 0.52, 0.43, 0.36, 0.3, 0.26] as const;
 const carouselLayerOpacities = [1, 0.82, 0.62, 0.44, 0.3, 0.2] as const;
-const RITUAL_BACKGROUND =
-  "/assets/gacha/ritual/v1/moonlit-prism-garden-b1291c69.webp";
-
 function interpolateCarouselLayer(
   distance: number,
   values: readonly number[],
@@ -131,7 +129,7 @@ export function GachaResultDialog({
     >
       <img
         className="gacha-moon-result-background"
-        src={RITUAL_BACKGROUND}
+        src={gachaRitualStageBackground}
         alt=""
         aria-hidden="true"
       />

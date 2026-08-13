@@ -25,6 +25,7 @@ import {
   gachaRarityPresentation,
   type GachaRarity,
 } from "../../../shared/assets/gachaRarityPresentation.ts";
+import { preloadGachaRitualStageBackground } from "../../../shared/assets/gachaRitualStage.ts";
 import {
   boxArtUrl,
   boxHeroSizes,
@@ -208,6 +209,12 @@ export function GachaView(): ReactNode {
   useEffect(() => {
     if (firstScreenReady && session) markFirstScreenReady(session.generation);
   }, [firstScreenReady, session]);
+
+  useEffect(() => {
+    if (!firstScreenReady) return;
+    preload("gacha.open");
+    preloadGachaRitualStageBackground();
+  }, [firstScreenReady, preload]);
 
   useEffect(() => {
     if (selectedBox) selectedTierRef.current = selectedBox.tier;

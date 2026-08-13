@@ -8,6 +8,7 @@ import {
   impactHaptic,
   selectionHaptic,
 } from "../../platform/telegram/index.ts";
+import { gachaRitualStageBackground } from "../../shared/assets/gachaRitualStage.ts";
 import { Button } from "../../shared/ui/Button.tsx";
 import type { GachaHatchTier } from "./context.ts";
 import {
@@ -17,9 +18,6 @@ import {
 
 export type { GachaHatchTier } from "./context.ts";
 export type { GachaRevealRarity } from "./GachaRitualCanvas.tsx";
-
-const RITUAL_BACKGROUND =
-  "/assets/gacha/ritual/v1/moonlit-prism-garden-b1291c69.webp";
 
 export function GachaHatchAnimation({
   tier,
@@ -67,7 +65,7 @@ export function GachaHatchAnimation({
     >
       <img
         className="gacha-moon-ritual-background"
-        src={RITUAL_BACKGROUND}
+        src={gachaRitualStageBackground}
         alt=""
         aria-hidden="true"
       />
@@ -110,7 +108,7 @@ export function GachaImageUnavailable({
     >
       <img
         className="gacha-moon-ritual-background gacha-moon-image-unavailable-background"
-        src={RITUAL_BACKGROUND}
+        src={gachaRitualStageBackground}
         alt=""
         aria-hidden="true"
       />

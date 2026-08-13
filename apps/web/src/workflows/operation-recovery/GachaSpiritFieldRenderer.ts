@@ -46,7 +46,7 @@ void main() {
   vec2 core = vec2(0.0, -0.035);
   float cleanplateRadius = length(vec2(p.x / 0.82, (p.y + 0.04) / 0.92));
   float cleanplate = (1.0 - smoothstep(0.68, 1.12, cleanplateRadius))
-    * mix(0.94, 1.0, u_build);
+    * mix(0.24, 0.34, u_build);
 
   float coreDistance = length((p - core) * vec2(1.08, 1.0));
   float coreHot = exp(-coreDistance * mix(21.0, 15.0, u_reveal));
@@ -266,7 +266,7 @@ export function createGachaSpiritField(
 ): SpiritFieldRenderer {
   const context = canvas.getContext("webgl2", {
     alpha: true,
-    antialias: true,
+    antialias: !options.lowPower,
     depth: false,
     desynchronized: true,
     failIfMajorPerformanceCaveat: true,
@@ -316,7 +316,7 @@ class WebGlSpiritField implements SpiritFieldRenderer {
   ) {
     this.#canvas = canvas;
     this.#gl = gl;
-    this.#pixelRatioLimit = options.lowPower ? 1.25 : 1.5;
+    this.#pixelRatioLimit = options.lowPower ? 1 : 1.25;
     this.#field = createProgramBundle(
       gl,
       FULLSCREEN_VERTEX_SHADER,
@@ -344,7 +344,8 @@ class WebGlSpiritField implements SpiritFieldRenderer {
     );
     enableAttribute(gl, this.#field, "a_position", 2, 8, 0);
 
-    const ribbonData = createRibbonGeometry(6, 84);
+    const ribbonSegments = options.lowPower ? 56 : 72;
+    const ribbonData = createRibbonGeometry(6, ribbonSegments);
     this.#ribbonVertexCount = ribbonData.length / 3;
     this.#ribbonVao = requireResource(gl.createVertexArray());
     this.#ribbonBuffer = requireResource(gl.createBuffer());
@@ -356,8 +357,11 @@ class WebGlSpiritField implements SpiritFieldRenderer {
     this.#particleCount = options.reducedMotion
       ? 120
       : options.lowPower
-        ? 620
-        : 900;
+        ? 420
+        : 720;
+    canvas.dataset.spiritParticleCount = String(this.#particleCount);
+    canvas.dataset.spiritQuality = options.lowPower ? "low-power" : "standard";
+    canvas.dataset.spiritRibbonSegments = String(ribbonSegments);
     const particleData = createParticleData(this.#particleCount);
     this.#particleVao = requireResource(gl.createVertexArray());
     this.#particleBuffer = requireResource(gl.createBuffer());
@@ -389,6 +393,7 @@ class WebGlSpiritField implements SpiritFieldRenderer {
     this.#width = width;
     this.#height = height;
     this.#pixelRatio = pixelRatio;
+    this.#canvas.dataset.spiritPixelRatio = pixelRatio.toFixed(2);
     this.#canvas.width = Math.round(width * pixelRatio);
     this.#canvas.height = Math.round(height * pixelRatio);
   }
@@ -598,8 +603,14 @@ function createCanvasFallback(
   const particleCount = options.reducedMotion
     ? 48
     : options.lowPower
-      ? 200
-      : 260;
+      ? 144
+      : 200;
+  const ribbonSegments = options.lowPower ? 40 : 52;
+  canvas.dataset.spiritParticleCount = String(particleCount);
+  canvas.dataset.spiritQuality = options.lowPower
+    ? "low-power-fallback"
+    : "standard-fallback";
+  canvas.dataset.spiritRibbonSegments = String(ribbonSegments);
   const particles = Array.from({ length: particleCount }, (_, index) => ({
     lateral: ((index * 37) % 101) / 100 - 0.5,
     path: index % 6,
@@ -619,8 +630,9 @@ function createCanvasFallback(
       height = Math.max(1, bounds.height);
       ratio = Math.min(
         window.devicePixelRatio || 1,
-        options.lowPower ? 1 : 1.25,
+        options.lowPower ? 1 : 1.1,
       );
+      canvas.dataset.spiritPixelRatio = ratio.toFixed(2);
       const nextWidth = Math.round(width * ratio);
       const nextHeight = Math.round(height * ratio);
       if (canvas.width === nextWidth && canvas.height === nextHeight) return;
@@ -643,8 +655,8 @@ function createCanvasFallback(
         centerY,
         width * 0.64,
       );
-      cleanplate.addColorStop(0, "rgba(5, 16, 26, 0.97)");
-      cleanplate.addColorStop(0.68, "rgba(8, 25, 38, 0.9)");
+      cleanplate.addColorStop(0, "rgba(5, 16, 26, 0.38)");
+      cleanplate.addColorStop(0.68, "rgba(8, 25, 38, 0.26)");
       cleanplate.addColorStop(1, "rgba(8, 25, 38, 0)");
       context.fillStyle = cleanplate;
       context.fillRect(0, centerY - width * 0.72, width, width * 1.44);
@@ -654,8 +666,8 @@ function createCanvasFallback(
       for (let path = 0; path < 6; path += 1) {
         for (let fiber = 0; fiber < 6; fiber += 1) {
           context.beginPath();
-          for (let step = 0; step <= 64; step += 1) {
-            const t = step / 64;
+          for (let step = 0; step <= ribbonSegments; step += 1) {
+            const t = step / ribbonSegments;
             const point = fallbackCurve(
               t,
               path,

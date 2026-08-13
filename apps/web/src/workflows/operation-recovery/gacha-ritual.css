@@ -43,12 +43,6 @@
   object-position: center;
 }
 
-.gacha-moon-ritual:not(.gacha-moon-image-unavailable)
-  > .gacha-moon-ritual-background {
-  animation: gacha-ritual-camera-build 3.3s cubic-bezier(0.22, 0.72, 0.22, 1)
-    both;
-}
-
 .gacha-moon-ritual.rarity-rare {
   --gacha-reveal-color: #1ce204;
   --gacha-reveal-rgb: 28, 226, 4;
@@ -95,16 +89,15 @@
     radial-gradient(
       circle at 50% 54%,
       transparent 0 18%,
-      rgba(5, 15, 24, 0.08) 38%,
-      rgba(5, 15, 24, 0.42) 100%
+      rgba(5, 15, 24, 0.02) 38%,
+      rgba(5, 15, 24, 0.16) 100%
     ),
     linear-gradient(
       to bottom,
-      rgba(5, 15, 24, 0.1),
+      rgba(5, 15, 24, 0.03),
       transparent 24% 68%,
-      rgba(5, 15, 24, 0.3)
+      rgba(5, 15, 24, 0.12)
     );
-  animation: gacha-ritual-vignette-build 3.3s ease-in both;
 }
 
 .gacha-ritual-flash {
@@ -118,11 +111,6 @@
     transparent 68%
   );
   mix-blend-mode: screen;
-}
-
-.gacha-moon-ritual.is-revealing > .gacha-moon-ritual-background {
-  animation: gacha-ritual-camera-reveal 700ms cubic-bezier(0.16, 0.8, 0.2, 1)
-    both;
 }
 
 .gacha-moon-ritual.is-revealing .gacha-ritual-flash {
@@ -465,50 +453,6 @@
   text-align: center;
 }
 
-@keyframes gacha-ritual-camera-build {
-  0% {
-    filter: brightness(0.76) saturate(0.84);
-    transform: scale(1);
-  }
-  44% {
-    filter: brightness(0.88) saturate(0.94);
-    transform: scale(1.018);
-  }
-  78% {
-    filter: brightness(0.72) saturate(0.82);
-    transform: scale(1.042);
-  }
-  100% {
-    filter: brightness(0.58) saturate(0.76);
-    transform: scale(1.055);
-  }
-}
-
-@keyframes gacha-ritual-camera-reveal {
-  0% {
-    filter: brightness(0.58) saturate(0.76);
-    transform: scale(1.055);
-  }
-  18% {
-    filter: brightness(1.45) saturate(1.08);
-    transform: scale(1.075);
-  }
-  100% {
-    filter: brightness(0.34) saturate(0.76);
-    transform: scale(1.12);
-  }
-}
-
-@keyframes gacha-ritual-vignette-build {
-  0%,
-  52% {
-    opacity: 0.38;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
 @keyframes gacha-ritual-vignette-reveal {
   0% {
     opacity: 1;
@@ -517,7 +461,7 @@
     opacity: 0.12;
   }
   100% {
-    opacity: 0.82;
+    opacity: 0;
   }
 }
 
@@ -623,13 +567,7 @@
     transition: none !important;
   }
 
-  .gacha-moon-ritual:not(.gacha-moon-image-unavailable)
-    > .gacha-moon-ritual-background {
-    filter: brightness(0.6) saturate(0.78);
-    transform: scale(1.04);
-  }
-
   .gacha-moon-ritual:not(.gacha-moon-image-unavailable) .gacha-ritual-vignette {
-    opacity: 1;
+    opacity: 0;
   }
 }

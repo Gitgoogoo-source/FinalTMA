@@ -30,6 +30,7 @@ export function GachaRitualCanvas({
   rarity: GachaRevealRarity | null;
 }): ReactNode {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const timelineRef = useRef<RitualTimeline | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -43,41 +44,87 @@ export function GachaRitualCanvas({
       lowPower,
       reducedMotion,
     });
-    const startedAt = performance.now();
+    let buildStartedAt = performance.now();
+    let revealStartedAt: number | null = null;
+    let revealRarity: GachaRevealRarity | null = null;
     let animationFrame: number | null = null;
+    let disposed = false;
 
-    const render = (now: number) => {
-      const elapsed = Math.max(0, now - startedAt);
-      const revealProgress = revealing ? clamp(elapsed / 700) : 0;
-      const buildProgress = revealing ? 1 : clamp(elapsed / 3_300);
-      renderer.resize();
+    const draw = (now: number): boolean => {
+      const revealingNow = revealStartedAt !== null && !reducedMotion;
+      const buildElapsed = reducedMotion
+        ? 3_300
+        : Math.max(0, now - buildStartedAt);
+      const revealElapsed = revealingNow
+        ? Math.max(0, now - (revealStartedAt ?? now))
+        : 0;
+      const revealProgress = revealingNow ? clamp(revealElapsed / 700) : 0;
+      const buildProgress = revealingNow ? 1 : clamp(buildElapsed / 3_300);
       renderer.render({
         buildProgress,
-        color: revealing && rarity ? rarityColors[rarity] : neutralGold,
-        elapsedMs: revealing ? 3_300 + elapsed : elapsed,
+        color:
+          revealingNow && revealRarity
+            ? rarityColors[revealRarity]
+            : neutralGold,
+        elapsedMs: revealingNow ? 3_300 + revealElapsed : buildElapsed,
         revealProgress,
       });
-
-      const animationActive = revealing
-        ? revealProgress < 1
-        : buildProgress < 1;
-      if (!reducedMotion && animationActive)
-        animationFrame = window.requestAnimationFrame(render);
+      return revealingNow ? revealProgress < 1 : buildProgress < 1;
     };
 
-    const handleResize = () => render(performance.now());
+    const schedule = () => {
+      if (disposed || reducedMotion || animationFrame !== null) return;
+      animationFrame = window.requestAnimationFrame(render);
+    };
+
+    const render = (now: number) => {
+      animationFrame = null;
+      if (draw(now)) schedule();
+    };
+
+    const handleResize = () => {
+      renderer.resize();
+      if (animationFrame === null) draw(performance.now());
+    };
+    const timeline: RitualTimeline = {
+      update(nextRevealing, nextRarity) {
+        revealRarity = nextRarity;
+        if (reducedMotion) return;
+        if (nextRevealing) {
+          revealStartedAt ??= performance.now();
+        } else if (revealStartedAt !== null) {
+          buildStartedAt = performance.now();
+          revealStartedAt = null;
+          revealRarity = null;
+        }
+        schedule();
+      },
+    };
+    timelineRef.current = timeline;
     window.addEventListener("resize", handleResize);
-    render(startedAt + (reducedMotion ? 3_300 : 0));
+    renderer.resize();
+    draw(buildStartedAt + (reducedMotion ? 3_300 : 0));
+    schedule();
 
     return () => {
+      disposed = true;
       if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
       window.removeEventListener("resize", handleResize);
+      if (timelineRef.current === timeline) timelineRef.current = null;
       renderer.dispose();
     };
+  }, []);
+
+  useEffect(() => {
+    timelineRef.current?.update(revealing, rarity);
   }, [rarity, revealing]);
 
   return <canvas ref={canvasRef} className="gacha-spirit-field-canvas" />;
 }
+
+type RitualTimeline = {
+  update(revealing: boolean, rarity: GachaRevealRarity | null): void;
+};
 
 function clamp(value: number): number {
   return Math.min(1, Math.max(0, value));
