@@ -70,8 +70,7 @@
 }
 
 .gacha-ritual-code-stage,
-.gacha-ritual-particles,
-.gacha-ritual-vector,
+.gacha-spirit-silk-canvas,
 .gacha-ritual-flash,
 .gacha-ritual-vignette {
   position: absolute;
@@ -86,16 +85,7 @@
   overflow: hidden;
 }
 
-.gacha-ritual-vector {
-  z-index: 1;
-  overflow: visible;
-}
-
-.gacha-ritual-cleanplate {
-  filter: blur(14px);
-}
-
-.gacha-ritual-particles {
+.gacha-spirit-silk-canvas {
   z-index: 2;
 }
 
@@ -130,128 +120,13 @@
   mix-blend-mode: screen;
 }
 
-.gacha-ritual-water-rings,
-.gacha-ritual-energy-rings,
-.gacha-ritual-lattice,
-.gacha-ritual-cracks,
-.gacha-ritual-lightning {
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.gacha-ritual-water-rings {
-  stroke: rgba(255, 253, 250, 0.62);
-  stroke-width: 1.4;
-}
-
-.gacha-ritual-water-rings ellipse {
-  opacity: 0;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: gacha-ritual-water-build 3.12s cubic-bezier(0.2, 0.75, 0.2, 1) both;
-}
-
-.gacha-ritual-water-rings ellipse:nth-child(2) {
-  animation-delay: 90ms;
-}
-
-.gacha-ritual-water-rings ellipse:nth-child(3) {
-  animation-delay: 180ms;
-}
-
-.gacha-ritual-energy-rings {
-  stroke: rgba(255, 184, 73, 0.78);
-  stroke-dasharray: 17 10 3 12;
-  stroke-width: 1.5;
-}
-
-.gacha-ritual-energy-rings ellipse {
-  opacity: 0;
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-.gacha-ritual-energy-rings ellipse:nth-child(1) {
-  animation: gacha-ritual-orbit-clockwise 3.06s
-    cubic-bezier(0.18, 0.68, 0.18, 1) both;
-}
-
-.gacha-ritual-energy-rings ellipse:nth-child(2) {
-  animation: gacha-ritual-orbit-counter 3.06s cubic-bezier(0.18, 0.68, 0.18, 1)
-    120ms both;
-}
-
-.gacha-ritual-energy-rings ellipse:nth-child(3) {
-  animation: gacha-ritual-orbit-clockwise 3.06s
-    cubic-bezier(0.18, 0.68, 0.18, 1) 240ms both;
-}
-
-.gacha-ritual-core {
-  opacity: 0.08;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: gacha-ritual-core-build 3.3s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-}
-
-.gacha-ritual-cocoon {
-  transform-box: fill-box;
-  transform-origin: center bottom;
-  animation: gacha-ritual-cocoon-build 3.3s cubic-bezier(0.2, 0.74, 0.2, 1) both;
-}
-
-.gacha-ritual-shell {
-  stroke: rgba(255, 253, 250, 0.88);
-  stroke-width: 1.8;
-  transform-box: fill-box;
-  transform-origin: center bottom;
-}
-
-.gacha-ritual-lattice {
-  stroke: rgba(255, 184, 73, 0.58);
-  stroke-width: 1.05;
-}
-
-.gacha-ritual-cracks {
-  stroke: #fffdfa;
-  stroke-dasharray: 440;
-  stroke-dashoffset: 440;
-  stroke-width: 2.4;
-  animation: gacha-ritual-cracks-build 3.3s cubic-bezier(0.42, 0, 0.2, 1) both;
-}
-
-.gacha-ritual-lightning {
-  opacity: 0;
-  stroke: var(--gacha-reveal-color);
-  stroke-width: 3.2;
-  filter: drop-shadow(0 0 8px var(--gacha-reveal-color));
-}
-
 .gacha-moon-ritual.is-revealing > .gacha-moon-ritual-background {
   animation: gacha-ritual-camera-reveal 700ms cubic-bezier(0.16, 0.8, 0.2, 1)
     both;
 }
 
-.gacha-moon-ritual.is-revealing .gacha-ritual-shell--left {
-  animation: gacha-ritual-shell-open-left 700ms cubic-bezier(0.16, 0.84, 0.2, 1)
-    both;
-}
-
-.gacha-moon-ritual.is-revealing .gacha-ritual-shell--right {
-  animation: gacha-ritual-shell-open-right 700ms
-    cubic-bezier(0.16, 0.84, 0.2, 1) both;
-}
-
-.gacha-moon-ritual.is-revealing .gacha-ritual-core {
-  animation: gacha-ritual-core-reveal 700ms ease-out both;
-}
-
 .gacha-moon-ritual.is-revealing .gacha-ritual-flash {
   animation: gacha-ritual-flash-reveal 700ms ease-out both;
-}
-
-.gacha-moon-ritual.is-revealing .gacha-ritual-lightning {
-  animation: gacha-ritual-lightning-reveal 700ms steps(2, end) both;
 }
 
 .gacha-moon-ritual.is-revealing .gacha-ritual-vignette {
@@ -646,183 +521,6 @@
   }
 }
 
-@keyframes gacha-ritual-water-build {
-  0%,
-  10% {
-    opacity: 0;
-    transform: scale(0.25);
-  }
-  24% {
-    opacity: 0.72;
-  }
-  58% {
-    opacity: 0.18;
-    transform: scale(0.82);
-  }
-  100% {
-    opacity: 0.72;
-    transform: scale(1.18);
-  }
-}
-
-@keyframes gacha-ritual-orbit-clockwise {
-  0%,
-  18% {
-    opacity: 0;
-    transform: rotate(-12deg) scale(0.72);
-  }
-  42% {
-    opacity: 0.42;
-  }
-  76% {
-    opacity: 0.86;
-  }
-  100% {
-    opacity: 0.96;
-    transform: rotate(324deg) scale(1.08);
-  }
-}
-
-@keyframes gacha-ritual-orbit-counter {
-  0%,
-  20% {
-    opacity: 0;
-    transform: rotate(14deg) scale(0.68);
-  }
-  48% {
-    opacity: 0.48;
-  }
-  100% {
-    opacity: 0.92;
-    transform: rotate(-286deg) scale(1.04);
-  }
-}
-
-@keyframes gacha-ritual-core-build {
-  0% {
-    opacity: 0.04;
-    transform: scale(0.28);
-  }
-  13% {
-    opacity: 0.68;
-    transform: scale(0.56);
-  }
-  21% {
-    opacity: 0.18;
-    transform: scale(0.42);
-  }
-  43% {
-    opacity: 0.78;
-    transform: scale(0.7);
-  }
-  52% {
-    opacity: 0.28;
-    transform: scale(0.58);
-  }
-  76% {
-    opacity: 0.96;
-    transform: scale(0.92);
-  }
-  84% {
-    opacity: 0.48;
-    transform: scale(0.78);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1.04);
-  }
-}
-
-@keyframes gacha-ritual-core-reveal {
-  0% {
-    opacity: 1;
-    transform: scale(1.04);
-  }
-  28% {
-    opacity: 1;
-    transform: scale(2.1);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(3.8);
-  }
-}
-
-@keyframes gacha-ritual-cocoon-build {
-  0% {
-    opacity: 0.24;
-    transform: scale(0.94);
-  }
-  14% {
-    opacity: 0.7;
-    transform: scale(1.015);
-  }
-  22% {
-    transform: scale(0.985);
-  }
-  45% {
-    opacity: 0.9;
-    transform: scale(1.025);
-  }
-  54% {
-    transform: scale(0.992);
-  }
-  77% {
-    opacity: 1;
-    transform: scale(1.04);
-  }
-  86% {
-    transform: scale(0.996);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1.055);
-  }
-}
-
-@keyframes gacha-ritual-cracks-build {
-  0%,
-  56% {
-    opacity: 0;
-    stroke-dashoffset: 440;
-  }
-  72% {
-    opacity: 0.66;
-  }
-  100% {
-    opacity: 1;
-    stroke-dashoffset: 0;
-  }
-}
-
-@keyframes gacha-ritual-shell-open-left {
-  0% {
-    opacity: 1;
-    transform: translate(0) rotate(0);
-  }
-  24% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.32;
-    transform: translate(-94px, 12px) rotate(-17deg);
-  }
-}
-
-@keyframes gacha-ritual-shell-open-right {
-  0% {
-    opacity: 1;
-    transform: translate(0) rotate(0);
-  }
-  24% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.32;
-    transform: translate(94px, 12px) rotate(17deg);
-  }
-}
-
 @keyframes gacha-ritual-flash-reveal {
   0% {
     opacity: 0;
@@ -838,26 +536,6 @@
   100% {
     opacity: 0;
     transform: scale(1.65);
-  }
-}
-
-@keyframes gacha-ritual-lightning-reveal {
-  0%,
-  10% {
-    opacity: 0;
-    stroke-dasharray: 5 18;
-  }
-  18%,
-  42% {
-    opacity: 1;
-    stroke-dasharray: 26 7;
-  }
-  64% {
-    opacity: 0.58;
-  }
-  100% {
-    opacity: 0;
-    stroke-dasharray: 8 18;
   }
 }
 
@@ -953,25 +631,5 @@
 
   .gacha-moon-ritual:not(.gacha-moon-image-unavailable) .gacha-ritual-vignette {
     opacity: 1;
-  }
-
-  .gacha-moon-ritual:not(.gacha-moon-image-unavailable)
-    :is(.gacha-ritual-water-rings ellipse, .gacha-ritual-energy-rings ellipse) {
-    opacity: 0.68;
-  }
-
-  .gacha-moon-ritual:not(.gacha-moon-image-unavailable) .gacha-ritual-core {
-    opacity: 0.9;
-    transform: scale(0.92);
-  }
-
-  .gacha-moon-ritual:not(.gacha-moon-image-unavailable) .gacha-ritual-cocoon {
-    opacity: 1;
-    transform: scale(1.04);
-  }
-
-  .gacha-moon-ritual:not(.gacha-moon-image-unavailable) .gacha-ritual-cracks {
-    opacity: 1;
-    stroke-dashoffset: 0;
   }
 }

@@ -10,10 +10,15 @@ export type GachaRevealRarity =
 type Spark = {
   angle: number;
   distance: number;
-  drift: number;
   phase: number;
   radius: number;
+  ribbon: number;
   speed: number;
+};
+
+type Point = {
+  x: number;
+  y: number;
 };
 
 const rarityColors: Record<GachaRevealRarity, [number, number, number]> = {
@@ -23,6 +28,8 @@ const rarityColors: Record<GachaRevealRarity, [number, number, number]> = {
   legendary: [255, 74, 48],
   mythic: [255, 156, 0],
 };
+
+const neutralGold: [number, number, number] = [255, 184, 73];
 
 export function GachaRitualCanvas({
   revealing,
@@ -47,11 +54,12 @@ export function GachaRitualCanvas({
       ? (["common", "rare", "epic", "legendary", "mythic"] as const).indexOf(
           rarity,
         )
-      : 4;
-    const particleRatio = 0.56 + rarityRank * 0.11;
-    const particleBudget = reducedMotion ? 18 : lowPower ? 38 : 64;
-    const sparkCount = Math.max(12, Math.round(particleBudget * particleRatio));
-    const revealIntensity = 0.72 + rarityRank * 0.1;
+      : 2;
+    const particleBudget = reducedMotion ? 18 : lowPower ? 36 : 58;
+    const sparkCount = Math.max(
+      14,
+      Math.round(particleBudget * (0.76 + rarityRank * 0.06)),
+    );
     const sparks = createSparks(sparkCount);
     const startedAt = performance.now();
     let animationFrame: number | null = null;
@@ -78,77 +86,75 @@ export function GachaRitualCanvas({
       resize();
       context.clearRect(0, 0, width, height);
       const elapsed = Math.max(0, now - startedAt);
+      const revealProgress = revealing ? clamp(elapsed / 700) : 0;
+      const buildProgress = revealing ? 1 : clamp(elapsed / 3_300);
+      const revealEase = easeOutCubic(revealProgress);
+      const activeColor =
+        revealing && rarity ? rarityColors[rarity] : neutralGold;
       const centerX = width * 0.5;
-      const centerY = height * 0.54;
-      const revealProgress = revealing ? Math.min(1, elapsed / 700) : 0;
-      const buildProgress = revealing ? 1 : Math.min(1, elapsed / 3_300);
-      const color = rarity ? rarityColors[rarity] : rarityColors.common;
+      const centerY = height * 0.535;
+      const span = Math.min(width * 0.92, height * 0.48);
 
-      sparks.forEach((spark, index) => {
-        const baseOrbit =
-          Math.min(width, height) * (0.1 + spark.distance * 0.27);
-        const orbitAngle =
-          spark.angle + buildProgress * spark.speed * 2.2 + spark.phase;
-        const burstDistance =
-          revealProgress *
-          revealProgress *
-          Math.min(width, height) *
-          spark.speed *
-          revealIntensity;
-        const orbitCompression = revealing ? 1 - revealProgress * 0.72 : 1;
-        const x =
-          centerX +
-          Math.cos(orbitAngle) * baseOrbit * orbitCompression +
-          Math.cos(spark.angle) * burstDistance;
-        const y =
-          centerY +
-          Math.sin(orbitAngle) * baseOrbit * 0.55 * orbitCompression +
-          Math.sin(spark.angle) * burstDistance * 0.72 -
-          spark.drift * buildProgress * height * 0.05;
-        const alpha = revealing
-          ? Math.max(0, 1 - revealProgress) * (0.48 + spark.phase * 0.08)
-          : 0.12 + buildProgress * 0.52;
-        const radius =
-          spark.radius * (revealing ? 1 + revealProgress * 1.8 : 1);
+      drawDarkCleanplate(
+        context,
+        centerX,
+        centerY,
+        width,
+        height,
+        buildProgress,
+      );
+      drawWaterWake(
+        context,
+        centerX,
+        centerY,
+        width,
+        height,
+        buildProgress,
+        revealEase,
+        activeColor,
+      );
 
-        context.save();
-        context.translate(x, y);
-        context.rotate(spark.angle + revealProgress * 1.8);
-        context.shadowBlur = revealing ? 14 : 7;
-        context.shadowColor = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${alpha})`;
-        context.fillStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${alpha})`;
-        if (index % 5 === 0) {
-          context.beginPath();
-          context.moveTo(0, -radius * 2.2);
-          context.lineTo(radius, 0);
-          context.lineTo(0, radius * 2.2);
-          context.lineTo(-radius, 0);
-          context.closePath();
-          context.fill();
-        } else {
-          context.beginPath();
-          context.arc(0, 0, radius, 0, Math.PI * 2);
-          context.fill();
-        }
-        context.restore();
-      });
-
-      if (revealing && revealProgress > 0.04) {
-        const ringRadius = revealProgress * Math.min(width, height) * 0.44;
-        context.strokeStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${Math.max(0, 0.78 - revealProgress * 0.78)})`;
-        context.lineWidth = Math.max(1, 4 - revealProgress * 3);
-        context.beginPath();
-        context.ellipse(
+      const ribbonAlpha = revealing
+        ? Math.max(0, 1 - revealProgress * 0.9)
+        : 0.34 + buildProgress * 0.66;
+      [0, 1, 2].forEach((ribbon) => {
+        drawSpiritSilk(
+          context,
           centerX,
           centerY,
-          ringRadius,
-          ringRadius * 0.46,
-          0,
-          0,
-          Math.PI * 2,
+          span,
+          width,
+          height,
+          ribbon,
+          buildProgress,
+          revealEase,
+          ribbonAlpha,
+          activeColor,
         );
-        context.stroke();
-      }
+      });
+
+      drawSparks(
+        context,
+        sparks,
+        centerX,
+        centerY,
+        span,
+        width,
+        height,
+        revealing ? 3_300 + elapsed : elapsed,
+        buildProgress,
+        revealEase,
+        activeColor,
+      );
+      drawCore(
+        context,
+        centerX,
+        centerY,
+        width,
+        buildProgress,
+        revealProgress,
+        activeColor,
+      );
 
       const animationActive = revealing
         ? revealProgress < 1
@@ -167,7 +173,361 @@ export function GachaRitualCanvas({
     };
   }, [rarity, revealing]);
 
-  return <canvas ref={canvasRef} className="gacha-ritual-particles" />;
+  return <canvas ref={canvasRef} className="gacha-spirit-silk-canvas" />;
+}
+
+function drawDarkCleanplate(
+  context: CanvasRenderingContext2D,
+  centerX: number,
+  centerY: number,
+  width: number,
+  height: number,
+  buildProgress: number,
+): void {
+  context.save();
+  context.translate(centerX, centerY);
+  context.scale(1, 1.24);
+  const radius = Math.min(width * 0.52, height * 0.27);
+  const gradient = context.createRadialGradient(
+    0,
+    0,
+    radius * 0.08,
+    0,
+    0,
+    radius,
+  );
+  gradient.addColorStop(0, `rgba(7, 18, 29, ${0.88 + buildProgress * 0.08})`);
+  gradient.addColorStop(0.5, `rgba(9, 24, 37, ${0.78 + buildProgress * 0.12})`);
+  gradient.addColorStop(0.78, "rgba(13, 31, 43, 0.48)");
+  gradient.addColorStop(1, "rgba(13, 31, 43, 0)");
+  context.fillStyle = gradient;
+  context.beginPath();
+  context.arc(0, 0, radius, 0, Math.PI * 2);
+  context.fill();
+  context.restore();
+}
+
+function drawSpiritSilk(
+  context: CanvasRenderingContext2D,
+  centerX: number,
+  centerY: number,
+  span: number,
+  width: number,
+  height: number,
+  ribbon: number,
+  buildProgress: number,
+  revealEase: number,
+  alpha: number,
+  color: [number, number, number],
+): void {
+  const points = createRibbonPoints(
+    centerX,
+    centerY,
+    span,
+    width,
+    height,
+    ribbon,
+    buildProgress,
+    revealEase,
+  );
+  const broadWidth = width * (ribbon === 1 ? 0.072 : 0.058);
+  const interiorWidth = broadWidth * 0.72;
+  const edgeOffset = broadWidth * 0.34;
+  const depth = ribbon === 1 ? 0.92 : ribbon === 0 ? 0.78 : 0.68;
+
+  context.save();
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  context.globalCompositeOperation = "screen";
+  context.shadowBlur = 18 + buildProgress * 8;
+  context.shadowColor = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${0.42 * alpha})`;
+  strokePoints(
+    context,
+    points,
+    0,
+    broadWidth,
+    `rgba(232, 241, 243, ${0.12 * alpha * depth})`,
+  );
+
+  context.globalCompositeOperation = "source-over";
+  context.shadowBlur = 0;
+  strokePoints(
+    context,
+    points,
+    0,
+    interiorWidth,
+    `rgba(20, 37, 54, ${0.42 * alpha})`,
+  );
+
+  context.globalCompositeOperation = "screen";
+  context.shadowBlur = 8;
+  context.shadowColor = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${0.72 * alpha})`;
+  strokePoints(
+    context,
+    points,
+    edgeOffset,
+    Math.max(1.1, width * 0.0048),
+    `rgba(255, 253, 250, ${0.7 * alpha * depth})`,
+  );
+  strokePoints(
+    context,
+    points,
+    -edgeOffset,
+    Math.max(0.9, width * 0.0037),
+    `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${0.68 * alpha * depth})`,
+  );
+  strokePoints(
+    context,
+    points,
+    0,
+    Math.max(0.7, width * 0.0025),
+    `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${0.46 * alpha})`,
+  );
+  context.restore();
+}
+
+function createRibbonPoints(
+  centerX: number,
+  centerY: number,
+  span: number,
+  width: number,
+  height: number,
+  ribbon: number,
+  buildProgress: number,
+  revealEase: number,
+): Point[] {
+  const phase = [0.18, 2.26, 4.34][ribbon] ?? 0;
+  const direction = ribbon === 1 ? -1 : 1;
+  const tighten = 1.12 - buildProgress * 0.24;
+  const points: Point[] = [];
+  for (let index = 0; index <= 64; index += 1) {
+    const t = (index / 64 - 0.5) * 2;
+    const edge = Math.pow(Math.abs(t), 0.64);
+    const angle =
+      phase +
+      direction * t * Math.PI * 1.42 +
+      direction * buildProgress * 1.08 +
+      direction * revealEase * 0.92;
+    const baseRadius = span * (0.035 + edge * (0.34 + ribbon * 0.018));
+    const whip = 1 + revealEase * (0.72 + edge * 1.55);
+    const asymmetricX = t * width * 0.038 * (ribbon - 1);
+    const asymmetricY =
+      Math.sin(t * Math.PI) * height * 0.022 * (ribbon === 1 ? -1 : 1);
+    points.push({
+      x: centerX + Math.cos(angle) * baseRadius * tighten * whip + asymmetricX,
+      y:
+        centerY +
+        Math.sin(angle) * baseRadius * 0.74 * tighten * whip +
+        asymmetricY +
+        t * height * 0.018 * (ribbon - 1),
+    });
+  }
+  return points;
+}
+
+function strokePoints(
+  context: CanvasRenderingContext2D,
+  points: Point[],
+  offset: number,
+  lineWidth: number,
+  strokeStyle: string,
+): void {
+  context.beginPath();
+  points.forEach((point, index) => {
+    const previous = points[Math.max(0, index - 1)] ?? point;
+    const next = points[Math.min(points.length - 1, index + 1)] ?? point;
+    const dx = next.x - previous.x;
+    const dy = next.y - previous.y;
+    const length = Math.max(0.001, Math.hypot(dx, dy));
+    const x = point.x - (dy / length) * offset;
+    const y = point.y + (dx / length) * offset;
+    if (index === 0) context.moveTo(x, y);
+    else context.lineTo(x, y);
+  });
+  context.lineWidth = lineWidth;
+  context.strokeStyle = strokeStyle;
+  context.stroke();
+}
+
+function drawSparks(
+  context: CanvasRenderingContext2D,
+  sparks: Spark[],
+  centerX: number,
+  centerY: number,
+  span: number,
+  width: number,
+  height: number,
+  elapsed: number,
+  buildProgress: number,
+  revealEase: number,
+  color: [number, number, number],
+): void {
+  context.save();
+  context.globalCompositeOperation = "screen";
+  sparks.forEach((spark, index) => {
+    const direction = spark.ribbon === 1 ? -1 : 1;
+    const angle =
+      spark.angle +
+      direction * (elapsed * 0.0002 * spark.speed + buildProgress * 2.6);
+    const pull = 1.05 - buildProgress * 0.26;
+    const burst = 1 + revealEase * (1.1 + spark.distance * 1.8);
+    const orbit = span * (0.11 + spark.distance * 0.38) * pull * burst;
+    const x = centerX + Math.cos(angle) * orbit;
+    const y =
+      centerY +
+      Math.sin(angle) * orbit * 0.72 -
+      Math.sin(spark.phase * Math.PI * 2) * height * 0.02;
+    const fade = revealingFade(revealEase);
+    const alpha = (0.18 + buildProgress * 0.62) * fade;
+    const radius = spark.radius * (1 + revealEase * 1.5);
+
+    context.save();
+    context.translate(x, y);
+    context.rotate(angle + Math.PI * 0.25);
+    context.shadowBlur = index % 7 === 0 ? 13 : 7;
+    context.shadowColor = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${alpha})`;
+    context.fillStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${alpha})`;
+    if (index % 7 === 0) {
+      context.beginPath();
+      context.moveTo(0, -radius * 3.2);
+      context.lineTo(radius * 1.2, 0);
+      context.lineTo(0, radius * 3.2);
+      context.lineTo(-radius * 1.2, 0);
+      context.closePath();
+      context.fill();
+    } else if (index % 5 === 0) {
+      context.strokeStyle = `rgba(255, 253, 250, ${alpha * 0.72})`;
+      context.lineWidth = Math.max(0.7, radius * 0.55);
+      context.beginPath();
+      context.moveTo(-radius * 3.4, 0);
+      context.quadraticCurveTo(0, -radius, radius * 3.4, 0);
+      context.stroke();
+    } else {
+      context.beginPath();
+      context.arc(0, 0, radius, 0, Math.PI * 2);
+      context.fill();
+    }
+    context.restore();
+  });
+  context.restore();
+}
+
+function drawWaterWake(
+  context: CanvasRenderingContext2D,
+  centerX: number,
+  centerY: number,
+  width: number,
+  height: number,
+  buildProgress: number,
+  revealEase: number,
+  color: [number, number, number],
+): void {
+  const waterY = centerY + height * 0.165;
+  context.save();
+  context.globalCompositeOperation = "screen";
+  context.lineCap = "round";
+  context.shadowBlur = 9;
+  context.shadowColor = `rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.5)`;
+
+  for (let index = 0; index < 4; index += 1) {
+    const scale = 0.4 + index * 0.22 + buildProgress * 0.16 + revealEase * 0.7;
+    context.beginPath();
+    context.ellipse(
+      centerX,
+      waterY,
+      width * 0.29 * scale,
+      height * 0.018 * scale,
+      -0.04 + index * 0.025,
+      Math.PI * (0.08 + index * 0.04),
+      Math.PI * (1.76 - index * 0.03),
+    );
+    context.lineWidth = Math.max(0.8, 1.6 - index * 0.16);
+    context.strokeStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${(0.52 - index * 0.08) * (0.34 + buildProgress * 0.66) * revealingFade(revealEase)})`;
+    context.stroke();
+  }
+
+  context.beginPath();
+  context.moveTo(centerX, centerY + 8);
+  context.bezierCurveTo(
+    centerX - width * 0.08,
+    centerY + height * 0.06,
+    centerX + width * 0.07,
+    waterY - height * 0.035,
+    centerX,
+    waterY,
+  );
+  context.lineWidth = Math.max(1, width * 0.005);
+  context.strokeStyle = `rgba(255, 253, 250, ${0.16 + buildProgress * 0.24})`;
+  context.stroke();
+  context.restore();
+}
+
+function drawCore(
+  context: CanvasRenderingContext2D,
+  centerX: number,
+  centerY: number,
+  width: number,
+  buildProgress: number,
+  revealProgress: number,
+  color: [number, number, number],
+): void {
+  const pulse =
+    0.9 +
+    Math.max(0, Math.sin(buildProgress * Math.PI * 6 - Math.PI * 0.45)) * 0.18;
+  const revealEase = easeOutCubic(revealProgress);
+  const radius = width * 0.043 * pulse * (1 + revealEase * 4.8);
+  const alpha = revealProgress > 0 ? Math.max(0, 1 - revealProgress) : 1;
+  const gradient = context.createRadialGradient(
+    centerX,
+    centerY,
+    0,
+    centerX,
+    centerY,
+    radius,
+  );
+  gradient.addColorStop(0, `rgba(255, 255, 255, ${0.98 * alpha})`);
+  gradient.addColorStop(
+    0.2,
+    `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${0.96 * alpha})`,
+  );
+  gradient.addColorStop(
+    0.55,
+    `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${0.36 * alpha})`,
+  );
+  gradient.addColorStop(1, `rgba(${color[0]}, ${color[1]}, ${color[2]}, 0)`);
+  context.save();
+  context.globalCompositeOperation = "screen";
+  context.fillStyle = gradient;
+  context.beginPath();
+  context.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  context.fill();
+
+  if (revealProgress > 0.04) {
+    context.beginPath();
+    context.arc(
+      centerX,
+      centerY,
+      width * 0.08 + revealEase * width * 0.46,
+      0,
+      Math.PI * 2,
+    );
+    context.lineWidth = Math.max(1, width * (0.009 - revealProgress * 0.006));
+    context.strokeStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${Math.max(0, 0.76 - revealProgress * 0.76)})`;
+    context.stroke();
+  }
+  context.restore();
+}
+
+function revealingFade(revealEase: number): number {
+  return Math.max(0, 1 - revealEase * 0.88);
+}
+
+function clamp(value: number): number {
+  return Math.min(1, Math.max(0, value));
+}
+
+function easeOutCubic(value: number): number {
+  return 1 - Math.pow(1 - value, 3);
 }
 
 function createSparks(count: number): Spark[] {
@@ -179,12 +539,12 @@ function createSparks(count: number): Spark[] {
     value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
     return ((value ^ (value >>> 14)) >>> 0) / 4_294_967_296;
   };
-  return Array.from({ length: count }, () => ({
+  return Array.from({ length: count }, (_, index) => ({
     angle: random() * Math.PI * 2,
     distance: random(),
-    drift: 0.25 + random() * 0.75,
     phase: random(),
-    radius: 0.7 + random() * 2.1,
-    speed: 0.45 + random() * 0.95,
+    radius: 0.65 + random() * 1.85,
+    ribbon: index % 3,
+    speed: 0.48 + random() * 0.92,
   }));
 }
