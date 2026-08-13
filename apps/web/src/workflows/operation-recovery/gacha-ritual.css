@@ -70,7 +70,7 @@
 }
 
 .gacha-ritual-code-stage,
-.gacha-spirit-silk-canvas,
+.gacha-spirit-field-canvas,
 .gacha-ritual-flash,
 .gacha-ritual-vignette {
   position: absolute;
@@ -85,7 +85,7 @@
   overflow: hidden;
 }
 
-.gacha-spirit-silk-canvas {
+.gacha-spirit-field-canvas {
   z-index: 2;
 }
 
