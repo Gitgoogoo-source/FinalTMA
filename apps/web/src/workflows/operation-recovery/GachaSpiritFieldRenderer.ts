@@ -76,7 +76,7 @@ void main() {
 
   vec3 night = vec3(0.018, 0.052, 0.078);
   vec3 ivory = vec3(1.0, 0.986, 0.93);
-  vec3 lightColor = mix(u_color, ivory, 0.54);
+  vec3 lightColor = mix(u_color, ivory, 0.28);
   float light = coreHot * pulse * 1.35 + coreHalo * 0.2
     + ripples * 0.7 + tail * 0.44 + shock * 0.92;
   vec3 color = night + lightColor * light;
@@ -90,9 +90,9 @@ const float PI = 3.14159265359;
 vec2 flowCurve(float t, float path) {
   float z = t * 2.0 - 1.0;
   float radial = pow(abs(z), 0.68);
-  float phase = -1.28 + path * 0.512;
-  float direction = mod(path, 2.0) < 1.0 ? 1.0 : -1.0;
-  float angle = direction * z * 2.68 + phase + u_build * 0.5
+  float phase = -1.3 + path * 0.34;
+  float pathBias = (path - 2.5) / 2.5;
+  float angle = z * 2.72 + phase + sin(z * PI) * 0.2 + u_build * 0.5
     + u_time * (0.045 + path * 0.003);
   float lobe = 0.22 + radial * (0.31 + 0.022 * mod(path, 3.0));
   vec2 position = vec2(
@@ -100,6 +100,8 @@ vec2 flowCurve(float t, float path) {
     -0.035 + z * 0.52 + cos(angle) * (0.065 + radial * 0.15) * radial
   );
   position.x += sin(z * 6.2 + phase * 1.7) * 0.045 * radial;
+  position.x += pathBias * 0.028 * radial;
+  position.y += pathBias * 0.024 * radial;
   vec2 core = vec2(0.0, -0.035);
   float loosen = 1.14 - u_build * 0.12;
   float release = 1.0 + u_reveal * (0.42 + radial * 0.98);
@@ -170,15 +172,15 @@ void main() {
   float grain = mix(0.68, 1.0, hash(floor(t * 230.0) + path * 37.0));
   float breakup = 0.82 + 0.18 * sin(t * 44.0 + side * 9.0 + path);
   float alpha = (
-    body * 0.2
-    + outerEdge * 0.27
-    + innerEdge * 0.14
-    + fibers * 0.34
+    body * 0.16
+    + outerEdge * 0.22
+    + innerEdge * 0.12
+    + fibers * 0.26
   ) * taper * grain * breakup * u_alpha;
   alpha *= 1.0 - u_reveal * 0.58;
 
   vec3 ivory = vec3(1.0, 0.992, 0.955);
-  float whiteWeight = clamp(0.42 + outerEdge * 0.48 + fibers * 0.3, 0.0, 1.0);
+  float whiteWeight = clamp(0.12 + outerEdge * 0.36 + fibers * 0.18, 0.0, 1.0);
   vec3 color = mix(u_color, ivory, whiteWeight);
   color *= 0.94 + outerEdge * 0.64 + fibers * 0.62;
   out_color = vec4(color, alpha);
@@ -250,7 +252,7 @@ void main() {
   if (shape < 0.025) discard;
 
   vec3 ivory = vec3(1.0, 0.99, 0.94);
-  vec3 color = mix(u_color, ivory, 0.24 + selector * 0.64);
+  vec3 color = mix(u_color, ivory, 0.08 + selector * 0.46);
   float alpha = shape * v_alpha * mix(0.42, 1.0, selector);
   out_color = vec4(color, alpha);
 }`;
@@ -710,10 +712,14 @@ function fallbackCurve(
 ): { x: number; y: number } {
   const z = t * 2 - 1;
   const radial = Math.pow(Math.abs(z), 0.68);
-  const phase = -1.28 + path * 0.512;
-  const direction = path % 2 === 0 ? 1 : -1;
+  const phase = -1.3 + path * 0.34;
+  const pathBias = (path - 2.5) / 2.5;
   const angle =
-    direction * z * 2.68 + phase + build * 0.5 + time * (0.045 + path * 0.003);
+    z * 2.72 +
+    phase +
+    Math.sin(z * Math.PI) * 0.2 +
+    build * 0.5 +
+    time * (0.045 + path * 0.003);
   const lobe = 0.22 + radial * (0.31 + 0.022 * (path % 3));
   const release = (1.14 - build * 0.12) * (1 + reveal * (0.42 + radial * 0.98));
   return {
@@ -721,12 +727,15 @@ function fallbackCurve(
       width *
       (0.5 +
         (Math.sin(angle) * lobe * radial +
-          Math.sin(z * 6.2 + phase * 1.7) * 0.045 * radial) *
+          Math.sin(z * 6.2 + phase * 1.7) * 0.045 * radial +
+          pathBias * 0.028 * radial) *
           release),
     y:
       height *
       (0.515 -
-        (z * 0.26 + Math.cos(angle) * (0.0325 + radial * 0.075) * radial) *
+        (z * 0.26 +
+          Math.cos(angle) * (0.0325 + radial * 0.075) * radial +
+          pathBias * 0.012 * radial) *
           release),
   };
 }
