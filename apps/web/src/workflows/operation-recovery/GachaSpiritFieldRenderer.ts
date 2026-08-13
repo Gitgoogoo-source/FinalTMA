@@ -92,12 +92,12 @@ vec2 flowCurve(float t, float path) {
   float radial = pow(abs(z), 0.68);
   float phase = -1.7 + path * 0.58;
   float pathBias = (path - 2.5) / 2.5;
-  float angle = z * 2.72 + phase + sin(z * PI) * 0.2 + u_build * 0.5
+  float angle = z * 3.35 + phase + sin(z * PI) * 0.2 + u_build * 0.5
     + u_time * (0.045 + path * 0.003);
-  float lobe = 0.22 + radial * (0.31 + 0.022 * mod(path, 3.0));
+  float lobe = 0.2 + radial * (0.36 + 0.024 * mod(path, 3.0));
   vec2 position = vec2(
     sin(angle) * lobe * radial,
-    -0.035 + z * 0.52 + cos(angle) * (0.065 + radial * 0.15) * radial
+    -0.035 + z * 0.32 + cos(angle) * (0.075 + radial * 0.27) * radial
   );
   position.x += sin(z * 6.2 + phase * 1.7) * 0.045 * radial;
   position.x += pathBias * 0.028 * radial;
@@ -715,12 +715,12 @@ function fallbackCurve(
   const phase = -1.7 + path * 0.58;
   const pathBias = (path - 2.5) / 2.5;
   const angle =
-    z * 2.72 +
+    z * 3.35 +
     phase +
     Math.sin(z * Math.PI) * 0.2 +
     build * 0.5 +
     time * (0.045 + path * 0.003);
-  const lobe = 0.22 + radial * (0.31 + 0.022 * (path % 3));
+  const lobe = 0.2 + radial * (0.36 + 0.024 * (path % 3));
   const release = (1.14 - build * 0.12) * (1 + reveal * (0.42 + radial * 0.98));
   return {
     x:
@@ -733,8 +733,8 @@ function fallbackCurve(
     y:
       height *
       (0.515 -
-        (z * 0.26 +
-          Math.cos(angle) * (0.0325 + radial * 0.075) * radial +
+        (z * 0.16 +
+          Math.cos(angle) * (0.0375 + radial * 0.135) * radial +
           pathBias * 0.012 * radial) *
           release),
   };
