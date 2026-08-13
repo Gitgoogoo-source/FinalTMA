@@ -1,9 +1,9 @@
 import { useEffect, useRef, type ReactNode } from "react";
 
 import {
-  createGachaSpiritField,
-  type SpiritFieldColor,
-} from "./GachaSpiritFieldRenderer.ts";
+  createGachaAstralField,
+  type AstralFieldColor,
+} from "./GachaAstralFieldRenderer.ts";
 
 export type GachaRevealRarity =
   | "common"
@@ -12,17 +12,17 @@ export type GachaRevealRarity =
   | "legendary"
   | "mythic";
 
-const rarityColors: Record<GachaRevealRarity, SpiritFieldColor> = {
+const rarityColors: Record<GachaRevealRarity, AstralFieldColor> = {
   common: [1, 0.992, 0.98],
   rare: [0.11, 0.89, 0.02],
   epic: [0.63, 0.4, 1],
   legendary: [1, 0.29, 0.19],
-  mythic: [1, 0.61, 0],
+  mythic: [1, 0.64, 0.18],
 };
 
-const neutralGold: SpiritFieldColor = [1, 0.72, 0.29];
+const neutralIce: AstralFieldColor = [0.325, 0.847, 1];
 
-export function GachaRitualCanvas({
+export function GachaAstralCanvas({
   revealing,
   rarity,
 }: {
@@ -30,7 +30,7 @@ export function GachaRitualCanvas({
   rarity: GachaRevealRarity | null;
 }): ReactNode {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const timelineRef = useRef<RitualTimeline | null>(null);
+  const timelineRef = useRef<AstralTimeline | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -40,7 +40,7 @@ export function GachaRitualCanvas({
       "(prefers-reduced-motion: reduce)",
     ).matches;
     const lowPower = (navigator.hardwareConcurrency || 8) <= 4;
-    const renderer = createGachaSpiritField(canvas, {
+    const renderer = createGachaAstralField(canvas, {
       lowPower,
       reducedMotion,
     });
@@ -65,7 +65,7 @@ export function GachaRitualCanvas({
         color:
           revealingNow && revealRarity
             ? rarityColors[revealRarity]
-            : neutralGold,
+            : neutralIce,
         elapsedMs: revealingNow ? 3_300 + revealElapsed : buildElapsed,
         revealProgress,
       });
@@ -86,7 +86,7 @@ export function GachaRitualCanvas({
       renderer.resize();
       if (animationFrame === null) draw(performance.now());
     };
-    const timeline: RitualTimeline = {
+    const timeline: AstralTimeline = {
       update(nextRevealing, nextRarity) {
         revealRarity = nextRarity;
         if (reducedMotion) return;
@@ -119,10 +119,10 @@ export function GachaRitualCanvas({
     timelineRef.current?.update(revealing, rarity);
   }, [rarity, revealing]);
 
-  return <canvas ref={canvasRef} className="gacha-spirit-field-canvas" />;
+  return <canvas ref={canvasRef} className="gacha-astral-field-canvas" />;
 }
 
-type RitualTimeline = {
+type AstralTimeline = {
   update(revealing: boolean, rarity: GachaRevealRarity | null): void;
 };
 

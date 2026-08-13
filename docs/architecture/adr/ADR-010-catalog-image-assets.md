@@ -16,7 +16,7 @@
 
 私有母版永久保留。旧公开对象从其最后引用批次退役起至少保留 90 天；仅在不被当前批次引用、所有引用批次均到期、没有有效回滚锁且对象不处于其他清理租约时，`/api/jobs/cleanup-catalog-assets` 才可领取最多 500 个对象并通过 Storage API 删除。Cron 使用 `CRON_SECRET`，数据库领取状态、过期租约和完成记录保证重复与并发触发幂等。删除失败回到可重试状态；禁止通过 SQL 删除 `storage.objects`。Supabase Storage 不提供对象版本或生命周期规则，因此保留、锁定和删除状态由应用数据库负责。
 
-浏览器只允许直接 GET `pet-runtime` 的完整公开 URL，不加载 Supabase SDK，不持有 Supabase key，不连接 Supabase Postgres、RPC、Auth 或其他 Data API。Vercel 使用 `/(.*)` Header 匹配在根路径和全部前端深链统一下发 CSP：`script-src` 只允许同源脚本与 `https://telegram.org` Mini App SDK，`img-src` 只额外允许 `https://*.supabase.co`，`connect-src` 只额外允许 Ably。宠物图片首次失败时维持固定尺寸，并显示 Vercel 内置 `/assets/pets/pet-silhouette.svg`；后台在 1 秒和 3 秒各重试一次，之后保持剪影。开盒成功结果是唯一展示例外：单抽详情图或十连全部缩略图必须完成 `HTMLImageElement.decode()` 后才整体显现，任一图片最终失败时不显露空框或剪影，改由 ADR-021 的静态月夜失败舞台提供只重试图片的入口。界面不显示服务器、Supabase、请求或资源故障文案。
+浏览器只允许直接 GET `pet-runtime` 的完整公开 URL，不加载 Supabase SDK，不持有 Supabase key，不连接 Supabase Postgres、RPC、Auth 或其他 Data API。Vercel 使用 `/(.*)` Header 匹配在根路径和全部前端深链统一下发 CSP：`script-src` 只允许同源脚本与 `https://telegram.org` Mini App SDK，`img-src` 只额外允许 `https://*.supabase.co`，`connect-src` 只额外允许 Ably。宠物图片首次失败时维持固定尺寸，并显示 Vercel 内置 `/assets/pets/pet-silhouette.svg`；后台在 1 秒和 3 秒各重试一次，之后保持剪影。开盒成功结果是唯一展示例外：单抽详情图或十连全部缩略图必须完成 `HTMLImageElement.decode()` 后才整体显现，任一图片最终失败时不显露空框或剪影，改由 ADR-021 的静止灵契星域失败舞台提供只重试图片的入口。界面不显示服务器、Supabase、请求或资源故障文案。
 
 ## 完整性门禁
 

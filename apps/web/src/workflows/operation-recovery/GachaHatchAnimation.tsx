@@ -8,16 +8,16 @@ import {
   impactHaptic,
   selectionHaptic,
 } from "../../platform/telegram/index.ts";
-import { gachaRitualStageBackground } from "../../shared/assets/gachaRitualStage.ts";
 import { Button } from "../../shared/ui/Button.tsx";
 import type { GachaHatchTier } from "./context.ts";
+import { GachaAstralBackdrop } from "./GachaAstralBackdrop.tsx";
 import {
-  GachaRitualCanvas,
+  GachaAstralCanvas,
   type GachaRevealRarity,
-} from "./GachaRitualCanvas.tsx";
+} from "./GachaAstralCanvas.tsx";
 
 export type { GachaHatchTier } from "./context.ts";
-export type { GachaRevealRarity } from "./GachaRitualCanvas.tsx";
+export type { GachaRevealRarity } from "./GachaAstralCanvas.tsx";
 
 export function GachaHatchAnimation({
   tier,
@@ -60,29 +60,24 @@ export function GachaHatchAnimation({
 
   return (
     <section
-      className={`gacha-moon-ritual tier-${tier}${revealing ? " is-revealing" : ""}${rarityClass}`}
-      aria-label="月下灵契仪式正在进行，抽取结果将在仪式结束后展示"
+      className={`gacha-astral-ritual tier-${tier}${revealing ? " is-revealing" : ""}${rarityClass}`}
+      aria-label="灵契星轨正在跃迁，抽取结果将在跃迁结束后展示"
     >
-      <img
-        className="gacha-moon-ritual-background"
-        src={gachaRitualStageBackground}
-        alt=""
-        aria-hidden="true"
-      />
+      <GachaAstralBackdrop />
 
       <div className="gacha-ritual-code-stage" aria-hidden="true">
-        <GachaRitualCanvas revealing={revealing} rarity={revealRarity} />
+        <GachaAstralCanvas revealing={revealing} rarity={revealRarity} />
         <span className="gacha-ritual-flash" />
         <span className="gacha-ritual-vignette" />
       </div>
 
-      <header className="gacha-moon-ritual-heading" aria-hidden="true">
-        <small>月下灵契</small>
-        <h2>灵光正在回应</h2>
+      <header className="gacha-astral-ritual-heading" aria-hidden="true">
+        <small>灵契跃迁</small>
+        <h2>穿越星海</h2>
       </header>
 
-      <p className="gacha-moon-ritual-copy" aria-hidden="true">
-        静候灵契显现
+      <p className="gacha-astral-ritual-copy" aria-hidden="true">
+        前往未知回响
       </p>
     </section>
   );
@@ -103,22 +98,17 @@ export function GachaImageUnavailable({
 }): ReactNode {
   return (
     <section
-      className="gacha-moon-ritual gacha-moon-image-unavailable"
+      className="gacha-astral-ritual gacha-astral-image-unavailable"
       aria-labelledby="gacha-image-unavailable-title"
     >
-      <img
-        className="gacha-moon-ritual-background gacha-moon-image-unavailable-background"
-        src={gachaRitualStageBackground}
-        alt=""
-        aria-hidden="true"
-      />
+      <GachaAstralBackdrop calm />
 
-      <header className="gacha-moon-ritual-heading">
-        <small>月下灵契</small>
+      <header className="gacha-astral-ritual-heading">
+        <small>灵契跃迁</small>
         <h2 id="gacha-image-unavailable-title">灵契尚未显现</h2>
       </header>
 
-      <div className="gacha-moon-image-unavailable-action">
+      <div className="gacha-astral-image-unavailable-action">
         <Button disabled={busy} onClick={onRetry}>
           {busy ? "显现中" : "再试一次"}
         </Button>

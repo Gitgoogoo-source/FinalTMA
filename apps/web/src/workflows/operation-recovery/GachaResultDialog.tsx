@@ -11,12 +11,12 @@ import {
 import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 
 import { selectionHaptic } from "../../platform/telegram/index.ts";
-import { gachaRitualStageBackground } from "../../shared/assets/gachaRitualStage.ts";
 import { Button } from "../../shared/ui/Button.tsx";
 import {
   CatalogImage,
   type CatalogImageStatus,
 } from "../../shared/ui/CatalogImage.tsx";
+import { GachaAstralBackdrop } from "./GachaAstralBackdrop.tsx";
 
 type GachaResult = RouteOutput<"gacha.open">;
 type ResultItem = GachaResult["results"][number];
@@ -123,18 +123,13 @@ export function GachaResultDialog({
 
   return (
     <div
-      className={`modal gacha-moon-result ${single ? "is-single" : "is-ten"}${visible ? "" : " is-preparing"}`}
+      className={`modal gacha-astral-result ${single ? "is-single" : "is-ten"}${visible ? "" : " is-preparing"}`}
       aria-hidden={!visible}
       inert={!visible}
     >
-      <img
-        className="gacha-moon-result-background"
-        src={gachaRitualStageBackground}
-        alt=""
-        aria-hidden="true"
-      />
-      <header className="gacha-moon-heading">
-        <small>{single ? "灵契已成" : "十连灵契"}</small>
+      <GachaAstralBackdrop calm />
+      <header className="gacha-astral-heading">
+        <small>{single ? "灵契抵达" : "十连抵达"}</small>
         <h2 id="gacha-result-title">召唤结果</h2>
       </header>
 
@@ -154,7 +149,7 @@ export function GachaResultDialog({
       )}
 
       {error ? <p className="operation-ack-error">{error}</p> : null}
-      <div className="gacha-moon-actions">
+      <div className="gacha-astral-actions">
         <Button disabled={busy} onClick={onRepeat}>
           {busy ? "请稍候" : "再开一次"}
         </Button>
@@ -181,9 +176,11 @@ function SingleResult({
   onImageStatusChange(imageKey: string, status: CatalogImageStatus): void;
 }): ReactNode {
   return (
-    <article className={`gacha-moon-single rarity-${item.rarity}`}>
-      <strong className="gacha-moon-rarity">{rarityLabels[item.rarity]}</strong>
-      <div className="gacha-moon-art">
+    <article className={`gacha-astral-single rarity-${item.rarity}`}>
+      <strong className="gacha-astral-rarity">
+        {rarityLabels[item.rarity]}
+      </strong>
+      <div className="gacha-astral-art">
         <CatalogImage
           key={`${imageKey}:${retryEpoch}`}
           url={item.image_detail_url}
@@ -193,7 +190,7 @@ function SingleResult({
           fetchPriority="high"
           onStatusChange={(status) => onImageStatusChange(imageKey, status)}
         />
-        <span className="gacha-moon-new">NEW</span>
+        <span className="gacha-astral-new">NEW</span>
       </div>
     </article>
   );
@@ -327,8 +324,8 @@ function TenDrawResults({
   };
 
   return (
-    <section className="gacha-moon-ten" aria-label="十连召唤结果">
-      <ol ref={layerListRef} className="gacha-moon-layer-list">
+    <section className="gacha-astral-ten" aria-label="十连召唤结果">
+      <ol ref={layerListRef} className="gacha-astral-layer-list">
         {carouselResults.map((item, index) => (
           <li
             key={`${item.order}-${item.template_id}`}
@@ -360,11 +357,11 @@ function TenDrawResults({
             aria-posinset={index + 1}
             aria-setsize={carouselResults.length}
           >
-            <strong className="gacha-moon-rarity">
+            <strong className="gacha-astral-rarity">
               {rarityLabels[item.rarity]}
             </strong>
-            <span className="gacha-moon-new">NEW</span>
-            <div className="gacha-moon-art">
+            <span className="gacha-astral-new">NEW</span>
+            <div className="gacha-astral-art">
               <CatalogImage
                 key={`${item.order}-${item.template_id}:${retryEpoch}`}
                 url={item.image_thumbnail_url}
@@ -385,7 +382,7 @@ function TenDrawResults({
       </ol>
       <div
         ref={carouselRef}
-        className="gacha-moon-carousel"
+        className="gacha-astral-carousel"
         role="group"
         aria-label="十连召唤结果，左右滑动查看"
         tabIndex={0}
@@ -395,7 +392,7 @@ function TenDrawResults({
         {carouselResults.map((item) => (
           <span
             key={`${item.order}-${item.template_id}`}
-            className="gacha-moon-snap-point"
+            className="gacha-astral-snap-point"
             aria-hidden="true"
           />
         ))}

@@ -1557,7 +1557,7 @@ export function OperationRegistryRuntimeProvider({
           }`}
           role="dialog"
           aria-modal="true"
-          aria-label={showGachaAnimation ? "月下灵契仪式" : undefined}
+          aria-label={showGachaAnimation ? "灵契星轨跃迁" : undefined}
           aria-labelledby={
             showGachaAnimation
               ? undefined

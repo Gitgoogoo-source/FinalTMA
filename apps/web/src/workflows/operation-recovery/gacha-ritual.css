@@ -2,7 +2,7 @@
   place-items: stretch center;
   padding: 0;
   overflow: hidden;
-  background: #36434b;
+  background: #050b16;
   backdrop-filter: none;
 }
 
@@ -17,54 +17,212 @@
   display: none;
 }
 
-.gacha-moon-ritual,
-.gacha-moon-result {
-  --gacha-reveal-color: #fffdfa;
-  --gacha-reveal-rgb: 255, 253, 250;
+.gacha-astral-ritual,
+.gacha-astral-result {
+  --gacha-reveal-color: #f9fbff;
+  --gacha-reveal-rgb: 249, 251, 255;
   position: relative;
   isolation: isolate;
   width: min(100%, 430px);
   height: var(--tg-viewport-stable-height, 100dvh);
   min-height: 100%;
   overflow: hidden;
-  color: #fffdfa;
-  background: #36434b;
+  color: #f9fbff;
+  background: #07111f;
 }
 
-.gacha-moon-ritual-background,
-.gacha-moon-result-background {
-  position: absolute;
-  z-index: -3;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  object-fit: cover;
-  object-position: center;
-}
-
-.gacha-moon-ritual.rarity-rare {
+.gacha-astral-ritual.rarity-rare {
   --gacha-reveal-color: #1ce204;
   --gacha-reveal-rgb: 28, 226, 4;
 }
 
-.gacha-moon-ritual.rarity-epic {
+.gacha-astral-ritual.rarity-epic {
   --gacha-reveal-color: #a166ff;
   --gacha-reveal-rgb: 161, 102, 255;
 }
 
-.gacha-moon-ritual.rarity-legendary {
+.gacha-astral-ritual.rarity-legendary {
   --gacha-reveal-color: #ff4a30;
   --gacha-reveal-rgb: 255, 74, 48;
 }
 
-.gacha-moon-ritual.rarity-mythic {
-  --gacha-reveal-color: #ff9c00;
-  --gacha-reveal-rgb: 255, 156, 0;
+.gacha-astral-ritual.rarity-mythic {
+  --gacha-reveal-color: #ffa32e;
+  --gacha-reveal-rgb: 255, 163, 46;
+}
+
+.gacha-astral-backdrop {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      circle at 50% 44%,
+      rgba(46, 151, 207, 0.2),
+      transparent 25%
+    ),
+    radial-gradient(
+      ellipse at 12% 60%,
+      rgba(96, 69, 180, 0.2),
+      transparent 45%
+    ),
+    radial-gradient(
+      ellipse at 88% 28%,
+      rgba(25, 111, 171, 0.18),
+      transparent 42%
+    ),
+    linear-gradient(180deg, #030914 0%, #071425 48%, #07111f 72%, #030711 100%);
+}
+
+.gacha-astral-nebula,
+.gacha-astral-stars,
+.gacha-astral-portal,
+.gacha-astral-horizon {
+  position: absolute;
+  pointer-events: none;
+}
+
+.gacha-astral-nebula {
+  width: 96%;
+  height: 54%;
+  border-radius: 50%;
+  filter: blur(28px);
+  mix-blend-mode: screen;
+  opacity: 0.34;
+  will-change: transform, opacity;
+}
+
+.gacha-astral-nebula-left {
+  top: 13%;
+  left: -52%;
+  rotate: -24deg;
+  background: radial-gradient(
+    ellipse,
+    rgba(110, 81, 208, 0.5),
+    transparent 67%
+  );
+  animation: gacha-astral-nebula-left 7.2s ease-in-out infinite alternate;
+}
+
+.gacha-astral-nebula-right {
+  top: 32%;
+  right: -58%;
+  rotate: 22deg;
+  background: radial-gradient(
+    ellipse,
+    rgba(50, 175, 229, 0.46),
+    transparent 68%
+  );
+  animation: gacha-astral-nebula-right 8.4s ease-in-out infinite alternate;
+}
+
+.gacha-astral-stars {
+  inset: -8%;
+  opacity: 0.72;
+  background-repeat: repeat;
+  mix-blend-mode: screen;
+  animation: gacha-astral-star-breathe 2.8s ease-in-out infinite alternate;
+}
+
+.gacha-astral-stars-far {
+  background-image:
+    radial-gradient(
+      circle,
+      rgba(249, 251, 255, 0.72) 0 0.6px,
+      transparent 0.9px
+    ),
+    radial-gradient(circle, rgba(98, 221, 255, 0.54) 0 0.7px, transparent 1px),
+    radial-gradient(
+      circle,
+      rgba(196, 167, 255, 0.5) 0 0.55px,
+      transparent 0.9px
+    );
+  background-position:
+    7px 13px,
+    31px 47px,
+    73px 19px;
+  background-size:
+    47px 61px,
+    79px 93px,
+    113px 127px;
+}
+
+.gacha-astral-stars-near {
+  inset: -15%;
+  opacity: 0.42;
+  background-image:
+    radial-gradient(circle, rgba(249, 251, 255, 0.9) 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(83, 216, 255, 0.74) 0 0.8px, transparent 1.3px);
+  background-position:
+    19px 23px,
+    61px 89px;
+  background-size:
+    139px 157px,
+    181px 211px;
+  animation-delay: -1.4s;
+}
+
+.gacha-astral-portal {
+  top: 45%;
+  left: 50%;
+  width: min(25vw, 104px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(176, 238, 255, 0.7);
+  border-radius: 50%;
+  translate: -50% -50%;
+  background: radial-gradient(
+    circle,
+    rgba(249, 251, 255, 0.82) 0 2%,
+    rgba(83, 216, 255, 0.34) 8%,
+    rgba(83, 216, 255, 0.08) 28%,
+    transparent 65%
+  );
+  box-shadow:
+    0 0 12px rgba(83, 216, 255, 0.36),
+    0 0 42px rgba(83, 216, 255, 0.18),
+    inset 0 0 18px rgba(196, 167, 255, 0.23);
+  opacity: 0.72;
+  animation: gacha-astral-portal-breathe 2.4s ease-in-out infinite alternate;
+}
+
+.gacha-astral-portal::before,
+.gacha-astral-portal::after {
+  content: "";
+  position: absolute;
+  inset: -18%;
+  border: 1px solid rgba(98, 221, 255, 0.2);
+  border-radius: inherit;
+}
+
+.gacha-astral-portal::after {
+  inset: -42%;
+  border-color: rgba(196, 167, 255, 0.12);
+}
+
+.gacha-astral-horizon {
+  right: -20%;
+  bottom: -12%;
+  left: -20%;
+  height: 38%;
+  opacity: 0.48;
+  background: radial-gradient(
+    ellipse at 50% 100%,
+    rgba(23, 112, 164, 0.35),
+    rgba(10, 43, 72, 0.14) 38%,
+    transparent 72%
+  );
+}
+
+.gacha-astral-backdrop.is-calm .gacha-astral-nebula,
+.gacha-astral-backdrop.is-calm .gacha-astral-stars,
+.gacha-astral-backdrop.is-calm .gacha-astral-portal {
+  animation-play-state: paused;
 }
 
 .gacha-ritual-code-stage,
-.gacha-spirit-field-canvas,
+.gacha-astral-field-canvas,
 .gacha-ritual-flash,
 .gacha-ritual-vignette {
   position: absolute;
@@ -79,7 +237,7 @@
   overflow: hidden;
 }
 
-.gacha-spirit-field-canvas {
+.gacha-astral-field-canvas {
   z-index: 2;
 }
 
@@ -87,16 +245,16 @@
   z-index: 3;
   background:
     radial-gradient(
-      circle at 50% 54%,
+      circle at 50% 45%,
       transparent 0 18%,
-      rgba(5, 15, 24, 0.02) 38%,
-      rgba(5, 15, 24, 0.16) 100%
+      rgba(2, 8, 18, 0.03) 44%,
+      rgba(2, 7, 16, 0.52) 100%
     ),
     linear-gradient(
       to bottom,
-      rgba(5, 15, 24, 0.03),
-      transparent 24% 68%,
-      rgba(5, 15, 24, 0.12)
+      rgba(2, 7, 16, 0.42),
+      transparent 24% 70%,
+      rgba(2, 7, 16, 0.42)
     );
 }
 
@@ -104,35 +262,35 @@
   z-index: 4;
   opacity: 0;
   background: radial-gradient(
-    circle at 50% 54%,
+    circle at 50% 45%,
     #fff 0 4%,
-    rgba(var(--gacha-reveal-rgb), 0.96) 15%,
-    rgba(var(--gacha-reveal-rgb), 0.35) 38%,
-    transparent 68%
+    rgba(var(--gacha-reveal-rgb), 0.98) 13%,
+    rgba(var(--gacha-reveal-rgb), 0.38) 34%,
+    transparent 66%
   );
   mix-blend-mode: screen;
 }
 
-.gacha-moon-ritual.is-revealing .gacha-ritual-flash {
+.gacha-astral-ritual.is-revealing .gacha-ritual-flash {
   animation: gacha-ritual-flash-reveal 700ms ease-out both;
 }
 
-.gacha-moon-ritual.is-revealing .gacha-ritual-vignette {
+.gacha-astral-ritual.is-revealing .gacha-ritual-vignette {
   animation: gacha-ritual-vignette-reveal 700ms ease-out both;
 }
 
-.gacha-moon-ritual.is-revealing .gacha-ritual-code-stage {
+.gacha-astral-ritual.is-revealing .gacha-ritual-code-stage {
   animation: gacha-ritual-impact-shake 700ms ease-out both;
 }
 
-.gacha-moon-ritual.is-revealing
-  :is(.gacha-moon-ritual-heading, .gacha-moon-ritual-copy) {
+.gacha-astral-ritual.is-revealing
+  :is(.gacha-astral-ritual-heading, .gacha-astral-ritual-copy) {
   animation: gacha-ritual-copy-exit 360ms ease-in both;
 }
 
-.gacha-moon-ritual-heading {
+.gacha-astral-ritual-heading {
   position: absolute;
-  z-index: 3;
+  z-index: 5;
   top: calc(var(--safe-top) + 32px);
   right: 24px;
   left: 24px;
@@ -140,49 +298,49 @@
   justify-items: center;
   gap: 8px;
   text-align: center;
-  text-shadow: 0 4px 20px rgba(54, 67, 75, 0.88);
+  text-shadow: 0 4px 24px rgba(0, 8, 22, 0.95);
 }
 
-.gacha-moon-ritual-heading small,
-.gacha-moon-heading small {
-  color: #ff9c00;
+.gacha-astral-ritual-heading small,
+.gacha-astral-heading small {
+  color: #62ddff;
   font-size: 12px;
   font-weight: 850;
-  letter-spacing: 0.28em;
+  letter-spacing: 0.3em;
 }
 
-.gacha-moon-ritual-heading h2,
-.gacha-moon-heading h2 {
+.gacha-astral-ritual-heading h2,
+.gacha-astral-heading h2 {
   margin: 0;
-  color: #fffdfa;
+  color: #f9fbff;
   font-family: "Songti SC", STSong, "Noto Serif CJK SC", serif;
   font-weight: 900;
   letter-spacing: 0.1em;
 }
 
-.gacha-moon-ritual-heading h2 {
+.gacha-astral-ritual-heading h2 {
   font-size: clamp(29px, 8.2vw, 36px);
 }
 
-.gacha-moon-ritual-copy {
+.gacha-astral-ritual-copy {
   position: absolute;
-  z-index: 3;
+  z-index: 5;
   right: 24px;
   bottom: calc(var(--safe-bottom) + 48px);
   left: 24px;
   margin: 0;
-  color: #fffdfa;
+  color: rgba(249, 251, 255, 0.88);
   font-family: "Songti SC", STSong, "Noto Serif CJK SC", serif;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 750;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.22em;
   text-align: center;
-  text-shadow: 0 4px 18px rgba(54, 67, 75, 0.9);
-  animation: gacha-moon-copy-build 3.3s ease-out both;
+  text-shadow: 0 4px 18px rgba(0, 8, 22, 0.95);
+  animation: gacha-astral-copy-build 3.3s ease-out both;
 }
 
-.gacha-moon-result {
-  --gacha-moon-focus-item-size: min(54vw, 230px);
+.gacha-astral-result {
+  --gacha-astral-focus-item-size: min(54vw, 230px);
   max-width: 430px;
   max-height: none;
   display: grid;
@@ -195,21 +353,16 @@
   overscroll-behavior: none;
 }
 
-.gacha-moon-result.is-preparing {
+.gacha-astral-result.is-preparing {
   position: absolute;
   inset: 0;
   visibility: hidden;
   pointer-events: none;
 }
 
-.gacha-moon-image-unavailable-background {
-  opacity: 1;
-  animation: none;
-}
-
-.gacha-moon-image-unavailable-action {
+.gacha-astral-image-unavailable-action {
   position: absolute;
-  z-index: 4;
+  z-index: 5;
   right: 24px;
   bottom: calc(var(--safe-bottom) + 48px);
   left: 24px;
@@ -217,15 +370,16 @@
   justify-content: center;
 }
 
-.gacha-moon-image-unavailable-action .button {
+.gacha-astral-image-unavailable-action .button {
   width: min(100%, 280px);
   min-height: 54px;
-  border-color: #ff9c00;
-  color: #fffdfa;
-  background: #ff9c00;
+  border-color: rgba(98, 221, 255, 0.88);
+  color: #f9fbff;
+  background: linear-gradient(135deg, #167dac, #42cceb);
+  box-shadow: 0 12px 30px rgba(25, 157, 204, 0.32);
 }
 
-.gacha-moon-heading {
+.gacha-astral-heading {
   position: relative;
   z-index: 4;
   display: grid;
@@ -233,15 +387,15 @@
   gap: 4px;
   padding-inline: 24px;
   text-align: center;
-  text-shadow: 0 4px 22px rgba(54, 67, 75, 0.92);
+  text-shadow: 0 4px 24px rgba(0, 8, 22, 0.95);
 }
 
-.gacha-moon-heading h2 {
+.gacha-astral-heading h2 {
   font-size: clamp(34px, 10.8vw, 46px);
   line-height: 1.06;
 }
 
-.gacha-moon-single {
+.gacha-astral-single {
   position: relative;
   z-index: 2;
   min-height: 0;
@@ -253,72 +407,87 @@
   padding: 18px 22px 4px;
 }
 
-.gacha-moon-art {
+.gacha-astral-art {
   position: relative;
   min-width: 0;
 }
 
-.gacha-moon-single .gacha-moon-art {
-  width: var(--gacha-moon-focus-item-size);
-  height: var(--gacha-moon-focus-item-size);
+.gacha-astral-single .gacha-astral-art {
+  width: var(--gacha-astral-focus-item-size);
+  height: var(--gacha-astral-focus-item-size);
 }
 
-.gacha-moon-art .catalog-image,
-.gacha-moon-art .image-missing {
+.gacha-astral-art .catalog-image,
+.gacha-astral-art .image-missing {
   width: 100%;
   height: 100%;
   border: 0;
   border-radius: 0;
   background: transparent;
   object-fit: contain;
-  filter: drop-shadow(0 18px 13px rgba(54, 67, 75, 0.68))
-    drop-shadow(0 0 14px rgba(255, 253, 250, 0.28));
+  filter: drop-shadow(0 18px 16px rgba(0, 8, 22, 0.78))
+    drop-shadow(0 0 18px rgba(98, 221, 255, 0.25));
 }
 
-.gacha-moon-single .gacha-moon-art .gacha-moon-new {
+.gacha-astral-single .gacha-astral-art .gacha-astral-new {
   position: absolute;
   z-index: 4;
   top: 8%;
   right: 2%;
 }
 
-.gacha-moon-rarity {
+.gacha-astral-rarity {
   position: relative;
   z-index: 4;
-  color: #fffdfa;
+  color: var(--item-accent, #f9fbff);
   font-family: "Songti SC", STSong, "Noto Serif CJK SC", serif;
   font-size: 20px;
   font-weight: 900;
   letter-spacing: 0.22em;
   line-height: 1;
-  text-shadow: 0 3px 16px rgba(54, 67, 75, 0.92);
+  text-shadow: 0 3px 18px rgba(0, 8, 22, 0.96);
 }
 
-.gacha-moon-single .gacha-moon-rarity {
-  color: #ff9c00;
+.rarity-rare {
+  --item-accent: #79ec93;
+}
+
+.rarity-epic {
+  --item-accent: #c4a7ff;
+}
+
+.rarity-legendary {
+  --item-accent: #ff8875;
+}
+
+.rarity-mythic {
+  --item-accent: #ffc66a;
+}
+
+.gacha-astral-single .gacha-astral-rarity {
   font-size: clamp(22px, 6.4vw, 28px);
 }
 
-.gacha-moon-new {
+.gacha-astral-new {
   width: fit-content;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 23px;
   padding: 3px 8px;
-  border: 1px solid rgba(255, 253, 250, 0.82);
+  border: 1px solid rgba(249, 251, 255, 0.82);
   border-radius: 999px;
-  color: #fffdfa;
-  background: #ff9c00;
-  box-shadow: 0 5px 16px rgba(54, 67, 75, 0.36);
+  color: #06111f;
+  background: #62ddff;
+  box-shadow: 0 5px 18px rgba(53, 190, 231, 0.36);
   font-size: 10px;
   font-weight: 950;
   letter-spacing: 0.08em;
 }
 
-.gacha-moon-ten {
-  --gacha-moon-item-size: var(--gacha-moon-focus-item-size);
-  --gacha-moon-item-step: calc(var(--gacha-moon-item-size) * 0.22);
+.gacha-astral-ten {
+  --gacha-astral-item-size: var(--gacha-astral-focus-item-size);
+  --gacha-astral-item-step: calc(var(--gacha-astral-item-size) * 0.22);
   position: relative;
   z-index: 2;
   min-height: 0;
@@ -326,75 +495,16 @@
   padding: 4px 0;
 }
 
-.gacha-moon-carousel {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  overflow-x: auto;
-  overflow-y: hidden;
-  margin: 0;
-  padding: 0 calc((100% - var(--gacha-moon-item-step)) / 2);
-  list-style: none;
-  scroll-padding-inline: calc((100% - var(--gacha-moon-item-step)) / 2);
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-  touch-action: pan-x;
-  overscroll-behavior-x: contain;
-  -webkit-overflow-scrolling: touch;
-  isolation: isolate;
-}
-
-.gacha-moon-carousel::-webkit-scrollbar {
+.gacha-astral-carousel::-webkit-scrollbar {
   display: none;
 }
 
-.gacha-moon-carousel li {
-  --carousel-scale: 0.28;
-  --carousel-opacity: 0.16;
-  position: relative;
-  flex: 0 0 var(--gacha-moon-item-step);
-  height: min(100%, 448px);
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
-  justify-items: center;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 0;
-  opacity: var(--carousel-opacity);
-  scroll-snap-align: center;
-  scroll-snap-stop: always;
-  transform: scale(var(--carousel-scale));
-  transform-origin: center bottom;
-  transition:
-    transform 90ms linear,
-    opacity 90ms linear;
-  will-change: transform, opacity;
-  animation: gacha-moon-pet-rise 460ms ease-out both;
-}
-
-.gacha-moon-carousel:focus-visible {
-  outline: 2px solid #ff9c00;
+.gacha-astral-carousel:focus-visible {
+  outline: 2px solid #62ddff;
   outline-offset: -5px;
 }
 
-.gacha-moon-carousel .gacha-moon-art {
-  width: var(--gacha-moon-item-size);
-  height: 100%;
-  min-height: 0;
-}
-
-.gacha-moon-carousel li[aria-current="true"] .gacha-moon-rarity {
-  color: #ff9c00;
-  font-size: 22px;
-}
-
-.gacha-moon-carousel li[aria-current="true"] .catalog-image {
-  filter: drop-shadow(0 18px 13px rgba(54, 67, 75, 0.72))
-    drop-shadow(0 0 18px rgba(255, 156, 0, 0.52));
-}
-
-.gacha-moon-actions {
+.gacha-astral-actions {
   position: relative;
   z-index: 5;
   width: min(calc(100% - 40px), 390px);
@@ -404,41 +514,41 @@
   margin: 0 auto;
 }
 
-.gacha-moon-actions .button {
+.gacha-astral-actions .button {
   min-height: 50px;
-  border: 1px solid rgba(255, 156, 0, 0.78);
+  border: 1px solid rgba(98, 221, 255, 0.42);
   border-radius: 999px;
-  color: #36434b;
-  background: rgba(255, 253, 250, 0.94);
-  box-shadow: 0 9px 24px rgba(54, 67, 75, 0.4);
+  color: #f9fbff;
+  background: rgba(10, 29, 51, 0.82);
+  box-shadow: 0 10px 28px rgba(0, 7, 18, 0.44);
+  backdrop-filter: blur(12px);
   font-size: 14px;
   font-weight: 900;
 }
 
-.gacha-moon-actions .button:first-child {
+.gacha-astral-actions .button:first-child {
   grid-column: 1 / -1;
   min-height: 56px;
-  color: #fffdfa;
-  background: #ff9c00;
-  box-shadow: 0 10px 28px rgba(255, 156, 0, 0.32);
+  color: #f9fbff;
+  background: linear-gradient(135deg, #167dac, #42cceb);
+  box-shadow: 0 12px 30px rgba(25, 157, 204, 0.32);
 }
 
-.gacha-moon-actions .button.secondary {
-  color: #36434b;
-  background: rgba(255, 253, 250, 0.94);
-  backdrop-filter: none;
+.gacha-astral-actions .button.secondary {
+  color: #f9fbff;
+  background: rgba(9, 29, 52, 0.8);
 }
 
-.gacha-moon-actions .button:focus-visible {
-  outline: 3px solid #1ce204;
+.gacha-astral-actions .button:focus-visible {
+  outline: 3px solid #c4a7ff;
   outline-offset: 2px;
 }
 
-.gacha-moon-actions .button:disabled {
+.gacha-astral-actions .button:disabled {
   opacity: 0.66;
 }
 
-.gacha-moon-result .operation-ack-error {
+.gacha-astral-result .operation-ack-error {
   position: absolute;
   z-index: 7;
   right: 24px;
@@ -446,11 +556,38 @@
   left: 24px;
   margin: 0;
   padding: 8px 12px;
-  border: 1px solid rgba(255, 156, 0, 0.5);
+  border: 1px solid rgba(98, 221, 255, 0.46);
   border-radius: 14px;
-  color: #fffdfa !important;
-  background: rgba(54, 67, 75, 0.94);
+  color: #f9fbff !important;
+  background: rgba(7, 17, 31, 0.94);
   text-align: center;
+}
+
+@keyframes gacha-astral-nebula-left {
+  to {
+    opacity: 0.5;
+    transform: translate3d(12%, -4%, 0) scale(1.08);
+  }
+}
+
+@keyframes gacha-astral-nebula-right {
+  to {
+    opacity: 0.5;
+    transform: translate3d(-10%, 5%, 0) scale(1.06);
+  }
+}
+
+@keyframes gacha-astral-star-breathe {
+  to {
+    opacity: 0.94;
+  }
+}
+
+@keyframes gacha-astral-portal-breathe {
+  to {
+    opacity: 0.94;
+    transform: scale(1.08);
+  }
 }
 
 @keyframes gacha-ritual-vignette-reveal {
@@ -468,18 +605,18 @@
 @keyframes gacha-ritual-flash-reveal {
   0% {
     opacity: 0;
-    transform: scale(0.28);
+    transform: scale(0.24);
   }
-  18% {
+  17% {
     opacity: 1;
   }
-  46% {
-    opacity: 0.72;
-    transform: scale(1.04);
+  44% {
+    opacity: 0.78;
+    transform: scale(1.08);
   }
   100% {
     opacity: 0;
-    transform: scale(1.65);
+    transform: scale(1.72);
   }
 }
 
@@ -509,21 +646,22 @@
   }
 }
 
-@keyframes gacha-moon-copy-build {
+@keyframes gacha-astral-copy-build {
   0% {
-    opacity: 0.52;
+    opacity: 0.5;
   }
-  45% {
-    opacity: 0.9;
+  52% {
+    opacity: 0.96;
   }
   100% {
-    opacity: 0.72;
+    opacity: 0.76;
   }
 }
 
-@keyframes gacha-moon-pet-rise {
+@keyframes gacha-astral-pet-rise {
   from {
-    translate: 0 28px;
+    opacity: 0;
+    translate: 0 24px;
   }
   to {
     translate: 0 0;
@@ -531,43 +669,45 @@
 }
 
 @media (max-height: 700px) {
-  .gacha-moon-result {
-    --gacha-moon-focus-item-size: min(52vw, 212px);
+  .gacha-astral-result {
+    --gacha-astral-focus-item-size: min(52vw, 212px);
   }
 
-  .gacha-moon-ritual-heading {
+  .gacha-astral-ritual-heading {
     top: calc(var(--safe-top) + 18px);
   }
 
-  .gacha-moon-ritual-heading h2 {
+  .gacha-astral-ritual-heading h2 {
     font-size: 27px;
   }
 
-  .gacha-moon-heading h2 {
+  .gacha-astral-heading h2 {
     font-size: 32px;
   }
 
-  .gacha-moon-single {
+  .gacha-astral-single {
     padding-top: 8px;
   }
 
-  .gacha-moon-actions .button {
+  .gacha-astral-actions .button {
     min-height: 44px;
   }
 
-  .gacha-moon-actions .button:first-child {
+  .gacha-astral-actions .button:first-child {
     min-height: 49px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gacha-moon-ritual:not(.gacha-moon-image-unavailable) *,
-  .gacha-moon-carousel li {
+  .gacha-astral-ritual:not(.gacha-astral-image-unavailable) *,
+  .gacha-astral-result *,
+  .gacha-astral-backdrop * {
     animation: none !important;
     transition: none !important;
   }
 
-  .gacha-moon-ritual:not(.gacha-moon-image-unavailable) .gacha-ritual-vignette {
+  .gacha-astral-ritual:not(.gacha-astral-image-unavailable)
+    .gacha-ritual-vignette {
     opacity: 0;
   }
 }
