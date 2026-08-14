@@ -8,6 +8,7 @@ import {
   impactHaptic,
   selectionHaptic,
 } from "../../platform/telegram/index.ts";
+import { isLowPowerAnimationDevice } from "../../platform/runtime/devicePerformance.ts";
 import { Button } from "../../shared/ui/Button.tsx";
 import type { GachaHatchTier } from "./context.ts";
 import { GachaAstralBackdrop } from "./GachaAstralBackdrop.tsx";
@@ -33,9 +34,11 @@ export function GachaHatchAnimation({
   useEffect(() => {
     onMounted();
     const stopAudio = playGachaRitualBuildUp();
-    const timers = [500, 2_000, 3_500].map((delay) =>
-      window.setTimeout(selectionHaptic, delay),
-    );
+    const timers = isLowPowerAnimationDevice()
+      ? []
+      : [500, 2_000, 3_500].map((delay) =>
+          window.setTimeout(selectionHaptic, delay),
+        );
     return () => {
       stopAudio();
       timers.forEach((timer) => window.clearTimeout(timer));
@@ -45,14 +48,17 @@ export function GachaHatchAnimation({
   useEffect(() => {
     if (!revealing || !revealRarity) return;
     const stopAudio = playGachaRitualReveal(revealRarity);
-    impactHaptic(revealImpact(revealRarity));
-    const echo = window.setTimeout(
-      () => impactHaptic(revealRarity === "mythic" ? "heavy" : "medium"),
-      240,
-    );
+    const hapticsEnabled = !isLowPowerAnimationDevice();
+    if (hapticsEnabled) impactHaptic(revealImpact(revealRarity));
+    const echo = hapticsEnabled
+      ? window.setTimeout(
+          () => impactHaptic(revealRarity === "mythic" ? "heavy" : "medium"),
+          240,
+        )
+      : null;
     return () => {
       stopAudio();
-      window.clearTimeout(echo);
+      if (echo !== null) window.clearTimeout(echo);
     };
   }, [revealRarity, revealing]);
 

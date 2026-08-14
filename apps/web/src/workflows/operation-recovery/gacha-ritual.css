@@ -246,6 +246,7 @@
 
 .gacha-ritual-code-stage,
 .gacha-astral-field-host,
+.gacha-astral-field-surface,
 .gacha-astral-field-canvas,
 .gacha-ritual-reveal-meteor,
 .gacha-ritual-burst-rays,
@@ -266,6 +267,24 @@
 
 .gacha-astral-field-canvas {
   z-index: 2;
+}
+
+.gacha-astral-field-surface {
+  z-index: 2;
+}
+
+.gacha-astral-field-surface.is-parked {
+  position: fixed;
+  z-index: -1;
+  top: 0;
+  right: auto;
+  bottom: auto;
+  left: 50%;
+  width: min(100%, 430px);
+  height: var(--tg-viewport-stable-height, 100dvh);
+  opacity: 0;
+  translate: -50% 0;
+  contain: strict;
 }
 
 .gacha-ritual-reveal-meteor {

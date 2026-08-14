@@ -1,3 +1,5 @@
+import { isLowPowerAnimationDevice } from "../runtime/devicePerformance.ts";
+
 type GachaRitualRarity = "common" | "rare" | "epic" | "legendary" | "mythic";
 
 const WIND_DURATION_SECONDS = 4.02;
@@ -27,19 +29,12 @@ function getAudioContext(): AudioContext | null {
   return audioContext;
 }
 
-function isLowPowerDevice(): boolean {
-  return (
-    typeof navigator !== "undefined" &&
-    (navigator.hardwareConcurrency || 8) <= 4
-  );
-}
-
 /**
  * Must run from the opening click so iOS can unlock Web Audio. Failure is a
  * presentation-only degradation and never blocks the gacha operation.
  */
 export function prepareGachaRitualAudio(): void {
-  if (isLowPowerDevice()) return;
+  if (isLowPowerAnimationDevice()) return;
   prepareGachaRitualAudioAssets();
   if (!preparedWindBuffer) windNoisePreparationStopped = true;
   const context = getAudioContext();
@@ -60,7 +55,7 @@ export function prepareGachaRitualAudioAssets(): void {
   if (
     typeof window === "undefined" ||
     typeof AudioBuffer === "undefined" ||
-    isLowPowerDevice() ||
+    isLowPowerAnimationDevice() ||
     preparedWindBuffer ||
     windNoisePreparationStarted
   )
@@ -106,7 +101,7 @@ function schedule(callback: () => void): void {
 }
 
 export function playGachaRitualBuildUp(): () => void {
-  if (isLowPowerDevice()) return () => undefined;
+  if (isLowPowerAnimationDevice()) return () => undefined;
   const context = getAudioContext();
   if (!context || context.state !== "running") return () => undefined;
 
@@ -188,7 +183,7 @@ export function playGachaRitualBuildUp(): () => void {
 }
 
 export function playGachaRitualReveal(rarity: GachaRitualRarity): () => void {
-  if (isLowPowerDevice()) return () => undefined;
+  if (isLowPowerAnimationDevice()) return () => undefined;
   const context = getAudioContext();
   if (!context || context.state !== "running") return () => undefined;
 

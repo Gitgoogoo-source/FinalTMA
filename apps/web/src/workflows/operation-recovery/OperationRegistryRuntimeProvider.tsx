@@ -30,6 +30,7 @@ import {
 } from "../../platform/api/client.ts";
 import { prepareGachaRitualAudio } from "../../platform/audio/gachaRitualAudio.ts";
 import { useAppNavigate } from "../../platform/navigation/index.tsx";
+import { isLowPowerAnimationDevice } from "../../platform/runtime/devicePerformance.ts";
 import {
   fetchApiQuery,
   refreshRouteScopes,
@@ -849,7 +850,8 @@ export function OperationRegistryRuntimeProvider({
         if (
           !suppressTerminalPresentation &&
           routeId !== "inventory.evolve" &&
-          routeId !== "inventory.decompose"
+          routeId !== "inventory.decompose" &&
+          !(routeId === "gacha.open" && isLowPowerAnimationDevice())
         )
           haptic(pending ? "warning" : "success");
         if (!refreshBeforeSuccess) {
@@ -1106,7 +1108,8 @@ export function OperationRegistryRuntimeProvider({
             setActiveId((current) => current ?? operation.id);
           if (
             operation.routeId !== "inventory.evolve" &&
-            operation.routeId !== "inventory.decompose"
+            operation.routeId !== "inventory.decompose" &&
+            !(operation.routeId === "gacha.open" && isLowPowerAnimationDevice())
           )
             haptic("success");
           if (!refreshBeforeSuccess)
