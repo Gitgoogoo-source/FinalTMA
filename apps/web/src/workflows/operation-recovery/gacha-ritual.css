@@ -439,6 +439,9 @@
 
 .gacha-astral-result {
   --gacha-astral-focus-item-size: min(70vw, 270px);
+  position: absolute;
+  z-index: 0;
+  inset: 0;
   max-width: 430px;
   max-height: none;
   display: grid;
@@ -448,14 +451,12 @@
   border: 0;
   border-radius: 0;
   box-shadow: none;
+  margin-inline: auto;
   overscroll-behavior: none;
+  transform: translateZ(0);
 }
 
 .gacha-astral-result.is-preparing {
-  position: absolute;
-  z-index: 0;
-  inset: 0;
-  margin-inline: auto;
   pointer-events: none;
 }
 
@@ -799,7 +800,7 @@
 
 .gacha-astral-result.is-ten:not(.is-preparing) .gacha-astral-heading,
 .gacha-astral-result.is-ten:not(.is-preparing) .gacha-astral-actions {
-  animation: gacha-astral-ten-shell-settle 360ms ease-out both;
+  animation: none;
 }
 
 .gacha-astral-result .operation-ack-error {

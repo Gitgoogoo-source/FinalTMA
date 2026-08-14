@@ -50,13 +50,6 @@
   opacity: var(--carousel-opacity);
 }
 
-.gacha-astral-result:not(.is-preparing)
-  .gacha-astral-layer-list
-  > li.is-stage-visible {
-  animation: gacha-astral-ten-arrive 420ms calc(var(--result-order, 0) * 24ms)
-    cubic-bezier(0.12, 0.82, 0.2, 1) both;
-}
-
 .gacha-astral-layer-list .gacha-astral-art {
   width: var(--gacha-astral-stage-item-size);
   height: var(--gacha-astral-stage-item-size);
@@ -98,13 +91,6 @@
   font-size: 22px;
 }
 
-.gacha-astral-result:not(.is-preparing)
-  .gacha-astral-layer-list
-  > li[aria-current="true"]
-  .gacha-astral-identity {
-  animation: gacha-astral-ten-shell-settle 360ms ease-out both;
-}
-
 .gacha-astral-carousel {
   position: absolute;
   z-index: 12;
@@ -135,31 +121,6 @@
   height: 100%;
   scroll-snap-align: center;
   scroll-snap-stop: always;
-}
-
-@keyframes gacha-astral-ten-arrive {
-  0% {
-    opacity: var(--carousel-opacity);
-    transform: translate3d(-50%, 16px, 0) scale(var(--carousel-scale));
-  }
-  56% {
-    transform: translate3d(-50%, -5px, 0) scale(var(--carousel-scale));
-  }
-  100% {
-    opacity: var(--carousel-opacity);
-    transform: translate3d(-50%, 0, 0) scale(var(--carousel-scale));
-  }
-}
-
-@keyframes gacha-astral-ten-shell-settle {
-  from {
-    opacity: 1;
-    transform: translateY(8px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
 }
 
 @media (max-height: 700px) {
