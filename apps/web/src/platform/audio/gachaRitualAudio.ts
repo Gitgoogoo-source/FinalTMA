@@ -5,7 +5,6 @@ const WIND_MAX_SAMPLE_RATE = 48_000;
 const WIND_PREPARATION_CHUNK_SIZE = 4_096;
 
 let audioContext: AudioContext | null = null;
-let preparedWindNoise: Float32Array | null = null;
 let preparedWindBuffer: AudioBuffer | null = null;
 let windNoisePreparationStarted = false;
 
@@ -36,12 +35,8 @@ export function prepareGachaRitualAudio(): void {
   const context = getAudioContext();
   if (!context) return;
   if (context.state === "suspended")
-    void context
-      .resume()
-      .then(() => prepareWindBuffer(context))
-      .catch(() => undefined);
+    void context.resume().catch(() => undefined);
   if (context.state !== "running") return;
-  prepareWindBuffer(context);
 
   const oscillator = context.createOscillator();
   const gain = context.createGain();
@@ -54,14 +49,18 @@ export function prepareGachaRitualAudio(): void {
 export function prepareGachaRitualAudioAssets(): void {
   if (
     typeof window === "undefined" ||
-    preparedWindNoise ||
+    typeof AudioBuffer === "undefined" ||
+    preparedWindBuffer ||
     windNoisePreparationStarted
   )
     return;
   windNoisePreparationStarted = true;
-  const samples = new Float32Array(
-    Math.round(WIND_MAX_SAMPLE_RATE * WIND_DURATION_SECONDS),
-  );
+  const buffer = new AudioBuffer({
+    length: Math.round(WIND_MAX_SAMPLE_RATE * WIND_DURATION_SECONDS),
+    numberOfChannels: 1,
+    sampleRate: WIND_MAX_SAMPLE_RATE,
+  });
+  const samples = buffer.getChannelData(0);
   let cursor = 0;
   let randomState = 0x6d2b79f5;
 
@@ -82,7 +81,7 @@ export function prepareGachaRitualAudioAssets(): void {
       deadline.timeRemaining() > 2
     );
     if (cursor >= samples.length) {
-      preparedWindNoise = samples;
+      preparedWindBuffer = buffer;
       return;
     }
     schedule(completeOrSchedule);
@@ -97,17 +96,6 @@ function schedule(callback: (deadline?: IdleDeadline) => void): void {
     return;
   }
   window.setTimeout(callback, 0);
-}
-
-function prepareWindBuffer(context: AudioContext): AudioBuffer | null {
-  if (preparedWindBuffer) return preparedWindBuffer;
-  if (!preparedWindNoise) return null;
-  const length = Math.round(context.sampleRate * WIND_DURATION_SECONDS);
-  if (length > preparedWindNoise.length) return null;
-  const buffer = context.createBuffer(1, length, context.sampleRate);
-  buffer.getChannelData(0).set(preparedWindNoise.subarray(0, length));
-  preparedWindBuffer = buffer;
-  return buffer;
 }
 
 export function playGachaRitualBuildUp(): () => void {
@@ -145,7 +133,7 @@ export function playGachaRitualBuildUp(): () => void {
   overtone.stop(startedAt + 4.02);
   nodes.push(overtone);
 
-  const windBuffer = prepareWindBuffer(context);
+  const windBuffer = preparedWindBuffer;
   if (windBuffer) {
     const wind = context.createBufferSource();
     const windFilter = context.createBiquadFilter();
