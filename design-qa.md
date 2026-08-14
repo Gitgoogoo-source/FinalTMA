@@ -753,12 +753,15 @@ final result: passed
 - Full-view comparison: `/Users/mac/.codex/visualizations/2026/08/14/019fff01-c05a-7552-a2a1-5a63e0ce85c5/gacha-black-hole-qa/source-vs-implementation-final.png`
 - Focused motion evidence: `/Users/mac/.codex/visualizations/2026/08/14/019fff01-c05a-7552-a2a1-5a63e0ce85c5/gacha-black-hole-qa/breathing-sequence-final.png`
 - Focused reveal evidence: `/Users/mac/.codex/visualizations/2026/08/14/019fff01-c05a-7552-a2a1-5a63e0ce85c5/gacha-black-hole-qa/gold-burst-final.png`
+- Real iPhone build frames: `/Users/mac/.codex/visualizations/2026/08/14/019fff01-c05a-7552-a2a1-5a63e0ce85c5/gacha-black-hole-qa/iphone-real-02.jpeg` through `iphone-real-12.jpeg`
+- Runtime: Telegram iOS on the mirrored physical iPhone, Vercel Production deployment `dpl_2cFN7Xj3DwxnMFvur2KugzgXpNN7`, commit `bfc2f2e1`
 - Viewport: `393 × 852` CSS px at device scale factor `1`
 - Source pixels: `839 × 1879`; normalized comparison crop: `839 × 1819` resized to `393 × 852`
 - Implementation pixels: `393 × 852`
 - State: `3000ms / 3300ms` neutral black-hole build for full-view comparison; six neutral build checkpoints and `45%` reveal progress for focused evidence
 - Browser: Codex in-app browser; console warnings and errors checked, none present
 - Primary interaction: the ritual is intentionally automatic and non-interactive; neutral build, frozen critical frame, and reveal state were rendered through the production renderer without calling business APIs
+- Device interaction: three authorized single opens consumed `120 K-coin` in total; no Telegram Stars flow was entered
 
 **Findings**
 
@@ -769,15 +772,17 @@ final result: passed
 - Image quality and asset fidelity: the user selected the reference for effect style and motion, not its moon, plants, crystals, water, Telegram chrome, or other decorative artwork. Those out-of-scope assets were intentionally not copied. The requested black hole, accretion flow, and particles are rendered procedurally by the existing production WebGL/Canvas boundary, with no placeholder or added effect-image request.
 - Copy and content: `月下灵契 / 灵光正在回应 / 静候灵契显现` matches the reference tone and does not expose server or request processing.
 - Accessibility: the automatic stage retains a meaningful label, contains no hidden interactive control, and `prefers-reduced-motion` keeps the static critical frame while disabling movement and flash.
+- Real-device runtime: Safari Web Inspector confirmed `prefers-reduced-motion=false`, WebGL2 renderer selection, `320` particles, a `3337ms` build stage, a `722ms` reveal stage, and no console error. Captured iPhone frames show the small event horizon growing through spiral gold accretion, the full-screen gold burst, and the unchanged collectible result dialog.
 
 **Comparison History**
 
 - Iteration 1 — P2 layout: the black-hole center and CSS burst were at about `45%` viewport height, visibly higher than the source effect center. Fix: moved the WebGL, Canvas 2D, bloom, rays, impact ring, vignette, and flash centers to `50%`.
 - Iteration 2 — post-fix evidence: `source-vs-implementation-final.png` shows the effect centered consistently; `breathing-sequence-final.png` shows overall growth with repeated local contraction; `gold-burst-final.png` shows a full-screen reveal flash. No further P0/P1/P2 issue was found.
+- Iteration 3 — real-device evidence: Telegram iOS used WebGL2 with `320` particles and retained the full `3.3s + 0.7s` presentation lifecycle. The black hole, spiral inflow, gold explosion, decoded collectible image, repeat action, inventory action, and confirm action all rendered in their existing production flow without console errors.
 
 **Open Questions**
 
-- Real Telegram/iPhone cold-cache acceptance and Safari Web Inspector performance sampling remain a separate runtime gate; this browser QA does not claim that device gate.
+- None.
 
 **Implementation Checklist**
 
@@ -787,9 +792,10 @@ final result: passed
 - [x] The authorized reveal produces a full-screen gold burst.
 - [x] Result content and controls remain outside the visual-engine changes.
 - [x] Browser console has no warning or error in the compared states.
+- [x] Real iPhone Telegram and Safari Web Inspector acceptance completed without console errors.
 
 **Follow-up Polish**
 
-- None required before real-device acceptance.
+- None required.
 
 final result: passed
