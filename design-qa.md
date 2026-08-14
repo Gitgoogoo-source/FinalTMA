@@ -799,3 +799,49 @@ final result: passed
 - None required.
 
 final result: passed
+
+---
+
+## 开盒黑洞 9 次递减周期呼吸精修（2026-08-14）
+
+**Comparison Target**
+
+- Source visual truth: `/Users/mac/Desktop/图片/exec-8bc2503c-e497-499a-a5c2-12e394764f24.png`
+- Local reference comparison: `/Users/mac/.codex/visualizations/2026/08/14/019fff01-c05a-7552-a2a1-5a63e0ce85c5/gacha-nine-breath-qa/reference-vs-current.png`
+- Local WebGL peak/low sequence: `/Users/mac/.codex/visualizations/2026/08/14/019fff01-c05a-7552-a2a1-5a63e0ce85c5/gacha-nine-breath-qa/nine-breath-sequence.png`
+- Real iPhone peak/low sequence: `/Users/mac/.codex/visualizations/2026/08/14/019fff01-c05a-7552-a2a1-5a63e0ce85c5/gacha-nine-breath-qa/iphone-latest/iphone-nine-breath-peaks-and-lows.png`
+- Real iPhone final result: `/Users/mac/.codex/visualizations/2026/08/14/019fff01-c05a-7552-a2a1-5a63e0ce85c5/gacha-nine-breath-qa/iphone-latest/final-result.png`
+- Runtime: Telegram iOS on the mirrored physical iPhone XS Max, Vercel Production deployment `dpl_3PJBotHkkQgfyT8gzi9y1NiTN9C3`, commit `0b24f7c2`
+- Viewport: `414 × 896` CSS px, device pixel ratio `3`; low-power renderer pixel ratio limit `1.00`
+- Browser: Codex in-app browser for deterministic local comparison; Safari Web Inspector for the real Telegram WebView
+- Device interaction: two authorized single opens consumed `80 K-coin` in total; the first exposed the already-open WebView's stale in-memory version and was excluded from acceptance, then Safari reloaded the latest deployment before the accepted run. No Telegram Stars flow was entered.
+
+**Findings**
+
+- No actionable P0/P1/P2 visual difference remains for this refinement.
+- The neutral build still lasts `3300ms`, but now contains exactly nine full expansion/contraction cycles: `700 / 560 / 450 / 370 / 310 / 270 / 240 / 210 / 190ms`. Their sum is exactly `3300ms`, every period is shorter than the previous one, and the final breaths visibly accelerate before the existing gold reveal.
+- Deterministic WebGL sampling at each midpoint and boundary proves nine local maxima and nine following contractions while the overall envelope grows. The same calculation is shared by the Canvas 2D fallback; the CSS auxiliary bloom uses the same nine boundaries.
+- Real iPhone mirrored-frame radius sampling produced nine peak-to-low pairs of `27→24 / 40→34 / 51→44 / 60→50 / 68→60 / 76→63 / 83→75 / 89→78 / 93→83` capture pixels. Every pair contracts, while every subsequent peak and low remains larger than the preceding cycle.
+- Safari Web Inspector confirmed `data-astral-breath-count="9"`, `data-astral-breath-periods="0.7,0.56,0.45,0.37,0.31,0.27,0.24,0.21,0.19"`, WebGL2, low-power quality, `320` particles, and pixel ratio `1.00`.
+- On the accepted latest deployment, reveal began `3311ms` after Canvas mount, the existing reveal lasted `726ms`, and the decoded collectible result became visible at `4037ms`. The inspected page reported `prefers-reduced-motion=false` and no captured runtime error.
+- The accepted result still shows the unchanged collectible image, rarity, name, NEW marker, repeat action, inventory action, and confirm action. No API, RPC, data structure, backend, random result, deduction, image-decode gate, or result-dialog business behavior changed.
+
+**Implementation Checklist**
+
+- [x] Exactly nine complete black-hole breaths occur during the unchanged 3.3-second neutral build.
+- [x] Breath periods strictly decrease from 0.70 seconds to 0.19 seconds.
+- [x] Every breath visibly expands and contracts while the overall black-hole envelope grows.
+- [x] WebGL2, Canvas 2D fallback, and CSS auxiliary bloom use the same timing decision.
+- [x] Spiral particle inflow, gold reveal, decoded collectible hero image, and result actions remain intact.
+- [x] Product, architecture, ADR, and acceptance documents contain the same unique timing schedule.
+- [x] Local comparison and real iPhone Telegram plus Safari Web Inspector acceptance completed.
+
+**Open Questions**
+
+- None.
+
+**Follow-up Polish**
+
+- None required.
+
+final result: passed
