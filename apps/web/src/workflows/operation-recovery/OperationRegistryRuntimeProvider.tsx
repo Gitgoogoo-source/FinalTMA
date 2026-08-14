@@ -512,7 +512,7 @@ export function OperationRegistryRuntimeProvider({
     const operationId = animatedGachaOperationId;
     const timer = window.setTimeout(
       () => setGachaTensionReadyId(operationId),
-      3_300,
+      4_000,
     );
     return () => window.clearTimeout(timer);
   }, [animatedGachaOperationId, mountedGachaAnimationId]);

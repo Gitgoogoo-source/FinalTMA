@@ -21,6 +21,7 @@ const rarityColors: Record<GachaRevealRarity, AstralFieldColor> = {
 };
 
 const neutralGold: AstralFieldColor = [1, 0.72, 0.28];
+const GACHA_BUILD_DURATION_MS = 4_000;
 
 export function GachaAstralCanvas({
   revealing,
@@ -53,20 +54,24 @@ export function GachaAstralCanvas({
     const draw = (now: number): boolean => {
       const revealingNow = revealStartedAt !== null && !reducedMotion;
       const buildElapsed = reducedMotion
-        ? 3_300
+        ? GACHA_BUILD_DURATION_MS
         : Math.max(0, now - buildStartedAt);
       const revealElapsed = revealingNow
         ? Math.max(0, now - (revealStartedAt ?? now))
         : 0;
       const revealProgress = revealingNow ? clamp(revealElapsed / 700) : 0;
-      const buildProgress = revealingNow ? 1 : clamp(buildElapsed / 3_300);
+      const buildProgress = revealingNow
+        ? 1
+        : clamp(buildElapsed / GACHA_BUILD_DURATION_MS);
       renderer.render({
         buildProgress,
         color:
           revealingNow && revealRarity
             ? rarityColors[revealRarity]
             : neutralGold,
-        elapsedMs: revealingNow ? 3_300 + revealElapsed : buildElapsed,
+        elapsedMs: revealingNow
+          ? GACHA_BUILD_DURATION_MS + revealElapsed
+          : buildElapsed,
         revealProgress,
       });
       return revealingNow ? revealProgress < 1 : buildProgress < 1;
@@ -103,7 +108,7 @@ export function GachaAstralCanvas({
     timelineRef.current = timeline;
     window.addEventListener("resize", handleResize);
     renderer.resize();
-    draw(buildStartedAt + (reducedMotion ? 3_300 : 0));
+    draw(buildStartedAt + (reducedMotion ? GACHA_BUILD_DURATION_MS : 0));
     schedule();
 
     return () => {

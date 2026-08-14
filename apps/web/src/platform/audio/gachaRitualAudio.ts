@@ -41,33 +41,33 @@ export function playGachaRitualBuildUp(): () => void {
   const nodes: AudioScheduledSourceNode[] = [];
   master.gain.setValueAtTime(0.0001, startedAt);
   master.gain.exponentialRampToValueAtTime(0.026, startedAt + 0.28);
-  master.gain.exponentialRampToValueAtTime(0.075, startedAt + 3.18);
-  master.gain.exponentialRampToValueAtTime(0.0001, startedAt + 3.3);
+  master.gain.exponentialRampToValueAtTime(0.075, startedAt + 3.88);
+  master.gain.exponentialRampToValueAtTime(0.0001, startedAt + 4);
   master.connect(context.destination);
 
   const drone = context.createOscillator();
   drone.type = "sine";
   drone.frequency.setValueAtTime(88, startedAt);
-  drone.frequency.exponentialRampToValueAtTime(210, startedAt + 3.2);
+  drone.frequency.exponentialRampToValueAtTime(210, startedAt + 3.9);
   drone.connect(master);
   drone.start(startedAt);
-  drone.stop(startedAt + 3.32);
+  drone.stop(startedAt + 4.02);
   nodes.push(drone);
 
   const overtone = context.createOscillator();
   const overtoneGain = context.createGain();
   overtone.type = "triangle";
   overtone.frequency.setValueAtTime(176, startedAt);
-  overtone.frequency.exponentialRampToValueAtTime(560, startedAt + 3.2);
+  overtone.frequency.exponentialRampToValueAtTime(560, startedAt + 3.9);
   overtoneGain.gain.setValueAtTime(0.0001, startedAt);
-  overtoneGain.gain.exponentialRampToValueAtTime(0.18, startedAt + 2.72);
-  overtoneGain.gain.exponentialRampToValueAtTime(0.0001, startedAt + 3.3);
+  overtoneGain.gain.exponentialRampToValueAtTime(0.18, startedAt + 3.42);
+  overtoneGain.gain.exponentialRampToValueAtTime(0.0001, startedAt + 4);
   overtone.connect(overtoneGain).connect(master);
   overtone.start(startedAt);
-  overtone.stop(startedAt + 3.32);
+  overtone.stop(startedAt + 4.02);
   nodes.push(overtone);
 
-  const windLength = Math.max(1, Math.round(context.sampleRate * 3.32));
+  const windLength = Math.max(1, Math.round(context.sampleRate * 4.02));
   const windBuffer = context.createBuffer(1, windLength, context.sampleRate);
   const windData = windBuffer.getChannelData(0);
   for (let index = 0; index < windData.length; index += 1) {
@@ -80,15 +80,15 @@ export function playGachaRitualBuildUp(): () => void {
   wind.buffer = windBuffer;
   windFilter.type = "bandpass";
   windFilter.frequency.setValueAtTime(380, startedAt);
-  windFilter.frequency.exponentialRampToValueAtTime(3_600, startedAt + 3.22);
+  windFilter.frequency.exponentialRampToValueAtTime(3_600, startedAt + 3.92);
   windFilter.Q.value = 0.82;
   windGain.gain.setValueAtTime(0.02, startedAt);
-  windGain.gain.exponentialRampToValueAtTime(0.34, startedAt + 3.15);
+  windGain.gain.exponentialRampToValueAtTime(0.34, startedAt + 3.85);
   wind.connect(windFilter).connect(windGain).connect(master);
   wind.start(startedAt);
   nodes.push(wind);
 
-  [0.42, 1.42, 2.5].forEach((offset, index) => {
+  [0.5, 2, 3.5].forEach((offset, index) => {
     const pulse = context.createOscillator();
     const pulseGain = context.createGain();
     const pulseAt = startedAt + offset;

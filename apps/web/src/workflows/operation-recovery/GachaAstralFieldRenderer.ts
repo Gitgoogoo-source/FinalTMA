@@ -19,26 +19,30 @@ type AstralFieldOptions = {
 };
 
 const GACHA_BREATH_PERIODS_SECONDS = [
-  0.7, 0.56, 0.45, 0.37, 0.31, 0.27, 0.24, 0.21, 0.19,
+  0.8, 0.58, 0.46, 0.38, 0.33, 0.29, 0.26, 0.23, 0.2, 0.17, 0.13, 0.1, 0.07,
 ] as const;
 
 const ACCELERATED_BREATH_GLSL = `
 vec2 acceleratedBreath(float seconds) {
-  float time = clamp(seconds, 0.0, 3.3);
-  if (time < 0.70) return vec2(0.0, time / 0.70);
-  if (time < 1.26) return vec2(1.0, (time - 0.70) / 0.56);
-  if (time < 1.71) return vec2(2.0, (time - 1.26) / 0.45);
-  if (time < 2.08) return vec2(3.0, (time - 1.71) / 0.37);
-  if (time < 2.39) return vec2(4.0, (time - 2.08) / 0.31);
-  if (time < 2.66) return vec2(5.0, (time - 2.39) / 0.27);
-  if (time < 2.90) return vec2(6.0, (time - 2.66) / 0.24);
-  if (time < 3.11) return vec2(7.0, (time - 2.90) / 0.21);
-  return vec2(8.0, (time - 3.11) / 0.19);
+  float time = clamp(seconds, 0.0, 4.0);
+  if (time < 0.80) return vec2(0.0, time / 0.80);
+  if (time < 1.38) return vec2(1.0, (time - 0.80) / 0.58);
+  if (time < 1.84) return vec2(2.0, (time - 1.38) / 0.46);
+  if (time < 2.22) return vec2(3.0, (time - 1.84) / 0.38);
+  if (time < 2.55) return vec2(4.0, (time - 2.22) / 0.33);
+  if (time < 2.84) return vec2(5.0, (time - 2.55) / 0.29);
+  if (time < 3.10) return vec2(6.0, (time - 2.84) / 0.26);
+  if (time < 3.33) return vec2(7.0, (time - 3.10) / 0.23);
+  if (time < 3.53) return vec2(8.0, (time - 3.33) / 0.20);
+  if (time < 3.70) return vec2(9.0, (time - 3.53) / 0.17);
+  if (time < 3.83) return vec2(10.0, (time - 3.70) / 0.13);
+  if (time < 3.93) return vec2(11.0, (time - 3.83) / 0.10);
+  return vec2(12.0, (time - 3.93) / 0.07);
 }
 
 float breathingHoleRadius(float seconds) {
   vec2 breath = acceleratedBreath(seconds);
-  float overall = clamp((breath.x + breath.y) / 9.0, 0.0, 1.0);
+  float overall = clamp((breath.x + breath.y) / 13.0, 0.0, 1.0);
   float growth = pow(overall, 0.76);
   float pulse = sin(breath.y * 3.14159265);
   float pulseStrength = mix(0.48, 0.18, growth);
@@ -738,10 +742,10 @@ function acceleratedBreath(time: number): {
   index: number;
   progress: number;
 } {
-  const elapsed = Math.min(3.3, Math.max(0, time));
+  const elapsed = Math.min(4, Math.max(0, time));
   let startedAt = 0;
   for (let index = 0; index < GACHA_BREATH_PERIODS_SECONDS.length; index += 1) {
-    const period = GACHA_BREATH_PERIODS_SECONDS[index] ?? 0.19;
+    const period = GACHA_BREATH_PERIODS_SECONDS[index] ?? 0.07;
     const endedAt = startedAt + period;
     if (elapsed < endedAt || index === GACHA_BREATH_PERIODS_SECONDS.length - 1)
       return {

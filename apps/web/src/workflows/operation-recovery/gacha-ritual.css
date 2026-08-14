@@ -269,7 +269,7 @@
       transparent 27% 100%
     );
   opacity: 0;
-  animation: gacha-ritual-warp-bloom 3.3s linear both;
+  animation: gacha-ritual-warp-bloom 4s linear both;
 }
 
 .gacha-ritual-reveal-meteor {
@@ -430,7 +430,7 @@
   text-shadow:
     0 4px 18px rgba(0, 0, 0, 0.95),
     0 0 22px rgba(227, 153, 53, 0.18);
-  animation: gacha-astral-copy-build 3.3s ease-out both;
+  animation: gacha-astral-copy-build 4s ease-out both;
 }
 
 .gacha-astral-result {
@@ -873,77 +873,109 @@
     opacity: 0.08;
     transform: scale(0.2) rotate(-8deg);
   }
-  10.606% {
-    opacity: 0.28;
-    transform: scale(0.37) rotate(-4deg);
+  10% {
+    opacity: 0.25;
+    transform: scale(0.33) rotate(-5deg);
   }
-  21.212% {
+  20% {
     opacity: 0.13;
-    transform: scale(0.3) rotate(0deg);
+    transform: scale(0.29) rotate(-2deg);
   }
-  29.697% {
-    opacity: 0.36;
-    transform: scale(0.5) rotate(2deg);
+  27.25% {
+    opacity: 0.32;
+    transform: scale(0.43) rotate(0deg);
   }
-  38.182% {
-    opacity: 0.18;
-    transform: scale(0.41) rotate(5deg);
+  34.5% {
+    opacity: 0.17;
+    transform: scale(0.37) rotate(3deg);
   }
-  45% {
-    opacity: 0.44;
-    transform: scale(0.63) rotate(7deg);
-  }
-  51.818% {
-    opacity: 0.24;
-    transform: scale(0.52) rotate(10deg);
-  }
-  57.424% {
-    opacity: 0.52;
-    transform: scale(0.74) rotate(12deg);
-  }
-  63.03% {
-    opacity: 0.31;
-    transform: scale(0.63) rotate(14deg);
-  }
-  67.727% {
-    opacity: 0.6;
-    transform: scale(0.84) rotate(16deg);
-  }
-  72.424% {
+  40.25% {
     opacity: 0.39;
-    transform: scale(0.73) rotate(18deg);
+    transform: scale(0.54) rotate(5deg);
   }
-  76.515% {
-    opacity: 0.68;
-    transform: scale(0.94) rotate(19deg);
+  46% {
+    opacity: 0.22;
+    transform: scale(0.46) rotate(7deg);
   }
-  80.606% {
-    opacity: 0.48;
-    transform: scale(0.82) rotate(21deg);
+  50.75% {
+    opacity: 0.46;
+    transform: scale(0.63) rotate(9deg);
   }
-  84.242% {
-    opacity: 0.75;
-    transform: scale(1.04) rotate(23deg);
+  55.5% {
+    opacity: 0.28;
+    transform: scale(0.54) rotate(11deg);
   }
-  87.879% {
-    opacity: 0.56;
-    transform: scale(0.9) rotate(24deg);
+  59.625% {
+    opacity: 0.53;
+    transform: scale(0.71) rotate(13deg);
   }
-  91.061% {
-    opacity: 0.82;
-    transform: scale(1.12) rotate(25deg);
+  63.75% {
+    opacity: 0.34;
+    transform: scale(0.61) rotate(15deg);
   }
-  94.242% {
-    opacity: 0.64;
-    transform: scale(0.98) rotate(26deg);
+  67.375% {
+    opacity: 0.6;
+    transform: scale(0.79) rotate(17deg);
   }
-  97.121% {
+  71% {
+    opacity: 0.4;
+    transform: scale(0.68) rotate(19deg);
+  }
+  74.25% {
+    opacity: 0.67;
+    transform: scale(0.87) rotate(20deg);
+  }
+  77.5% {
+    opacity: 0.47;
+    transform: scale(0.75) rotate(22deg);
+  }
+  80.375% {
+    opacity: 0.74;
+    transform: scale(0.95) rotate(23deg);
+  }
+  83.25% {
+    opacity: 0.54;
+    transform: scale(0.82) rotate(24deg);
+  }
+  85.75% {
+    opacity: 0.8;
+    transform: scale(1.03) rotate(25deg);
+  }
+  88.25% {
+    opacity: 0.6;
+    transform: scale(0.89) rotate(26deg);
+  }
+  90.375% {
+    opacity: 0.85;
+    transform: scale(1.1) rotate(27deg);
+  }
+  92.5% {
+    opacity: 0.66;
+    transform: scale(0.96) rotate(28deg);
+  }
+  94.125% {
     opacity: 0.9;
-    transform: scale(1.18) rotate(27deg);
+    transform: scale(1.16) rotate(29deg);
+  }
+  95.75% {
+    opacity: 0.7;
+    transform: scale(1.02) rotate(30deg);
+  }
+  97% {
+    opacity: 0.94;
+    transform: scale(1.21) rotate(31deg);
+  }
+  98.25% {
+    opacity: 0.74;
+    transform: scale(1.07) rotate(32deg);
+  }
+  99.125% {
+    opacity: 0.98;
+    transform: scale(1.25) rotate(33deg);
   }
   100% {
-    opacity: 0.72;
-    transform: scale(1.06) rotate(28deg);
+    opacity: 0.78;
+    transform: scale(1.11) rotate(34deg);
   }
 }
 

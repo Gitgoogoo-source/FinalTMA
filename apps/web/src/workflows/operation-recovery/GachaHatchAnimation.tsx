@@ -33,7 +33,7 @@ export function GachaHatchAnimation({
   useEffect(() => {
     onMounted();
     const stopAudio = playGachaRitualBuildUp();
-    const timers = [420, 1_420, 2_500].map((delay) =>
+    const timers = [500, 2_000, 3_500].map((delay) =>
       window.setTimeout(selectionHaptic, delay),
     );
     return () => {
