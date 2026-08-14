@@ -61,6 +61,62 @@ final result: passed
 
 ---
 
+## 开盒黑洞 13 次科幻升频呼吸精修（2026-08-14）
+
+**Comparison Target**
+
+- Source visual truth: `/Users/mac/Desktop/图片/exec-8bc2503c-e497-499a-a5c2-12e394764f24.png`
+- Full-view comparison: `/Users/mac/.codex/visualizations/2026/08/14/019fff01-c05a-7552-a2a1-5a63e0ce85c5/gacha-thirteen-breath-qa/reference-vs-current.png`
+- Local 13-breath sequence: `/Users/mac/.codex/visualizations/2026/08/14/019fff01-c05a-7552-a2a1-5a63e0ce85c5/gacha-thirteen-breath-qa/thirteen-breath-sequence.png`
+- Local final-four focused comparison: `/Users/mac/.codex/visualizations/2026/08/14/019fff01-c05a-7552-a2a1-5a63e0ce85c5/gacha-thirteen-breath-qa/final-four-critical-flicker.png`
+- Local gold reveal: `/Users/mac/.codex/visualizations/2026/08/14/019fff01-c05a-7552-a2a1-5a63e0ce85c5/gacha-thirteen-breath-qa/gold-reveal.jpg`
+- Real iPhone 13-breath sequence: `/Users/mac/.codex/visualizations/2026/08/14/019fff01-c05a-7552-a2a1-5a63e0ce85c5/gacha-thirteen-breath-qa/iphone-latest/iphone-thirteen-breath-peaks-and-lows.png`
+- Real iPhone final-four focused comparison: `/Users/mac/.codex/visualizations/2026/08/14/019fff01-c05a-7552-a2a1-5a63e0ce85c5/gacha-thirteen-breath-qa/iphone-latest/iphone-final-four-flicker.png`
+- Real iPhone final result: `/Users/mac/.codex/visualizations/2026/08/14/019fff01-c05a-7552-a2a1-5a63e0ce85c5/gacha-thirteen-breath-qa/iphone-latest/final-result.jpg`
+- Runtime: Telegram iOS on the mirrored physical iPhone XS Max, Vercel Production deployment `dpl_6JLNnsY39uKhrQrhVYLZQrGY4TdX`, commit `51e5dea0`
+- Local viewport: `390 × 844` CSS px at density `1`; source `839 × 1879` px was normalized by cropping to `839 × 1819` and resizing to `390 × 844`
+- Real-device viewport: `414 × 896` CSS px at device pixel ratio `3`; low-power renderer pixel ratio limit `1.00`
+- State: deterministic local midpoint/boundary renders for all 13 breaths, `45%` reveal progress, and one real single-open result
+- Device interaction: one authorized single open consumed `40 K-coin`; no Telegram Stars flow was entered
+
+**Findings**
+
+- No actionable P0/P1/P2 visual difference remains for this refinement.
+- The neutral build now contains exactly 13 complete expansion/contraction cycles in `4000ms`: `800 / 580 / 460 / 380 / 330 / 290 / 260 / 230 / 200 / 170 / 130 / 100 / 70ms`. The periods are strictly decreasing and the final four cycles total `470ms`.
+- Deterministic radius sampling proves every midpoint is larger than its following boundary while every subsequent midpoint and boundary continues to grow. The WebGL2, Canvas 2D fallback, and CSS auxiliary bloom use the same cycle boundaries.
+- The full-view comparison retains the source's central deep-black core, warm-gold photon ring, rotating curved inflow, dark warm atmosphere, centered Songti-style heading, and restrained lower copy. Typography, vertical rhythm, palette, image sharpness, and copy remain coherent with the accepted implementation.
+- The focused local and real-iPhone comparisons show the last four cycles alternating between visibly larger and smaller event-horizon rings without flashing the whole screen. The following reveal remains a separate full-screen gold burst.
+- Safari Web Inspector confirmed `data-astral-breath-count="13"`, `data-astral-breath-periods="0.8,0.58,0.46,0.38,0.33,0.29,0.26,0.23,0.2,0.17,0.13,0.1,0.07"`, WebGL2, low-power quality, `320` particles, and pixel ratio `1.00`.
+- The real iPhone renderer produced `274` sampled animation frames with `17ms` median and `18.27ms` average frame interval. The 4-second presentation gate completed before reveal; the cold result/image path held the neutral critical frame for `271ms`, then the existing reveal lasted `741ms` and the decoded result appeared at `5012ms` from Canvas mount.
+- Safari recorded one `gacha.open` request and no captured runtime error. The only console warning was the existing generic notice that the main JavaScript preload was not consumed within a few seconds after load.
+- The accepted result shows the decoded collectible hero image, rarity, name, NEW marker, repeat action, inventory action, and confirm action unchanged.
+
+**Comparison History**
+
+- Iteration 1 — local and real-device comparison: no P0/P1/P2 issue was found, so no visual correction cycle was required.
+
+**Implementation Checklist**
+
+- [x] Exactly 13 complete black-hole breaths occur during the 4-second neutral build.
+- [x] Breath periods strictly decrease from `0.80s` to `0.07s`.
+- [x] The last four breaths complete in `470ms` as a localized critical flicker.
+- [x] Every breath expands and contracts while the overall black-hole envelope grows.
+- [x] Spiral particle inflow, gold reveal, decoded collectible hero image, and result actions remain intact.
+- [x] Product, architecture, ADR, and acceptance documents contain the same unique timing schedule.
+- [x] Local comparison and real iPhone Telegram plus Safari Web Inspector acceptance completed.
+
+**Open Questions**
+
+- None.
+
+**Follow-up Polish**
+
+- None required.
+
+final result: passed
+
+---
+
 # VIP 月卡皇冠与双权益真实素材验收
 
 ## 验收对象
