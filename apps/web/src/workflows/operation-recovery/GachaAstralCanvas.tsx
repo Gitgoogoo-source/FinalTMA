@@ -37,9 +37,8 @@ export function GachaAstralCanvas({
     const host = hostRef.current;
     if (!host) return;
     const lease = claimGachaAstralField();
-    const { reducedMotion, renderer, surface } = lease;
-    host.replaceChildren(surface);
-    surface.classList.remove("is-parked");
+    const { activate, reducedMotion, renderer } = lease;
+    activate();
     let buildStartedAt = performance.now();
     let revealStartedAt: number | null = null;
     let revealRarity: GachaRevealRarity | null = null;

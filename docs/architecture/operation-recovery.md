@@ -1,6 +1,6 @@
 # 操作恢复
 
-开盒表现模块的空闲准备按 [ADR-069](adr/ADR-069-gacha-renderer-prewarm-and-static-stage.md) 在文档内透明停放 surface 上完成实际视口 drawing buffer、Canvas/WebGL 程序资源和首帧；五核及以上设备另以有界空闲任务准备 Web Audio 风声样本，四核及以下设备固定不创建或播放自定义 Web Audio，也不触发演出期 Telegram `HapticFeedback`。首轮可见呼吸不得承担 GPU 程序资源冷创建、drawing buffer 首次扩展、四秒音频数组同步生成、低功耗设备音频管线建立或原生触觉桥接。
+开盒表现模块的空闲准备按 [ADR-069](adr/ADR-069-gacha-renderer-prewarm-and-static-stage.md) 在永久文档根层 surface 上完成实际视口 drawing buffer、Canvas/WebGL 程序资源和首帧；五核及以上设备另以有界空闲任务准备 Web Audio 风声样本，四核及以下设备固定不创建或播放自定义 Web Audio，也不触发演出期 Telegram `HapticFeedback`。首轮可见呼吸不得承担 GPU 程序资源冷创建、drawing buffer 首次扩展、四秒音频数组同步生成、低功耗设备音频管线建立或原生触觉桥接。
 
 用户确认会创建 operation 的写操作时，操作注册中心先使用 Web Crypto 生成 UUIDv7 并写入内存记录，再在下一动画帧提交请求。同一 operation 的会话恢复重试和结果查询始终复用该 UUIDv7；旧记录查询先于数据库新鲜度与配额，因此同 key 重试不创建或计数第二条 operation。Battle heartbeat 和 offline 不进入操作注册中心、不生成 UUID，也不通过 operations 查询恢复；Battle 结果按钮不发送请求。
 

@@ -42,6 +42,7 @@ type ManagedAstralField = {
 };
 
 export type GachaAstralFieldLease = {
+  activate(): void;
   canvas: HTMLCanvasElement;
   reducedMotion: boolean;
   release(): void;
@@ -306,7 +307,7 @@ export function prepareGachaAstralField(): void {
     if (pooledAstralField) return;
     const options = resolveAstralFieldOptions();
     const managed = createManagedAstralField(options);
-    parkManagedAstralField(managed);
+    mountManagedAstralField(managed);
     managed.renderer.resize();
     managed.renderer.render(GACHA_PREWARM_FRAME);
     managed.warmed = true;
@@ -345,11 +346,15 @@ export function claimGachaAstralField(): GachaAstralFieldLease {
       ? pooledAstralField
       : createManagedAstralField(options);
   if (!pooledAstralField) pooledAstralField = managed;
+  mountManagedAstralField(managed);
   managed.leased = true;
   managed.canvas.dataset.astralStartup = managed.warmed ? "warm" : "cold";
   let released = false;
 
   return {
+    activate() {
+      managed.surface.classList.add("is-active");
+    },
     canvas: managed.canvas,
     reducedMotion: options.reducedMotion,
     renderer: managed.renderer,
@@ -357,10 +362,10 @@ export function claimGachaAstralField(): GachaAstralFieldLease {
     release() {
       if (released) return;
       released = true;
+      managed.surface.classList.remove("is-active");
       managed.warmed = true;
       managed.leased = false;
-      if (pooledAstralField === managed) parkManagedAstralField(managed);
-      else disposeManagedAstralField(managed);
+      if (pooledAstralField !== managed) disposeManagedAstralField(managed);
     },
   };
 }
@@ -383,7 +388,7 @@ function createManagedAstralField(
   const canvas = document.createElement("canvas");
   canvas.className = "gacha-astral-field-canvas";
   const surface = document.createElement("div");
-  surface.className = "gacha-astral-field-surface is-parked";
+  surface.className = "gacha-astral-field-surface";
   surface.setAttribute("aria-hidden", "true");
   surface.append(canvas);
   return {
@@ -397,9 +402,8 @@ function createManagedAstralField(
   };
 }
 
-function parkManagedAstralField(managed: ManagedAstralField): void {
-  managed.surface.classList.add("is-parked");
-  document.body.append(managed.surface);
+function mountManagedAstralField(managed: ManagedAstralField): void {
+  if (!managed.surface.isConnected) document.body.append(managed.surface);
 }
 
 function bindPageLifecycle(): void {
