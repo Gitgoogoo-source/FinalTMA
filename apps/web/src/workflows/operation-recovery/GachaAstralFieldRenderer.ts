@@ -11,6 +11,7 @@ export type AstralFieldFrame = {
 
 export type AstralFieldRenderer = {
   dispose(): void;
+  finishWarmup(): void;
   render(frame: AstralFieldFrame): void;
   resize(): void;
 };
@@ -310,6 +311,7 @@ export function prepareGachaAstralField(): void {
     mountManagedAstralField(managed);
     managed.renderer.resize();
     managed.renderer.render(GACHA_PREWARM_FRAME);
+    managed.renderer.finishWarmup();
     managed.warmed = true;
     pooledAstralField = managed;
   };
@@ -569,6 +571,10 @@ class WebGlAstralField implements AstralFieldRenderer {
     gl.deleteProgram(this.#field.program);
     gl.deleteProgram(this.#star.program);
   }
+
+  finishWarmup(): void {
+    this.#gl.finish();
+  }
 }
 
 function createCanvasFallback(
@@ -597,6 +603,7 @@ function createCanvasFallback(
 
   return {
     dispose() {},
+    finishWarmup() {},
     resize() {
       const bounds = canvas.getBoundingClientRect();
       width = Math.max(1, bounds.width);
@@ -866,7 +873,7 @@ function createStarGeometry(count: number): Float32Array {
 }
 
 function createNoopRenderer(): AstralFieldRenderer {
-  return { dispose() {}, render() {}, resize() {} };
+  return { dispose() {}, finishWarmup() {}, render() {}, resize() {} };
 }
 
 function seededRandom(initialSeed: number): () => number {
