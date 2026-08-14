@@ -45,9 +45,15 @@ const raritySigilCounts: Record<Rarity, number> = {
 };
 const tenDrawRankPositions = [4, 5, 3, 6, 2, 7, 1, 8, 0, 9] as const;
 const initialCarouselIndex = tenDrawRankPositions[0];
+const initialCarouselLayerRadius = 1;
 const carouselLayerOffsets = [0, 0.24, 0.34, 0.42, 0.48, 0.53] as const;
 const carouselLayerScales = [1, 0.52, 0.43, 0.36, 0.3, 0.26] as const;
 const carouselLayerOpacities = [1, 0.82, 0.62, 0.44, 0.3, 0.2] as const;
+
+function resultImageKey(item: ResultItem): string {
+  return `${item.order}-${item.template_id}`;
+}
+
 function interpolateCarouselLayer(
   distance: number,
   values: readonly number[],
@@ -91,9 +97,7 @@ export function GachaResultDialog({
   );
   const single = result.draw_count === 1;
   const highestRarity = rankedResults[0]?.rarity ?? "common";
-  const imageKeys = rankedResults.map(
-    (item) => `${item.order}-${item.template_id}`,
-  );
+  const imageKeys = rankedResults.map(resultImageKey);
   const preparationKey = `${single ? "single" : "ten"}:${imageKeys.join("|")}:${retryEpoch}`;
   const [preparation, setPreparation] = useState<{
     key: string;
@@ -101,11 +105,12 @@ export function GachaResultDialog({
   }>({ key: "", statuses: {} });
   const statuses =
     preparation.key === preparationKey ? preparation.statuses : {};
-  const imageStatus: CatalogImageStatus = imageKeys.every(
+  const revealImageKeys = single ? imageKeys : imageKeys.slice(0, 1);
+  const imageStatus: CatalogImageStatus = revealImageKeys.every(
     (key) => statuses[key] === "ready",
   )
     ? "ready"
-    : imageKeys.some((key) => statuses[key] === "failed")
+    : revealImageKeys.some((key) => statuses[key] === "failed")
       ? "failed"
       : "loading";
 
@@ -151,6 +156,8 @@ export function GachaResultDialog({
       ) : (
         <TenDrawResults
           results={rankedResults}
+          imageStatuses={statuses}
+          visible={visible}
           retryEpoch={retryEpoch}
           onImageStatusChange={updateImageStatus}
         />
@@ -206,10 +213,14 @@ function SingleResult({
 
 function TenDrawResults({
   results,
+  imageStatuses,
+  visible,
   retryEpoch,
   onImageStatusChange,
 }: {
   results: ResultItem[];
+  imageStatuses: Record<string, CatalogImageStatus>;
+  visible: boolean;
   retryEpoch: number;
   onImageStatusChange(imageKey: string, status: CatalogImageStatus): void;
 }): ReactNode {
@@ -222,9 +233,37 @@ function TenDrawResults({
   const layerListRef = useRef<HTMLOListElement>(null);
   const animationFrameRef = useRef<number | null>(null);
   const activeIndexRef = useRef<number>(initialCarouselIndex);
-  const resultKey = carouselResults
-    .map((item) => `${item.order}-${item.template_id}`)
-    .join("|");
+  const [revealedLayerRadius, setRevealedLayerRadius] = useState(
+    initialCarouselLayerRadius,
+  );
+  const resultKey = carouselResults.map(resultImageKey).join("|");
+  const maximumLayerRadius = Math.max(
+    initialCarouselIndex,
+    carouselResults.length - initialCarouselIndex - 1,
+  );
+
+  useEffect(() => {
+    if (!visible) return;
+
+    let cancelled = false;
+    let frameId: number | null = null;
+    let radius = initialCarouselLayerRadius;
+    const revealNextLayer = () => {
+      if (cancelled || radius >= maximumLayerRadius) return;
+      radius += 1;
+      setRevealedLayerRadius(radius);
+      if (radius < maximumLayerRadius)
+        frameId = window.requestAnimationFrame(revealNextLayer);
+    };
+    frameId = window.requestAnimationFrame(() => {
+      frameId = window.requestAnimationFrame(revealNextLayer);
+    });
+
+    return () => {
+      cancelled = true;
+      if (frameId !== null) window.cancelAnimationFrame(frameId);
+    };
+  }, [maximumLayerRadius, resultKey, visible]);
 
   const updateCarousel = useCallback((withHaptic: boolean) => {
     const carousel = carouselRef.current;
@@ -334,60 +373,66 @@ function TenDrawResults({
   return (
     <section className="gacha-astral-ten" aria-label="十连召唤结果">
       <ol ref={layerListRef} className="gacha-astral-layer-list">
-        {carouselResults.map((item, index) => (
-          <li
-            key={`${item.order}-${item.template_id}`}
-            className={`rarity-${item.rarity}`}
-            style={
-              {
-                "--carousel-left": `${
-                  50 +
-                  Math.sign(index - initialCarouselIndex) *
-                    interpolateCarouselLayer(
-                      Math.abs(index - initialCarouselIndex),
-                      carouselLayerOffsets,
-                    ) *
-                    100
-                }%`,
-                "--carousel-scale": interpolateCarouselLayer(
-                  Math.abs(index - initialCarouselIndex),
-                  carouselLayerScales,
-                ),
-                "--carousel-opacity": interpolateCarouselLayer(
-                  Math.abs(index - initialCarouselIndex),
-                  carouselLayerOpacities,
-                ),
-                zIndex: 100 - Math.abs(index - initialCarouselIndex) * 10,
-                "--result-index": index,
-              } as CSSProperties
-            }
-            aria-label={`${rarityLabels[item.rarity]}藏品：${item.name}，NEW`}
-            aria-current={index === initialCarouselIndex ? "true" : undefined}
-            aria-posinset={index + 1}
-            aria-setsize={carouselResults.length}
-          >
-            <ResultIdentity item={item} />
-            <span className="gacha-astral-new">NEW</span>
-            <div className="gacha-astral-art">
-              <span className="gacha-astral-aura" aria-hidden="true" />
-              <span className="gacha-astral-pedestal" aria-hidden="true" />
-              <CatalogImage
-                key={`${item.order}-${item.template_id}:${retryEpoch}`}
-                url={item.image_thumbnail_url}
-                alt={item.name}
-                variant="thumbnail"
-                loading="eager"
-                fetchPriority={index === initialCarouselIndex ? "high" : "auto"}
-                onStatusChange={(status) =>
-                  onImageStatusChange(
-                    `${item.order}-${item.template_id}`,
-                    status,
-                  )
-                }
-              />
-            </div>
-          </li>
-        ))}
+        {carouselResults.map((item, index) => {
+          const imageKey = resultImageKey(item);
+          const layerDistance = Math.abs(index - initialCarouselIndex);
+          const stageVisible =
+            imageStatuses[imageKey] === "ready" &&
+            layerDistance <= revealedLayerRadius;
+          return (
+            <li
+              key={imageKey}
+              className={`rarity-${item.rarity}${stageVisible ? " is-stage-visible" : ""}`}
+              style={
+                {
+                  "--carousel-left": `${
+                    50 +
+                    Math.sign(index - initialCarouselIndex) *
+                      interpolateCarouselLayer(
+                        layerDistance,
+                        carouselLayerOffsets,
+                      ) *
+                      100
+                  }%`,
+                  "--carousel-scale": interpolateCarouselLayer(
+                    layerDistance,
+                    carouselLayerScales,
+                  ),
+                  "--carousel-opacity": interpolateCarouselLayer(
+                    layerDistance,
+                    carouselLayerOpacities,
+                  ),
+                  zIndex: 100 - layerDistance * 10,
+                  "--result-order": layerDistance,
+                } as CSSProperties
+              }
+              aria-label={`${rarityLabels[item.rarity]}藏品：${item.name}，NEW`}
+              aria-current={index === initialCarouselIndex ? "true" : undefined}
+              aria-posinset={index + 1}
+              aria-setsize={carouselResults.length}
+            >
+              <ResultIdentity item={item} />
+              <span className="gacha-astral-new">NEW</span>
+              <div className="gacha-astral-art">
+                <span className="gacha-astral-aura" aria-hidden="true" />
+                <span className="gacha-astral-pedestal" aria-hidden="true" />
+                <CatalogImage
+                  key={`${imageKey}:${retryEpoch}`}
+                  url={item.image_thumbnail_url}
+                  alt={item.name}
+                  variant="thumbnail"
+                  loading="eager"
+                  fetchPriority={
+                    index === initialCarouselIndex ? "high" : "auto"
+                  }
+                  onStatusChange={(status) =>
+                    onImageStatusChange(imageKey, status)
+                  }
+                />
+              </div>
+            </li>
+          );
+        })}
       </ol>
       <div
         ref={carouselRef}

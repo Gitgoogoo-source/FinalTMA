@@ -33,6 +33,10 @@
   background: #050504;
 }
 
+.gacha-astral-ritual {
+  z-index: 1;
+}
+
 .gacha-astral-ritual.rarity-rare,
 .gacha-astral-result.rarity-rare {
   --item-accent: #79ec93;
@@ -449,8 +453,9 @@
 
 .gacha-astral-result.is-preparing {
   position: absolute;
+  z-index: 0;
   inset: 0;
-  visibility: hidden;
+  margin-inline: auto;
   pointer-events: none;
 }
 
@@ -790,6 +795,11 @@
 
 .gacha-astral-result:not(.is-preparing) .gacha-astral-actions {
   animation: gacha-astral-actions-arrive 460ms 260ms ease-out both;
+}
+
+.gacha-astral-result.is-ten:not(.is-preparing) .gacha-astral-heading,
+.gacha-astral-result.is-ten:not(.is-preparing) .gacha-astral-actions {
+  animation: gacha-astral-ten-shell-settle 360ms ease-out both;
 }
 
 .gacha-astral-result .operation-ack-error {

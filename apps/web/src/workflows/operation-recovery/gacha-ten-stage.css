@@ -35,18 +35,25 @@
   align-items: center;
   gap: 5px;
   padding: 0;
-  opacity: var(--carousel-opacity);
+  visibility: hidden;
+  opacity: 0;
   transform: translate3d(-50%, 0, 0) scale(var(--carousel-scale));
   transform-origin: center bottom;
   transition:
     left 80ms linear,
     transform 80ms linear,
     opacity 80ms linear;
-  will-change: left, transform, opacity;
 }
 
-.gacha-astral-result:not(.is-preparing) .gacha-astral-layer-list > li {
-  animation: gacha-astral-ten-arrive 640ms calc(var(--result-index, 0) * 36ms)
+.gacha-astral-layer-list > li.is-stage-visible {
+  visibility: visible;
+  opacity: var(--carousel-opacity);
+}
+
+.gacha-astral-result:not(.is-preparing)
+  .gacha-astral-layer-list
+  > li.is-stage-visible {
+  animation: gacha-astral-ten-arrive 420ms calc(var(--result-order, 0) * 24ms)
     cubic-bezier(0.12, 0.82, 0.2, 1) both;
 }
 
@@ -59,6 +66,26 @@
 .gacha-astral-layer-list .catalog-image {
   transform: scale(1.14);
   transform-origin: center bottom;
+  filter: none;
+}
+
+.gacha-astral-layer-list :is(.gacha-astral-aura, .gacha-astral-pedestal) {
+  display: none;
+}
+
+.gacha-astral-layer-list > li[aria-current="true"] .gacha-astral-art::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: 7%;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    rgba(var(--item-accent-rgb), 0.3) 0 18%,
+    rgba(var(--item-accent-rgb), 0.12) 42%,
+    transparent 70%
+  );
 }
 
 .gacha-astral-layer-list
@@ -75,12 +102,7 @@
   .gacha-astral-layer-list
   > li[aria-current="true"]
   .gacha-astral-identity {
-  animation: gacha-astral-identity-arrive 280ms ease-out both;
-}
-
-.gacha-astral-layer-list > li[aria-current="true"] .catalog-image {
-  filter: drop-shadow(0 18px 16px rgba(0, 8, 22, 0.8))
-    drop-shadow(0 0 20px rgba(98, 221, 255, 0.34));
+  animation: gacha-astral-ten-shell-settle 360ms ease-out both;
 }
 
 .gacha-astral-carousel {
@@ -117,18 +139,26 @@
 
 @keyframes gacha-astral-ten-arrive {
   0% {
-    opacity: 0;
-    filter: blur(8px) brightness(1.9);
-    transform: translate3d(-50%, 32px, 0) scale(0.18);
+    opacity: var(--carousel-opacity);
+    transform: translate3d(-50%, 16px, 0) scale(var(--carousel-scale));
   }
   56% {
-    filter: blur(0) brightness(1.28);
     transform: translate3d(-50%, -5px, 0) scale(var(--carousel-scale));
   }
   100% {
     opacity: var(--carousel-opacity);
-    filter: blur(0) brightness(1);
     transform: translate3d(-50%, 0, 0) scale(var(--carousel-scale));
+  }
+}
+
+@keyframes gacha-astral-ten-shell-settle {
+  from {
+    opacity: 1;
+    transform: translateY(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
