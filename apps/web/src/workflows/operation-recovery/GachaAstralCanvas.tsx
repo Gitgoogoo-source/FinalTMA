@@ -20,7 +20,7 @@ const rarityColors: Record<GachaRevealRarity, AstralFieldColor> = {
   mythic: [1, 0.64, 0.18],
 };
 
-const neutralIce: AstralFieldColor = [0.325, 0.847, 1];
+const neutralGold: AstralFieldColor = [1, 0.72, 0.28];
 
 export function GachaAstralCanvas({
   revealing,
@@ -65,7 +65,7 @@ export function GachaAstralCanvas({
         color:
           revealingNow && revealRarity
             ? rarityColors[revealRarity]
-            : neutralIce,
+            : neutralGold,
         elapsedMs: revealingNow ? 3_300 + revealElapsed : buildElapsed,
         revealProgress,
       });

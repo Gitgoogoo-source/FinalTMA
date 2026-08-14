@@ -42,62 +42,81 @@ float ring(float radius, float target, float width) {
   return exp(-abs(radius - target) * width);
 }
 
-float segmentDistance(vec2 point, vec2 from, vec2 to) {
-  vec2 delta = to - from;
-  float amount = clamp(dot(point - from, delta) / dot(delta, delta), 0.0, 1.0);
-  return length(point - (from + delta * amount));
+float hash(vec2 point) {
+  return fract(sin(dot(point, vec2(127.1, 311.7))) * 43758.5453123);
 }
 
 void main() {
   vec2 p = v_uv * 2.0 - 1.0;
   p.x *= u_aspect;
-  vec2 portal = vec2(0.0, 0.1);
+  vec2 portal = vec2(0.0, 0.0);
+  vec2 q = p - portal;
   float build = smoothstep(0.0, 1.0, u_build);
-  float travel = pow(build, 0.62);
-  vec2 origin = vec2(-0.18, -1.12);
-  vec2 comet = mix(origin, portal, travel);
-  comet.x += sin(travel * 3.14159265) * 0.24;
-  comet.x += sin(u_time * 3.1) * 0.016 * (1.0 - build);
+  float growth = pow(build, 0.76);
+  float breath = sin(u_time * 7.65 + 0.4);
+  float holeRadius = mix(0.026, 0.23, growth)
+    * (1.0 + breath * mix(0.08, 0.145, build));
+  float radius = length(q);
+  float normalizedRadius = radius / max(holeRadius, 0.001);
+  float angle = atan(q.y, q.x);
 
-  float portalRadius = length(p - portal);
-  float portalRing = ring(portalRadius, 0.12 + u_reveal * 0.09, 72.0);
-  float portalHalo = exp(-portalRadius * mix(5.6, 2.6, u_reveal));
-  float portalCore = exp(-portalRadius * mix(31.0, 9.0, u_reveal));
+  float eventHorizon = 1.0 - smoothstep(holeRadius * 0.94, holeRadius * 1.02, radius);
+  float photonRing = ring(normalizedRadius, 1.04, 15.0);
+  float innerGlow = ring(normalizedRadius, 1.16, 7.5);
+  float outerWindow = smoothstep(3.8, 1.18, normalizedRadius)
+    * smoothstep(0.96, 1.12, normalizedRadius);
+  float spiralPhase = angle * 3.0 - normalizedRadius * 5.8 + u_time * 2.15;
+  float spiralArms = pow(0.5 + 0.5 * cos(spiralPhase), 7.0);
+  float counterSpiral = pow(
+    0.5 + 0.5 * cos(angle * 2.0 + normalizedRadius * 7.2 - u_time * 1.35),
+    10.0
+  );
+  float dustNoise = 0.42 + hash(floor(q * 180.0 + u_time * 2.0)) * 0.58;
+  float accretion = outerWindow
+    * (0.2 + spiralArms * 0.9 + counterSpiral * 0.48)
+    * dustNoise
+    * smoothstep(0.03, 0.34, build);
+  float halo = exp(-max(0.0, normalizedRadius - 1.0) * 1.35)
+    * (1.0 - eventHorizon)
+    * smoothstep(0.01, 0.24, build);
 
-  float cometDistance = length((p - comet) * vec2(1.08, 1.0));
-  float cometCore = exp(-cometDistance * mix(34.0, 17.0, u_reveal));
-  float cometHalo = exp(-cometDistance * 6.2);
-  float tailDistance = segmentDistance(p, origin, comet);
-  float tailWindow = smoothstep(-1.14, comet.y, p.y)
-    * (1.0 - smoothstep(comet.y, comet.y + 0.06, p.y));
-  float tail = exp(-tailDistance * 17.0) * tailWindow * smoothstep(0.03, 0.34, build);
-  float speedCorridor = exp(-abs(p.x) * 4.8)
-    * (1.0 - smoothstep(-0.36, 0.24, p.y))
-    * smoothstep(0.22, 0.94, build);
-
-  float shockRadius = u_reveal * 1.12;
-  float shock = ring(portalRadius, shockRadius, 48.0)
+  float shockRadius = holeRadius + u_reveal * 1.24;
+  float shock = ring(radius, shockRadius, 54.0)
     * smoothstep(0.02, 0.14, u_reveal)
     * (1.0 - smoothstep(0.72, 1.0, u_reveal));
-  float impact = exp(-portalRadius * 2.15)
-    * sin(clamp(u_reveal, 0.0, 1.0) * 3.14159265)
-    * 0.72;
-  float impactCross = (exp(-abs(p.x) * 24.0) + exp(-abs(p.y - portal.y) * 22.0))
-    * sin(clamp(u_reveal * 1.18, 0.0, 1.0) * 3.14159265)
-    * 0.24;
+  float burst = sin(clamp(u_reveal, 0.0, 1.0) * 3.14159265);
+  float impact = exp(-radius * mix(3.6, 0.72, u_reveal)) * burst;
+  float impactCross = (
+      exp(-abs(q.x) * 21.0) + exp(-abs(q.y) * 21.0)
+    ) * burst * 0.22;
 
-  vec3 ice = vec3(0.325, 0.847, 1.0);
-  vec3 ivory = vec3(0.976, 0.988, 1.0);
-  vec3 accent = mix(ice, u_color, u_reveal);
-  vec3 color = mix(accent, ivory, 0.28);
-  float pulse = 0.88 + 0.12 * sin(u_time * 5.2);
-  float light = portalHalo * 0.23 + portalRing * (0.42 + build * 0.56)
-    + portalCore * 0.7 + cometCore * pulse * 1.24 + cometHalo * 0.42
-    + tail * 0.58 + speedCorridor * 0.1 + shock * 1.18 + impact + impactCross;
-  float alpha = clamp(portalHalo * 0.2 + portalRing * 0.62 + portalCore * 0.84
-    + cometCore + cometHalo * 0.5 + tail * 0.58 + speedCorridor * 0.08
-    + shock * 0.84 + impact + impactCross, 0.0, 1.0);
-  out_color = vec4(color * light, alpha);
+  vec3 gold = vec3(1.0, 0.64, 0.19);
+  vec3 champagne = vec3(1.0, 0.91, 0.7);
+  vec3 accent = mix(gold, u_color, u_reveal * 0.32);
+  vec3 lightColor = mix(accent, champagne, 0.36 + photonRing * 0.34);
+  float light = photonRing * (0.82 + build * 0.76)
+    + innerGlow * 0.44
+    + accretion * 1.08
+    + halo * 0.2
+    + shock * 1.36
+    + impact * 1.48
+    + impactCross;
+  float alpha = clamp(
+    photonRing * 0.9
+      + innerGlow * 0.48
+      + accretion * 0.9
+      + halo * 0.17
+      + shock
+      + impact * 0.88
+      + impactCross
+      + eventHorizon * 0.995,
+    0.0,
+    1.0
+  );
+  vec3 blackCore = vec3(0.0015, 0.0018, 0.0022);
+  vec3 color = mix(lightColor * light, blackCore, eventHorizon);
+  color = mix(color, champagne * (1.1 + impact * 0.8), clamp(impact * 0.74, 0.0, 0.92));
+  out_color = vec4(color, alpha);
 }`;
 
 const STAR_VERTEX_SHADER = `#version 300 es
@@ -114,26 +133,41 @@ out float v_alpha;
 out float v_core;
 
 void main() {
-  float buildSpeed = mix(0.06, 0.66, smoothstep(0.06, 0.9, u_build));
-  float depth = fract(a_star.z + u_time * buildSpeed * (0.52 + a_star.w * 0.8));
-  float perspective = pow(depth, 1.56);
-  vec2 direction = normalize(a_star.xy);
+  float build = smoothstep(0.0, 1.0, u_build);
+  float growth = pow(build, 0.76);
+  float breath = sin(u_time * 7.65 + 0.4);
+  float holeRadius = mix(0.026, 0.23, growth)
+    * (1.0 + breath * mix(0.08, 0.145, build));
+  float speed = mix(0.055, 0.31, smoothstep(0.02, 0.92, build));
+  float travel = fract(a_star.z + u_time * speed * (0.5 + a_star.w * 0.56));
+  float fall = pow(travel, 0.78);
   float seedRadius = length(a_star.xy);
-  float radius = mix(0.025, 1.94 + seedRadius * 0.56, perspective);
-  vec2 center = vec2(direction.x * radius / u_aspect, direction.y * radius + 0.1);
-
-  vec2 radial = normalize(vec2(direction.x / u_aspect, direction.y));
+  float baseAngle = atan(a_star.y, a_star.x);
+  float angle = baseAngle
+    + fall * (5.0 + seedRadius * 2.7)
+    + u_time * (0.18 + a_star.w * 0.12);
+  float radius = mix(1.72 + seedRadius * 0.42, holeRadius * 1.04, fall);
+  vec2 radial = vec2(cos(angle), sin(angle));
   vec2 tangent = vec2(-radial.y, radial.x);
-  float streakLength = mix(0.004, 0.052, u_build)
-    + pow(perspective, 1.6) * mix(0.026, 0.31, u_build);
-  streakLength *= 0.78 + a_star.w * 0.92;
-  float width = (0.0018 + a_star.w * 0.0023 + perspective * 0.0034)
+  vec2 center = vec2(radial.x * radius / u_aspect, radial.y * radius);
+  vec2 motion = normalize(
+    -radial * mix(0.54, 1.08, fall) + tangent * mix(1.42, 0.78, fall)
+  );
+  vec2 screenMotion = normalize(vec2(motion.x / u_aspect, motion.y));
+  vec2 screenNormal = vec2(-screenMotion.y, screenMotion.x);
+  float streakLength = mix(0.006, 0.056, build)
+    * (0.62 + a_star.w * 0.96)
+    * mix(0.72, 1.28, fall);
+  float width = (0.0014 + a_star.w * 0.002 + fall * 0.0018)
     * u_pixel_ratio;
-  vec2 position = center + radial * a_corner.y * streakLength + tangent * a_corner.x * width;
+  vec2 position = center
+    + screenMotion * a_corner.y * streakLength
+    + screenNormal * a_corner.x * width;
 
-  v_alpha = smoothstep(0.01, 0.12, depth) * (1.0 - smoothstep(0.89, 1.0, depth));
-  v_alpha *= mix(0.34, 1.18, u_build) * (0.52 + a_star.w * 0.72);
-  v_alpha *= 1.0 - u_reveal * 0.22;
+  v_alpha = smoothstep(0.0, 0.09, travel)
+    * (1.0 - smoothstep(0.83, 1.0, travel));
+  v_alpha *= mix(0.2, 1.18, build) * (0.46 + a_star.w * 0.78);
+  v_alpha *= 1.0 - u_reveal * 0.34;
   v_core = 1.0 - abs(a_corner.x);
   gl_Position = vec4(position, 0.0, 1.0);
 }`;
@@ -149,12 +183,10 @@ out vec4 out_color;
 
 void main() {
   float edge = smoothstep(0.0, 0.34, v_core);
-  vec3 ice = vec3(0.325, 0.847, 1.0);
-  vec3 violet = vec3(0.77, 0.655, 1.0);
-  vec3 ivory = vec3(0.976, 0.988, 1.0);
-  vec3 neutral = mix(ice, violet, 0.22);
-  vec3 color = mix(neutral, u_color, u_reveal);
-  color = mix(color, ivory, 0.28 + edge * 0.32);
+  vec3 gold = vec3(1.0, 0.63, 0.16);
+  vec3 champagne = vec3(1.0, 0.93, 0.76);
+  vec3 color = mix(gold, u_color, u_reveal * 0.38);
+  color = mix(color, champagne, 0.32 + edge * 0.42);
   out_color = vec4(color, v_alpha * edge);
 }`;
 
@@ -301,6 +333,7 @@ class WebGlAstralField implements AstralFieldRenderer {
     gl.bindVertexArray(this.#starVao);
     gl.drawArrays(gl.TRIANGLES, 0, this.#starVertexCount);
 
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.useProgram(this.#field.program);
     setUniform1f(gl, this.#field, "u_aspect", aspect);
     setUniform1f(gl, this.#field, "u_build", build);
@@ -337,16 +370,12 @@ function createCanvasFallback(
       : "standard-fallback";
   canvas.dataset.astralStarCount = String(starCount);
   const random = seededRandom(0x51a7f13d);
-  const stars = Array.from({ length: starCount }, () => {
-    const angle = random() * Math.PI * 2;
-    const radius = 0.35 + random() * 0.9;
-    return {
-      directionX: Math.cos(angle) * radius,
-      directionY: Math.sin(angle) * radius,
-      phase: random(),
-      size: 0.4 + random() * 0.9,
-    };
-  });
+  const stars = Array.from({ length: starCount }, () => ({
+    angle: random() * Math.PI * 2,
+    phase: random(),
+    seedRadius: 0.35 + random() * 0.9,
+    size: 0.4 + random() * 0.9,
+  }));
   let width = 0;
   let height = 0;
   let ratio = 1;
@@ -372,79 +401,134 @@ function createCanvasFallback(
       const build = clamp(frame.buildProgress);
       const reveal = easeOutCubic(clamp(frame.revealProgress));
       const time = frame.elapsedMs / 1_000;
-      const speed = mix(0.06, 0.66, smoothstep(0.06, 0.9, build));
+      const speed = mix(0.055, 0.31, smoothstep(0.02, 0.92, build));
       const centerX = width * 0.5;
-      const centerY = height * 0.45;
+      const centerY = height * 0.5;
+      const growth = Math.pow(build, 0.76);
+      const holeRadius =
+        height *
+        mix(0.013, 0.115, growth) *
+        (1 + Math.sin(time * 7.65 + 0.4) * mix(0.08, 0.145, build));
       const accent = colorToCss(
-        mixColor([0.325, 0.847, 1], frame.color, reveal),
+        mixColor([1, 0.64, 0.19], frame.color, reveal * 0.32),
       );
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
       context.clearRect(0, 0, width, height);
       context.save();
       context.globalCompositeOperation = "lighter";
+      context.lineCap = "round";
 
       stars.forEach((star) => {
-        const depth =
-          (star.phase + time * speed * (0.52 + star.size * 0.8)) % 1;
-        const perspective = Math.pow(depth, 1.56);
-        const endX = centerX + star.directionX * width * perspective * 1.08;
-        const endY = centerY + star.directionY * height * perspective * 1.08;
-        const trail =
-          (7 + 104 * Math.pow(perspective, 1.6) * build) * star.size;
-        const length = Math.hypot(endX - centerX, endY - centerY) || 1;
-        const startX = endX - ((endX - centerX) / length) * trail;
-        const startY = endY - ((endY - centerY) / length) * trail;
+        const travel =
+          (star.phase + time * speed * (0.5 + star.size * 0.56)) % 1;
+        const fall = Math.pow(travel, 0.78);
+        const previousFall = Math.max(0, fall - (0.014 + build * 0.024));
+        const outerRadius =
+          Math.hypot(width, height) * (0.53 + star.seedRadius * 0.08);
+        const radius = mix(outerRadius, holeRadius * 1.04, fall);
+        const previousRadius = mix(
+          outerRadius,
+          holeRadius * 1.04,
+          previousFall,
+        );
+        const angle =
+          star.angle +
+          fall * (5 + star.seedRadius * 2.7) +
+          time * (0.18 + star.size * 0.12);
+        const previousAngle =
+          star.angle +
+          previousFall * (5 + star.seedRadius * 2.7) +
+          time * (0.18 + star.size * 0.12);
+        const endX = centerX + Math.cos(angle) * radius;
+        const endY = centerY + Math.sin(angle) * radius;
+        const startX = centerX + Math.cos(previousAngle) * previousRadius;
+        const startY = centerY + Math.sin(previousAngle) * previousRadius;
         const alpha =
-          smoothstep(0.01, 0.12, depth) * (1 - smoothstep(0.89, 1, depth));
-        context.strokeStyle = `rgba(${accent}, ${Math.min(1, alpha * (0.34 + build * 0.9))})`;
-        context.lineWidth = 0.9 + star.size * 1.5;
+          smoothstep(0, 0.09, travel) * (1 - smoothstep(0.83, 1, travel));
+        context.strokeStyle = `rgba(${accent}, ${Math.min(1, alpha * (0.2 + build * 0.98) * (1 - reveal * 0.34))})`;
+        context.lineWidth = 0.65 + star.size * 1.35;
         context.beginPath();
         context.moveTo(startX, startY);
         context.lineTo(endX, endY);
         context.stroke();
       });
 
-      const travel = Math.pow(build, 0.62);
-      const cometY = mix(height * 0.91, centerY, travel);
-      const cometX =
-        mix(width * 0.41, centerX, travel) +
-        Math.sin(travel * Math.PI) * width * 0.12;
-      const tailGradient = context.createLinearGradient(
-        width * 0.41,
-        height,
-        cometX,
-        cometY,
-      );
-      tailGradient.addColorStop(0, `rgba(${accent}, 0)`);
-      tailGradient.addColorStop(1, `rgba(${accent}, ${0.42 + build * 0.34})`);
-      context.strokeStyle = tailGradient;
-      context.lineWidth = 8 + build * 9;
-      context.beginPath();
-      context.moveTo(width * 0.41, height * 1.02);
-      context.lineTo(cometX, cometY);
-      context.stroke();
-      const cometGradient = context.createRadialGradient(
-        cometX,
-        cometY,
+      const haloGradient = context.createRadialGradient(
+        centerX,
+        centerY,
         0,
-        cometX,
-        cometY,
-        36 + reveal * 34,
+        centerX,
+        centerY,
+        holeRadius * 3.5,
       );
-      cometGradient.addColorStop(0, "rgba(255, 255, 255, 1)");
-      cometGradient.addColorStop(0.14, `rgba(${accent}, 0.95)`);
-      cometGradient.addColorStop(1, `rgba(${accent}, 0)`);
-      context.fillStyle = cometGradient;
+      haloGradient.addColorStop(0, `rgba(${accent}, 0)`);
+      haloGradient.addColorStop(
+        0.28,
+        `rgba(${accent}, ${0.28 + build * 0.18})`,
+      );
+      haloGradient.addColorStop(1, `rgba(${accent}, 0)`);
+      context.fillStyle = haloGradient;
       context.beginPath();
-      context.arc(cometX, cometY, 36 + reveal * 44, 0, Math.PI * 2);
+      context.arc(centerX, centerY, holeRadius * 3.5, 0, Math.PI * 2);
       context.fill();
 
-      context.strokeStyle = `rgba(${accent}, ${0.35 + reveal * 0.45})`;
-      context.lineWidth = 3;
-      context.beginPath();
-      context.arc(centerX, centerY, 28 + reveal * width * 0.52, 0, Math.PI * 2);
-      context.stroke();
+      for (let arcIndex = 0; arcIndex < 7; arcIndex += 1) {
+        const arcRadius = holeRadius * (1.08 + arcIndex * 0.24);
+        const arcStart = time * (0.72 + arcIndex * 0.035) + arcIndex * 1.37;
+        context.strokeStyle = `rgba(${accent}, ${Math.max(0.08, 0.5 - arcIndex * 0.052) * build})`;
+        context.lineWidth = Math.max(0.8, 3.2 - arcIndex * 0.31);
+        context.beginPath();
+        context.arc(
+          centerX,
+          centerY,
+          arcRadius,
+          arcStart,
+          arcStart + Math.PI * (0.52 + arcIndex * 0.12),
+        );
+        context.stroke();
+      }
       context.restore();
+
+      const coreGradient = context.createRadialGradient(
+        centerX - holeRadius * 0.16,
+        centerY - holeRadius * 0.14,
+        0,
+        centerX,
+        centerY,
+        holeRadius,
+      );
+      coreGradient.addColorStop(0, "rgba(0, 0, 0, 1)");
+      coreGradient.addColorStop(0.78, "rgba(1, 2, 3, 1)");
+      coreGradient.addColorStop(1, "rgba(5, 5, 4, 0.98)");
+      context.fillStyle = coreGradient;
+      context.beginPath();
+      context.arc(centerX, centerY, holeRadius, 0, Math.PI * 2);
+      context.fill();
+      context.strokeStyle = `rgba(${accent}, ${0.76 + build * 0.2})`;
+      context.lineWidth = Math.max(1.5, holeRadius * 0.025);
+      context.beginPath();
+      context.arc(centerX, centerY, holeRadius * 1.025, 0, Math.PI * 2);
+      context.stroke();
+
+      const burst = Math.sin(reveal * Math.PI);
+      if (burst > 0.001) {
+        const burstGradient = context.createRadialGradient(
+          centerX,
+          centerY,
+          0,
+          centerX,
+          centerY,
+          Math.hypot(width, height) * 0.72,
+        );
+        burstGradient.addColorStop(0, `rgba(255, 252, 232, ${burst})`);
+        burstGradient.addColorStop(0.18, `rgba(${accent}, ${burst * 0.9})`);
+        burstGradient.addColorStop(1, `rgba(${accent}, 0)`);
+        context.save();
+        context.globalCompositeOperation = "screen";
+        context.fillStyle = burstGradient;
+        context.fillRect(0, 0, width, height);
+        context.restore();
+      }
     },
   };
 }

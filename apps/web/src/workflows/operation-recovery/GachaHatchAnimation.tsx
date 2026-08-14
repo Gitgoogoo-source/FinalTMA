@@ -61,7 +61,7 @@ export function GachaHatchAnimation({
   return (
     <section
       className={`gacha-astral-ritual tier-${tier}${revealing ? " is-revealing" : ""}${rarityClass}`}
-      aria-label="灵契星轨正在跃迁，抽取结果将在跃迁结束后展示"
+      aria-label="灵契黑洞正在汇聚，抽取结果将在金光绽放后展示"
     >
       <GachaAstralBackdrop />
 
@@ -76,12 +76,12 @@ export function GachaHatchAnimation({
       </div>
 
       <header className="gacha-astral-ritual-heading" aria-hidden="true">
-        <small>灵契跃迁</small>
-        <h2>穿越星海</h2>
+        <small>月下灵契</small>
+        <h2>灵光正在回应</h2>
       </header>
 
       <p className="gacha-astral-ritual-copy" aria-hidden="true">
-        前往未知回响
+        静候灵契显现
       </p>
     </section>
   );
@@ -108,7 +108,7 @@ export function GachaImageUnavailable({
       <GachaAstralBackdrop calm />
 
       <header className="gacha-astral-ritual-heading">
-        <small>灵契跃迁</small>
+        <small>月下灵契</small>
         <h2 id="gacha-image-unavailable-title">灵契尚未显现</h2>
       </header>
 

@@ -743,3 +743,53 @@ final result: passed
 无阻塞性交付项。
 
 final result: passed
+
+---
+
+**Comparison Target**
+
+- Source visual truth: `/Users/mac/Desktop/图片/exec-8bc2503c-e497-499a-a5c2-12e394764f24.png`
+- Browser-rendered implementation: `/tmp/finaltma-gacha-visual.hkEVxT/implementation-3000-post.png`
+- Full-view comparison: `/Users/mac/.codex/visualizations/2026/08/14/019fff01-c05a-7552-a2a1-5a63e0ce85c5/gacha-black-hole-qa/source-vs-implementation-final.png`
+- Focused motion evidence: `/Users/mac/.codex/visualizations/2026/08/14/019fff01-c05a-7552-a2a1-5a63e0ce85c5/gacha-black-hole-qa/breathing-sequence-final.png`
+- Focused reveal evidence: `/Users/mac/.codex/visualizations/2026/08/14/019fff01-c05a-7552-a2a1-5a63e0ce85c5/gacha-black-hole-qa/gold-burst-final.png`
+- Viewport: `393 × 852` CSS px at device scale factor `1`
+- Source pixels: `839 × 1879`; normalized comparison crop: `839 × 1819` resized to `393 × 852`
+- Implementation pixels: `393 × 852`
+- State: `3000ms / 3300ms` neutral black-hole build for full-view comparison; six neutral build checkpoints and `45%` reveal progress for focused evidence
+- Browser: Codex in-app browser; console warnings and errors checked, none present
+- Primary interaction: the ritual is intentionally automatic and non-interactive; neutral build, frozen critical frame, and reveal state were rendered through the production renderer without calling business APIs
+
+**Findings**
+
+- No actionable P0/P1/P2 difference remains.
+- Fonts and typography: the Songti display treatment, white main heading, small warm-gold eyebrow, and bottom ceremonial copy preserve the source hierarchy without reproducing Telegram-owned chrome.
+- Spacing and layout rhythm: heading and footer remain clear of the effect; the black-hole and burst centers now align to the screen midpoint and the mature event horizon occupies about half of the narrow viewport width.
+- Colors and visual tokens: deep black, warm gold, champagne highlights, and low-saturation brown-gold haze match the requested material direction. The final burst is gold-led while allowing only a small server-authorized rarity tint.
+- Image quality and asset fidelity: the user selected the reference for effect style and motion, not its moon, plants, crystals, water, Telegram chrome, or other decorative artwork. Those out-of-scope assets were intentionally not copied. The requested black hole, accretion flow, and particles are rendered procedurally by the existing production WebGL/Canvas boundary, with no placeholder or added effect-image request.
+- Copy and content: `月下灵契 / 灵光正在回应 / 静候灵契显现` matches the reference tone and does not expose server or request processing.
+- Accessibility: the automatic stage retains a meaningful label, contains no hidden interactive control, and `prefers-reduced-motion` keeps the static critical frame while disabling movement and flash.
+
+**Comparison History**
+
+- Iteration 1 — P2 layout: the black-hole center and CSS burst were at about `45%` viewport height, visibly higher than the source effect center. Fix: moved the WebGL, Canvas 2D, bloom, rays, impact ring, vignette, and flash centers to `50%`.
+- Iteration 2 — post-fix evidence: `source-vs-implementation-final.png` shows the effect centered consistently; `breathing-sequence-final.png` shows overall growth with repeated local contraction; `gold-burst-final.png` shows a full-screen reveal flash. No further P0/P1/P2 issue was found.
+
+**Open Questions**
+
+- Real Telegram/iPhone cold-cache acceptance and Safari Web Inspector performance sampling remain a separate runtime gate; this browser QA does not claim that device gate.
+
+**Implementation Checklist**
+
+- [x] Black hole grows overall while visibly breathing.
+- [x] Particles approach through rotating curved trajectories.
+- [x] The critical state freezes when authoritative result or image decode is late.
+- [x] The authorized reveal produces a full-screen gold burst.
+- [x] Result content and controls remain outside the visual-engine changes.
+- [x] Browser console has no warning or error in the compared states.
+
+**Follow-up Polish**
+
+- None required before real-device acceptance.
+
+final result: passed
