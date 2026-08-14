@@ -2,7 +2,7 @@
 
 ## 决定
 
-默认开盒页首屏事实就绪并完成 `gacha.open` 表现模块加载后，模块在浏览器空闲回调中创建一张脱离文档流的真实 Canvas，按当前 `hardwareConcurrency` 与减少动态效果设置创建 WebGL2 或 Canvas 2D 渲染器，以当前 WebView 的 `innerWidth × innerHeight` 完成真实全屏 drawing buffer 分配和一帧中性绘制，并把 Canvas、context、program、buffer 与 vertex array 保留为全局单实例池；禁止只以脱离文档流时的 `1 × 1` 边界完成名义预热。开盒表现挂载时必须直接租用这张已经预热的 Canvas 并放入演出宿主，不再于用户点击后的首个动画帧冷创建 GPU 资源或重新分配同尺寸全屏后备缓冲；表现卸载时只把 Canvas 脱离演出宿主并回收到池中，后续同会话开盒继续复用。质量档发生变化时释放旧实例并按新档重建；页面 `pagehide` 时释放池内资源。池被占用或空闲预热尚未执行时允许创建唯一的即时实例，但不得并行共享一个 WebGL context。
+默认开盒页首屏事实就绪并完成 `gacha.open` 表现模块加载后，模块在浏览器空闲回调中创建一张脱离文档流的真实 Canvas，按当前 `hardwareConcurrency` 与减少动态效果设置创建 WebGL2 或 Canvas 2D 渲染器，完成 shader、context、program、buffer、vertex array 和一帧中性绘制，并把这些资源保留为全局单实例池。脱离文档流的预热 Canvas 不得预分配当前 WebView 的全屏 drawing buffer；WebKit 把预分配的离屏全屏 surface 重挂到可见层时会产生额外合成迁移，画布只在进入真实演出宿主后按实际边界分配一次。开盒表现挂载时必须直接租用这张已经预热的 Canvas 并放入演出宿主，不再于用户点击后的首个动画帧冷创建 GPU 程序资源；表现卸载时只把 Canvas 脱离演出宿主并回收到池中，后续同会话开盒继续复用。质量档发生变化时释放旧实例并按新档重建；页面 `pagehide` 时释放池内资源。池被占用或空闲预热尚未执行时允许创建唯一的即时实例，但不得并行共享一个 WebGL context。
 
 同一表现模块加载完成后还必须在空闲回调中直接创建可复用的开场 Web Audio 风声 `AudioBuffer`，每次空闲回调最多填充 `4096` 个固定噪声样本并重新排队，禁止在单次 idle deadline 内循环填满整段 Buffer。用户点击只负责停止尚未完成的样本准备并解锁 `AudioContext`；Buffer 已准备时，动画组件挂载只创建轻量音频节点并复用它，不得把整段 Buffer 的创建、复制或逐样本填充放进 `AudioContext.resume()` 的异步回调或首轮可见呼吸。Buffer 尚未准备、音频能力缺失或浏览器拒绝解锁时省略本次风声层，振荡器、触觉、动画计时和业务请求继续执行，禁止回退为可见动画期间的同步生成。
 
@@ -13,5 +13,5 @@ Canvas 固定暴露 `data-astral-startup="warm|cold"`，并继续暴露 ADR-067 
 ## 后果
 
 - 动态模块仍按需加载，首屏同步闭包不引入 WebGL 代码、第三方运行时、图片、视频或序列帧；预热只在开盒页事实就绪后执行。
-- 同一会话首次和重复开盒都不再把 shader 编译、buffer 初始化、全屏 drawing buffer 分配、音频噪声逐样本生成与首轮呼吸争用同一个可见帧。
+- 同一会话首次和重复开盒都不再把 shader 编译、GPU 程序资源初始化、音频噪声逐样本生成与首轮呼吸争用同一个可见帧，也不因离屏全屏 surface 重挂引入额外合成迁移。
 - 程序化星域的视觉身份保持不变，但汇聚阶段只有一套动态黑洞时间轴，避免 WebGL 与 CSS 重复绘制全屏呼吸效果。

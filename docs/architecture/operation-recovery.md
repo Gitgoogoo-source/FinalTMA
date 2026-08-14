@@ -1,6 +1,6 @@
 # 操作恢复
 
-开盒表现模块的空闲准备按 [ADR-069](adr/ADR-069-gacha-renderer-prewarm-and-static-stage.md) 同时完成当前 WebView 全屏 drawing buffer、首帧和分块 Web Audio 风声样本；首轮可见呼吸不得承担画布从 `1 × 1` 扩容或四秒音频数组同步生成。
+开盒表现模块的空闲准备按 [ADR-069](adr/ADR-069-gacha-renderer-prewarm-and-static-stage.md) 完成 Canvas/WebGL 程序资源、首帧和有界 Web Audio 风声样本；离屏 Canvas 不预分配全屏 surface，首轮可见呼吸不得承担 GPU 程序资源冷创建或四秒音频数组同步生成。
 
 用户确认会创建 operation 的写操作时，操作注册中心先使用 Web Crypto 生成 UUIDv7 并写入内存记录，再在下一动画帧提交请求。同一 operation 的会话恢复重试和结果查询始终复用该 UUIDv7；旧记录查询先于数据库新鲜度与配额，因此同 key 重试不创建或计数第二条 operation。Battle heartbeat 和 offline 不进入操作注册中心、不生成 UUID，也不通过 operations 查询恢复；Battle 结果按钮不发送请求。
 
