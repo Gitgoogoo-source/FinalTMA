@@ -442,7 +442,7 @@ class WebGlAstralField implements AstralFieldRenderer {
   ) {
     this.#canvas = canvas;
     this.#gl = gl;
-    this.#pixelRatioLimit = options.lowPower ? 1 : 1.25;
+    this.#pixelRatioLimit = options.lowPower ? 0.75 : 1.25;
     this.#starCount = options.reducedMotion ? 96 : options.lowPower ? 320 : 520;
     canvas.dataset.astralQuality = options.reducedMotion
       ? "reduced-motion"
@@ -592,7 +592,7 @@ function createCanvasFallback(
       height = Math.max(1, bounds.height);
       ratio = Math.min(
         window.devicePixelRatio || 1,
-        options.lowPower ? 1 : 1.1,
+        options.lowPower ? 0.75 : 1.1,
       );
       canvas.dataset.astralPixelRatio = ratio.toFixed(2);
       const nextWidth = Math.round(width * ratio);

@@ -148,6 +148,7 @@ const navigationLockedThroughResultRouteIds = new Set<RecoverableRouteId>([
   "vip.claim_free_box",
   "wheel.spin",
 ]);
+const GACHA_RESULT_PREPARATION_DELAY_MS = 1_840;
 const autoPollingRouteIds = new Set<RecoverableRouteId>([
   "wheel.spin",
   "market.create_listing",
@@ -215,6 +216,8 @@ export function OperationRegistryRuntimeProvider({
   const [gachaTensionReadyId, setGachaTensionReadyId] = useState<string | null>(
     null,
   );
+  const [gachaResultPreparationReadyId, setGachaResultPreparationReadyId] =
+    useState<string | null>(null);
   const [revealingGachaAnimationId, setRevealingGachaAnimationId] = useState<
     string | null
   >(null);
@@ -387,6 +390,9 @@ export function OperationRegistryRuntimeProvider({
   const gachaPresentationReady =
     animatedGachaOperationId === null ||
     revealedGachaAnimationId === animatedGachaOperationId;
+  const gachaResultPreparationReady =
+    animatedGachaOperationId === null ||
+    gachaResultPreparationReadyId === animatedGachaOperationId;
   const activeGachaImagePreparation =
     gachaImagePreparation?.operationId === active?.id
       ? gachaImagePreparation
@@ -486,6 +492,7 @@ export function OperationRegistryRuntimeProvider({
         setGachaActionError(null);
         setRevealedGachaAnimationId(null);
         setGachaTensionReadyId(null);
+        setGachaResultPreparationReadyId(null);
         setRevealingGachaAnimationId(null);
         setGachaImagePreparation(null);
         setMountedGachaAnimationId(null);
@@ -503,6 +510,20 @@ export function OperationRegistryRuntimeProvider({
     else telegram()?.disableClosingConfirmation();
     return () => telegram()?.disableClosingConfirmation();
   }, [closingBlocked]);
+
+  useEffect(() => {
+    if (
+      !animatedGachaOperationId ||
+      mountedGachaAnimationId !== animatedGachaOperationId
+    )
+      return;
+    const operationId = animatedGachaOperationId;
+    const timer = window.setTimeout(
+      () => setGachaResultPreparationReadyId(operationId),
+      GACHA_RESULT_PREPARATION_DELAY_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, [animatedGachaOperationId, mountedGachaAnimationId]);
 
   useEffect(() => {
     if (
@@ -1687,7 +1708,8 @@ export function OperationRegistryRuntimeProvider({
             />
           ) : active.routeId === "gacha.open" &&
             gachaResult &&
-            GachaResultDialog ? (
+            GachaResultDialog &&
+            gachaResultPreparationReady ? (
             <>
               <GachaResultDialog
                 key={active.id}
