@@ -7,7 +7,7 @@ export type AstralFieldFrame = {
   revealProgress: number;
 };
 
-type AstralFieldRenderer = {
+export type AstralFieldRenderer = {
   dispose(): void;
   render(frame: AstralFieldFrame): void;
   resize(): void;
@@ -21,6 +21,45 @@ type AstralFieldOptions = {
 const GACHA_BREATH_PERIODS_SECONDS = [
   0.8, 0.58, 0.46, 0.38, 0.33, 0.29, 0.26, 0.23, 0.2, 0.17, 0.13, 0.1, 0.07,
 ] as const;
+
+const GACHA_PREWARM_FRAME: AstralFieldFrame = {
+  buildProgress: 0,
+  color: [1, 0.72, 0.28],
+  elapsedMs: 0,
+  revealProgress: 0,
+};
+
+type ManagedAstralField = {
+  canvas: HTMLCanvasElement;
+  disposed: boolean;
+  leased: boolean;
+  optionsKey: string;
+  renderer: AstralFieldRenderer;
+  warmed: boolean;
+};
+
+export type GachaAstralFieldLease = {
+  canvas: HTMLCanvasElement;
+  reducedMotion: boolean;
+  release(): void;
+  renderer: AstralFieldRenderer;
+};
+
+type IdleWindow = Window & {
+  cancelIdleCallback?(handle: number): void;
+  requestIdleCallback?(
+    callback: () => void,
+    options?: { timeout: number },
+  ): number;
+};
+
+type ScheduledPreparation =
+  | { handle: number; kind: "idle" }
+  | { handle: number; kind: "timeout" };
+
+let pooledAstralField: ManagedAstralField | null = null;
+let scheduledPreparation: ScheduledPreparation | null = null;
+let pageLifecycleBound = false;
 
 const ACCELERATED_BREATH_GLSL = `
 vec2 acceleratedBreath(float seconds) {
@@ -251,6 +290,129 @@ export function createGachaAstralField(
     canvas.dataset.astralRenderer = "unavailable";
     return createNoopRenderer();
   }
+}
+
+export function prepareGachaAstralField(): void {
+  if (typeof document === "undefined" || typeof window === "undefined") return;
+  if (pooledAstralField || scheduledPreparation) return;
+  bindPageLifecycle();
+
+  const prepare = () => {
+    scheduledPreparation = null;
+    if (pooledAstralField) return;
+    const options = resolveAstralFieldOptions();
+    const managed = createManagedAstralField(options);
+    managed.renderer.resize();
+    managed.renderer.render(GACHA_PREWARM_FRAME);
+    managed.warmed = true;
+    pooledAstralField = managed;
+  };
+  const idleWindow = window as IdleWindow;
+  if (idleWindow.requestIdleCallback) {
+    scheduledPreparation = {
+      handle: idleWindow.requestIdleCallback(prepare, { timeout: 1_000 }),
+      kind: "idle",
+    };
+    return;
+  }
+  scheduledPreparation = {
+    handle: window.setTimeout(prepare, 120),
+    kind: "timeout",
+  };
+}
+
+export function claimGachaAstralField(): GachaAstralFieldLease {
+  cancelScheduledPreparation();
+  bindPageLifecycle();
+  const options = resolveAstralFieldOptions();
+  const optionsKey = astralFieldOptionsKey(options);
+  if (
+    pooledAstralField &&
+    !pooledAstralField.leased &&
+    pooledAstralField.optionsKey !== optionsKey
+  ) {
+    disposeManagedAstralField(pooledAstralField);
+    pooledAstralField = null;
+  }
+
+  const managed =
+    pooledAstralField && !pooledAstralField.leased
+      ? pooledAstralField
+      : createManagedAstralField(options);
+  if (!pooledAstralField) pooledAstralField = managed;
+  managed.leased = true;
+  managed.canvas.dataset.astralStartup = managed.warmed ? "warm" : "cold";
+  let released = false;
+
+  return {
+    canvas: managed.canvas,
+    reducedMotion: options.reducedMotion,
+    renderer: managed.renderer,
+    release() {
+      if (released) return;
+      released = true;
+      managed.canvas.remove();
+      managed.warmed = true;
+      managed.leased = false;
+      if (pooledAstralField !== managed) disposeManagedAstralField(managed);
+    },
+  };
+}
+
+function resolveAstralFieldOptions(): AstralFieldOptions {
+  return {
+    lowPower: (navigator.hardwareConcurrency || 8) <= 4,
+    reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)")
+      .matches,
+  };
+}
+
+function astralFieldOptionsKey(options: AstralFieldOptions): string {
+  return `${options.lowPower ? "low" : "standard"}:${options.reducedMotion ? "reduced" : "motion"}`;
+}
+
+function createManagedAstralField(
+  options: AstralFieldOptions,
+): ManagedAstralField {
+  const canvas = document.createElement("canvas");
+  canvas.className = "gacha-astral-field-canvas";
+  return {
+    canvas,
+    disposed: false,
+    leased: false,
+    optionsKey: astralFieldOptionsKey(options),
+    renderer: createGachaAstralField(canvas, options),
+    warmed: false,
+  };
+}
+
+function bindPageLifecycle(): void {
+  if (pageLifecycleBound) return;
+  pageLifecycleBound = true;
+  window.addEventListener("pagehide", disposePooledAstralField);
+}
+
+function disposePooledAstralField(): void {
+  cancelScheduledPreparation();
+  if (pooledAstralField) disposeManagedAstralField(pooledAstralField);
+  pooledAstralField = null;
+}
+
+function disposeManagedAstralField(managed: ManagedAstralField): void {
+  if (managed.disposed) return;
+  managed.disposed = true;
+  managed.canvas.remove();
+  managed.renderer.dispose();
+}
+
+function cancelScheduledPreparation(): void {
+  if (!scheduledPreparation) return;
+  if (scheduledPreparation.kind === "idle") {
+    (window as IdleWindow).cancelIdleCallback?.(scheduledPreparation.handle);
+  } else {
+    window.clearTimeout(scheduledPreparation.handle);
+  }
+  scheduledPreparation = null;
 }
 
 class WebGlAstralField implements AstralFieldRenderer {

@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 
 import {
-  createGachaAstralField,
+  claimGachaAstralField,
   type AstralFieldColor,
 } from "./GachaAstralFieldRenderer.ts";
 
@@ -30,21 +30,15 @@ export function GachaAstralCanvas({
   revealing: boolean;
   rarity: GachaRevealRarity | null;
 }): ReactNode {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const hostRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<AstralTimeline | null>(null);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const reducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    const lowPower = (navigator.hardwareConcurrency || 8) <= 4;
-    const renderer = createGachaAstralField(canvas, {
-      lowPower,
-      reducedMotion,
-    });
+    const host = hostRef.current;
+    if (!host) return;
+    const lease = claimGachaAstralField();
+    const { canvas, reducedMotion, renderer } = lease;
+    host.replaceChildren(canvas);
     let buildStartedAt = performance.now();
     let revealStartedAt: number | null = null;
     let revealRarity: GachaRevealRarity | null = null;
@@ -116,7 +110,7 @@ export function GachaAstralCanvas({
       if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
       window.removeEventListener("resize", handleResize);
       if (timelineRef.current === timeline) timelineRef.current = null;
-      renderer.dispose();
+      lease.release();
     };
   }, []);
 
@@ -124,7 +118,7 @@ export function GachaAstralCanvas({
     timelineRef.current?.update(revealing, rarity);
   }, [rarity, revealing]);
 
-  return <canvas ref={canvasRef} className="gacha-astral-field-canvas" />;
+  return <div ref={hostRef} className="gacha-astral-field-host" />;
 }
 
 type AstralTimeline = {

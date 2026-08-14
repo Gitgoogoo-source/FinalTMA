@@ -225,6 +225,19 @@
   opacity: 0;
 }
 
+.gacha-astral-ritual:not(.gacha-astral-image-unavailable) .gacha-astral-nebula {
+  filter: none;
+  mix-blend-mode: normal;
+  opacity: 0.22;
+  animation: none;
+  will-change: auto;
+}
+
+.gacha-astral-ritual:not(.gacha-astral-image-unavailable) .gacha-astral-stars {
+  mix-blend-mode: normal;
+  animation: none;
+}
+
 .gacha-astral-backdrop.is-calm .gacha-astral-nebula,
 .gacha-astral-backdrop.is-calm .gacha-astral-stars,
 .gacha-astral-backdrop.is-calm .gacha-astral-portal {
@@ -232,8 +245,8 @@
 }
 
 .gacha-ritual-code-stage,
+.gacha-astral-field-host,
 .gacha-astral-field-canvas,
-.gacha-ritual-warp-bloom,
 .gacha-ritual-reveal-meteor,
 .gacha-ritual-burst-rays,
 .gacha-ritual-impact-ring,
@@ -253,27 +266,6 @@
 
 .gacha-astral-field-canvas {
   z-index: 2;
-}
-
-.gacha-ritual-warp-bloom {
-  z-index: 2;
-  background:
-    radial-gradient(
-      ellipse at 50% 50%,
-      rgba(255, 246, 220, 0.14) 0 3%,
-      rgba(255, 194, 94, 0.14) 9%,
-      transparent 31%
-    ),
-    conic-gradient(
-      from 0deg at 50% 50%,
-      transparent 0 7%,
-      rgba(255, 203, 112, 0.11) 8% 9.5%,
-      transparent 10.5% 23%,
-      rgba(255, 231, 184, 0.08) 24% 25.5%,
-      transparent 27% 100%
-    );
-  opacity: 0;
-  animation: gacha-ritual-warp-bloom 4s linear both;
 }
 
 .gacha-ritual-reveal-meteor {
@@ -876,117 +868,6 @@
   100% {
     opacity: 0;
     transform: scale(2.06);
-  }
-}
-
-@keyframes gacha-ritual-warp-bloom {
-  0% {
-    opacity: 0.08;
-    transform: scale(0.2) rotate(-8deg);
-  }
-  10% {
-    opacity: 0.25;
-    transform: scale(0.33) rotate(-5deg);
-  }
-  20% {
-    opacity: 0.13;
-    transform: scale(0.29) rotate(-2deg);
-  }
-  27.25% {
-    opacity: 0.32;
-    transform: scale(0.43) rotate(0deg);
-  }
-  34.5% {
-    opacity: 0.17;
-    transform: scale(0.37) rotate(3deg);
-  }
-  40.25% {
-    opacity: 0.39;
-    transform: scale(0.54) rotate(5deg);
-  }
-  46% {
-    opacity: 0.22;
-    transform: scale(0.46) rotate(7deg);
-  }
-  50.75% {
-    opacity: 0.46;
-    transform: scale(0.63) rotate(9deg);
-  }
-  55.5% {
-    opacity: 0.28;
-    transform: scale(0.54) rotate(11deg);
-  }
-  59.625% {
-    opacity: 0.53;
-    transform: scale(0.71) rotate(13deg);
-  }
-  63.75% {
-    opacity: 0.34;
-    transform: scale(0.61) rotate(15deg);
-  }
-  67.375% {
-    opacity: 0.6;
-    transform: scale(0.79) rotate(17deg);
-  }
-  71% {
-    opacity: 0.4;
-    transform: scale(0.68) rotate(19deg);
-  }
-  74.25% {
-    opacity: 0.67;
-    transform: scale(0.87) rotate(20deg);
-  }
-  77.5% {
-    opacity: 0.47;
-    transform: scale(0.75) rotate(22deg);
-  }
-  80.375% {
-    opacity: 0.74;
-    transform: scale(0.95) rotate(23deg);
-  }
-  83.25% {
-    opacity: 0.54;
-    transform: scale(0.82) rotate(24deg);
-  }
-  85.75% {
-    opacity: 0.8;
-    transform: scale(1.03) rotate(25deg);
-  }
-  88.25% {
-    opacity: 0.6;
-    transform: scale(0.89) rotate(26deg);
-  }
-  90.375% {
-    opacity: 0.85;
-    transform: scale(1.1) rotate(27deg);
-  }
-  92.5% {
-    opacity: 0.66;
-    transform: scale(0.96) rotate(28deg);
-  }
-  94.125% {
-    opacity: 0.9;
-    transform: scale(1.16) rotate(29deg);
-  }
-  95.75% {
-    opacity: 0.7;
-    transform: scale(1.02) rotate(30deg);
-  }
-  97% {
-    opacity: 0.94;
-    transform: scale(1.21) rotate(31deg);
-  }
-  98.25% {
-    opacity: 0.74;
-    transform: scale(1.07) rotate(32deg);
-  }
-  99.125% {
-    opacity: 0.98;
-    transform: scale(1.25) rotate(33deg);
-  }
-  100% {
-    opacity: 0.78;
-    transform: scale(1.11) rotate(34deg);
   }
 }
 

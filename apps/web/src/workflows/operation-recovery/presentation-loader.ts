@@ -24,7 +24,11 @@ type PresentationModule = LoadedOperationPresentation["module"];
 type PresentationLoader = () => Promise<PresentationModule>;
 
 const loaders: Record<PresentationKind, PresentationLoader> = {
-  gacha: cachedLoader(() => import("./presentations/GachaPresentation.ts")),
+  gacha: cachedLoader(async () => {
+    const module = await import("./presentations/GachaPresentation.ts");
+    module.prepareGachaPresentation();
+    return module;
+  }),
   evolution: cachedLoader(
     () => import("./presentations/EvolutionPresentation.ts"),
   ),
