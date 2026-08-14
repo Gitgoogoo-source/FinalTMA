@@ -1,5 +1,7 @@
 # 操作恢复
 
+开盒表现模块的空闲准备按 [ADR-069](adr/ADR-069-gacha-renderer-prewarm-and-static-stage.md) 同时完成当前 WebView 全屏 drawing buffer、首帧和分块 Web Audio 风声样本；首轮可见呼吸不得承担画布从 `1 × 1` 扩容或四秒音频数组同步生成。
+
 用户确认会创建 operation 的写操作时，操作注册中心先使用 Web Crypto 生成 UUIDv7 并写入内存记录，再在下一动画帧提交请求。同一 operation 的会话恢复重试和结果查询始终复用该 UUIDv7；旧记录查询先于数据库新鲜度与配额，因此同 key 重试不创建或计数第二条 operation。Battle heartbeat 和 offline 不进入操作注册中心、不生成 UUID，也不通过 operations 查询恢复；Battle 结果按钮不发送请求。
 
 网络失败不会展示业务成功。`unknown`、`pending` 通过 `GET /api/operations/:operation_id` 查询；只有明确返回 `OPERATION_NOT_FOUND` 时才用原 UUID 单次重提。恢复成功时，`use_case` 对应的原命令输出 Schema 会重新校验 `result`，随后把该路由声明的 refresh scope 全部标记失效并刷新当前可见页面与全局活动查询；隐藏页面不读取、不参与等待，返回时按 [ADR-037](adr/ADR-037-persistent-page-query-activity.md) 回正。`battle.action` 的完整权威 room snapshot 直接写入对应查询缓存并应用页面 authority，不再失效整个 `battle` scope。入口交接未完成时，该查询只能读取当前用户的原 `referral.bind` 操作。

@@ -10,7 +10,7 @@ export type AstralFieldFrame = {
 export type AstralFieldRenderer = {
   dispose(): void;
   render(frame: AstralFieldFrame): void;
-  resize(): void;
+  resize(width?: number, height?: number): void;
 };
 
 type AstralFieldOptions = {
@@ -302,7 +302,7 @@ export function prepareGachaAstralField(): void {
     if (pooledAstralField) return;
     const options = resolveAstralFieldOptions();
     const managed = createManagedAstralField(options);
-    managed.renderer.resize();
+    managed.renderer.resize(window.innerWidth, window.innerHeight);
     managed.renderer.render(GACHA_PREWARM_FRAME);
     managed.warmed = true;
     pooledAstralField = managed;
@@ -484,10 +484,10 @@ class WebGlAstralField implements AstralFieldRenderer {
     gl.enable(gl.BLEND);
   }
 
-  resize(): void {
+  resize(preparedWidth?: number, preparedHeight?: number): void {
     const bounds = this.#canvas.getBoundingClientRect();
-    const width = Math.max(1, bounds.width);
-    const height = Math.max(1, bounds.height);
+    const width = Math.max(1, preparedWidth ?? bounds.width);
+    const height = Math.max(1, preparedHeight ?? bounds.height);
     const pixelRatio = Math.min(
       window.devicePixelRatio || 1,
       this.#pixelRatioLimit,
@@ -577,10 +577,10 @@ function createCanvasFallback(
 
   return {
     dispose() {},
-    resize() {
+    resize(preparedWidth?: number, preparedHeight?: number) {
       const bounds = canvas.getBoundingClientRect();
-      width = Math.max(1, bounds.width);
-      height = Math.max(1, bounds.height);
+      width = Math.max(1, preparedWidth ?? bounds.width);
+      height = Math.max(1, preparedHeight ?? bounds.height);
       ratio = Math.min(
         window.devicePixelRatio || 1,
         options.lowPower ? 1 : 1.1,

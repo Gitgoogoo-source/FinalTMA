@@ -1,6 +1,20 @@
 type GachaRitualRarity = "common" | "rare" | "epic" | "legendary" | "mythic";
 
+const WIND_DURATION_SECONDS = 4.02;
+const WIND_MAX_SAMPLE_RATE = 48_000;
+const WIND_PREPARATION_CHUNK_SIZE = 4_096;
+
 let audioContext: AudioContext | null = null;
+let preparedWindNoise: Float32Array | null = null;
+let preparedWindBuffer: AudioBuffer | null = null;
+let windNoisePreparationStarted = false;
+
+type AudioIdleWindow = Window & {
+  requestIdleCallback?(
+    callback: (deadline: IdleDeadline) => void,
+    options?: { timeout: number },
+  ): number;
+};
 
 function getAudioContext(): AudioContext | null {
   if (typeof window === "undefined" || !window.AudioContext) return null;
@@ -18,11 +32,16 @@ function getAudioContext(): AudioContext | null {
  * presentation-only degradation and never blocks the gacha operation.
  */
 export function prepareGachaRitualAudio(): void {
+  prepareGachaRitualAudioAssets();
   const context = getAudioContext();
   if (!context) return;
   if (context.state === "suspended")
-    void context.resume().catch(() => undefined);
+    void context
+      .resume()
+      .then(() => prepareWindBuffer(context))
+      .catch(() => undefined);
   if (context.state !== "running") return;
+  prepareWindBuffer(context);
 
   const oscillator = context.createOscillator();
   const gain = context.createGain();
@@ -30,6 +49,65 @@ export function prepareGachaRitualAudio(): void {
   oscillator.connect(gain).connect(context.destination);
   oscillator.start();
   oscillator.stop(context.currentTime + 0.012);
+}
+
+export function prepareGachaRitualAudioAssets(): void {
+  if (
+    typeof window === "undefined" ||
+    preparedWindNoise ||
+    windNoisePreparationStarted
+  )
+    return;
+  windNoisePreparationStarted = true;
+  const samples = new Float32Array(
+    Math.round(WIND_MAX_SAMPLE_RATE * WIND_DURATION_SECONDS),
+  );
+  let cursor = 0;
+  let randomState = 0x6d2b79f5;
+
+  const fillChunk = () => {
+    const end = Math.min(cursor + WIND_PREPARATION_CHUNK_SIZE, samples.length);
+    for (; cursor < end; cursor += 1) {
+      randomState = (Math.imul(randomState, 1_664_525) + 1_013_904_223) | 0;
+      const envelope = Math.pow(cursor / samples.length, 1.4);
+      samples[cursor] =
+        (((randomState >>> 0) / 4_294_967_295) * 2 - 1) * envelope;
+    }
+  };
+  const completeOrSchedule = (deadline?: IdleDeadline) => {
+    do fillChunk();
+    while (
+      cursor < samples.length &&
+      deadline !== undefined &&
+      deadline.timeRemaining() > 2
+    );
+    if (cursor >= samples.length) {
+      preparedWindNoise = samples;
+      return;
+    }
+    schedule(completeOrSchedule);
+  };
+  schedule(completeOrSchedule);
+}
+
+function schedule(callback: (deadline?: IdleDeadline) => void): void {
+  const idleWindow = window as AudioIdleWindow;
+  if (idleWindow.requestIdleCallback) {
+    idleWindow.requestIdleCallback(callback, { timeout: 500 });
+    return;
+  }
+  window.setTimeout(callback, 0);
+}
+
+function prepareWindBuffer(context: AudioContext): AudioBuffer | null {
+  if (preparedWindBuffer) return preparedWindBuffer;
+  if (!preparedWindNoise) return null;
+  const length = Math.round(context.sampleRate * WIND_DURATION_SECONDS);
+  if (length > preparedWindNoise.length) return null;
+  const buffer = context.createBuffer(1, length, context.sampleRate);
+  buffer.getChannelData(0).set(preparedWindNoise.subarray(0, length));
+  preparedWindBuffer = buffer;
+  return buffer;
 }
 
 export function playGachaRitualBuildUp(): () => void {
@@ -67,26 +145,22 @@ export function playGachaRitualBuildUp(): () => void {
   overtone.stop(startedAt + 4.02);
   nodes.push(overtone);
 
-  const windLength = Math.max(1, Math.round(context.sampleRate * 4.02));
-  const windBuffer = context.createBuffer(1, windLength, context.sampleRate);
-  const windData = windBuffer.getChannelData(0);
-  for (let index = 0; index < windData.length; index += 1) {
-    const envelope = Math.pow(index / windData.length, 1.4);
-    windData[index] = (Math.random() * 2 - 1) * envelope;
+  const windBuffer = prepareWindBuffer(context);
+  if (windBuffer) {
+    const wind = context.createBufferSource();
+    const windFilter = context.createBiquadFilter();
+    const windGain = context.createGain();
+    wind.buffer = windBuffer;
+    windFilter.type = "bandpass";
+    windFilter.frequency.setValueAtTime(380, startedAt);
+    windFilter.frequency.exponentialRampToValueAtTime(3_600, startedAt + 3.92);
+    windFilter.Q.value = 0.82;
+    windGain.gain.setValueAtTime(0.02, startedAt);
+    windGain.gain.exponentialRampToValueAtTime(0.34, startedAt + 3.85);
+    wind.connect(windFilter).connect(windGain).connect(master);
+    wind.start(startedAt);
+    nodes.push(wind);
   }
-  const wind = context.createBufferSource();
-  const windFilter = context.createBiquadFilter();
-  const windGain = context.createGain();
-  wind.buffer = windBuffer;
-  windFilter.type = "bandpass";
-  windFilter.frequency.setValueAtTime(380, startedAt);
-  windFilter.frequency.exponentialRampToValueAtTime(3_600, startedAt + 3.92);
-  windFilter.Q.value = 0.82;
-  windGain.gain.setValueAtTime(0.02, startedAt);
-  windGain.gain.exponentialRampToValueAtTime(0.34, startedAt + 3.85);
-  wind.connect(windFilter).connect(windGain).connect(master);
-  wind.start(startedAt);
-  nodes.push(wind);
 
   [0.5, 2, 3.5].forEach((offset, index) => {
     const pulse = context.createOscillator();
