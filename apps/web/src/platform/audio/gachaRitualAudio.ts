@@ -52,6 +52,7 @@ export function prepareGachaRitualAudioAssets(): void {
   if (
     typeof window === "undefined" ||
     typeof AudioBuffer === "undefined" ||
+    (navigator.hardwareConcurrency || 8) <= 4 ||
     preparedWindBuffer ||
     windNoisePreparationStarted
   )
