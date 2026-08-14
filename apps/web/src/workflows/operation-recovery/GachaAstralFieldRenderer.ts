@@ -38,17 +38,14 @@ type ManagedAstralField = {
   leased: boolean;
   optionsKey: string;
   renderer: AstralFieldRenderer;
-  surface: HTMLDivElement;
   warmed: boolean;
 };
 
 export type GachaAstralFieldLease = {
-  activate(): void;
   canvas: HTMLCanvasElement;
   reducedMotion: boolean;
   release(): void;
   renderer: AstralFieldRenderer;
-  surface: HTMLDivElement;
 };
 
 type IdleWindow = Window & {
@@ -308,7 +305,6 @@ export function prepareGachaAstralField(): void {
     if (pooledAstralField) return;
     const options = resolveAstralFieldOptions();
     const managed = createManagedAstralField(options);
-    mountManagedAstralField(managed);
     managed.renderer.resize();
     managed.renderer.render(GACHA_PREWARM_FRAME);
     managed.renderer.finishWarmup();
@@ -348,23 +344,18 @@ export function claimGachaAstralField(): GachaAstralFieldLease {
       ? pooledAstralField
       : createManagedAstralField(options);
   if (!pooledAstralField) pooledAstralField = managed;
-  mountManagedAstralField(managed);
   managed.leased = true;
   managed.canvas.dataset.astralStartup = managed.warmed ? "warm" : "cold";
   let released = false;
 
   return {
-    activate() {
-      managed.surface.classList.add("is-active");
-    },
     canvas: managed.canvas,
     reducedMotion: options.reducedMotion,
     renderer: managed.renderer,
-    surface: managed.surface,
     release() {
       if (released) return;
       released = true;
-      managed.surface.classList.remove("is-active");
+      managed.canvas.remove();
       managed.warmed = true;
       managed.leased = false;
       if (pooledAstralField !== managed) disposeManagedAstralField(managed);
@@ -389,23 +380,14 @@ function createManagedAstralField(
 ): ManagedAstralField {
   const canvas = document.createElement("canvas");
   canvas.className = "gacha-astral-field-canvas";
-  const surface = document.createElement("div");
-  surface.className = "gacha-astral-field-surface";
-  surface.setAttribute("aria-hidden", "true");
-  surface.append(canvas);
   return {
     canvas,
     disposed: false,
     leased: false,
     optionsKey: astralFieldOptionsKey(options),
     renderer: createGachaAstralField(canvas, options),
-    surface,
     warmed: false,
   };
-}
-
-function mountManagedAstralField(managed: ManagedAstralField): void {
-  if (!managed.surface.isConnected) document.body.append(managed.surface);
 }
 
 function bindPageLifecycle(): void {
@@ -423,7 +405,7 @@ function disposePooledAstralField(): void {
 function disposeManagedAstralField(managed: ManagedAstralField): void {
   if (managed.disposed) return;
   managed.disposed = true;
-  managed.surface.remove();
+  managed.canvas.remove();
   managed.renderer.dispose();
 }
 

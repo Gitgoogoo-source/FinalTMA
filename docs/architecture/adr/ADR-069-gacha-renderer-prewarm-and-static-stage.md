@@ -2,7 +2,7 @@
 
 ## 决定
 
-默认开盒页首屏事实就绪并完成 `gacha.open` 表现模块加载后，模块在浏览器空闲回调中创建一套真实 Canvas/WebGL 资源，并把 Canvas 永久保持在当前文档的固定根层 surface 中。根层 surface 使用与真实演出相同的窄屏宽度和稳定视口高度，因此空闲阶段即按当前 `hardwareConcurrency` 与减少动态效果设置完成 drawing buffer 分配、shader、context、program、buffer、vertex array 和一帧中性绘制；WebGL 路径必须在该空闲任务内调用一次 `finish()`，等待预热绘制和延迟 GPU 工作真实完成后才能把实例标记为 `warm`，禁止只把 draw call 排入驱动队列就宣称已预热。待机时固定保持 `opacity: 0.001` 并声明 `will-change: opacity`，让 WebKit 在空闲期维持合成层；开盒表现激活和卸载时只切换该既有层的不透明度，不改变 Canvas 或 surface 的父节点、尺寸和 backing buffer。全尺寸 Canvas 不得脱离文档或在演出挂载时重挂到弹层，否则 WebKit 会产生额外合成迁移。后续同会话开盒继续复用同一根层资源；质量档发生变化时释放旧实例并按新档重建，页面 `pagehide` 时释放池内资源。池被占用或空闲预热尚未执行时允许创建唯一的即时实例，但不得并行共享一个 WebGL context。
+默认开盒页首屏事实就绪并完成 `gacha.open` 表现模块加载后，模块在浏览器空闲回调中创建一张脱离文档流的真实 Canvas，按当前 `hardwareConcurrency` 与减少动态效果设置完成 WebGL2 或 Canvas 2D context、program、buffer、vertex array 和一帧中性绘制，并把这些资源保留为全局单实例池。WebGL 路径必须在该空闲任务内调用一次 `finish()`，等待预热绘制和延迟 GPU 工作真实完成后才能把实例标记为 `warm`，禁止只把 draw call 排入驱动队列就宣称已预热。开盒表现挂载时直接把这张 Canvas 放入演出内的既有绝对定位宿主，由宿主的实际尺寸执行一次 drawing buffer 对齐；表现卸载时只把 Canvas 脱离宿主并回收到池中，禁止创建或显隐一张独立的全屏根层 surface。后续同会话开盒继续复用同一 Canvas 与 GPU 资源；质量档发生变化时释放旧实例并按新档重建，页面 `pagehide` 时释放池内资源。池被占用或空闲预热尚未执行时允许创建唯一的即时实例，但不得并行共享一个 WebGL context。
 
 同一表现模块加载完成后，五核及以上设备必须在空闲回调中直接创建可复用的开场 Web Audio 风声 `AudioBuffer`，每次空闲回调最多填充 `4096` 个固定噪声样本并重新排队，禁止在单次 idle deadline 内循环填满整段 Buffer。用户点击只负责停止尚未完成的样本准备并解锁 `AudioContext`；Buffer 已准备时，动画组件挂载只创建轻量音频节点并复用它，不得把整段 Buffer 的创建、复制或逐样本填充放进 `AudioContext.resume()` 的异步回调或首轮可见呼吸。四核及以下设备固定不创建或解锁 `AudioContext`，也不播放风声、振荡器或揭晓噪声音效，并且在开场、服务端成功、揭晓阶段都不触发 Telegram `HapticFeedback`；真实 iPhone Telegram 的原生触觉桥接、Safari 首次音频管线建立和定时振荡器启动都会与可见 Canvas 帧争用。省略这些演出反馈不改变动画计时、业务请求或结果，结果舞台后续用户交互仍保留普通控件反馈。五核及以上设备的 Buffer 尚未准备、音频能力缺失或浏览器拒绝解锁时同样省略本次风声层，禁止回退为可见动画期间的同步生成。
 
@@ -13,5 +13,5 @@ Canvas 固定暴露 `data-astral-startup="warm|cold"`，并继续暴露 ADR-067 
 ## 后果
 
 - 动态模块仍按需加载，首屏同步闭包不引入 WebGL 代码、第三方运行时、图片、视频或序列帧；预热只在开盒页事实就绪后执行。
-- 同一会话首次和重复开盒都不再把 shader 编译、GPU 程序资源初始化、驱动延迟提交、音频噪声逐样本生成与首轮呼吸争用同一个可见帧，也不因离屏全屏 surface 重挂引入额外合成迁移；四核及以下设备也不再由首次音频管线建立、定时振荡器启动或 Telegram 原生触觉桥接打断可见帧；全尺寸 drawing buffer 和首帧 GPU 工作已在永久根层 surface 上同步完成，激活只切换可见状态，不再承担首次 surface 扩展、父节点重挂或延迟 GPU 提交。
+- 同一会话首次和重复开盒都不再把 shader 编译、GPU 程序资源初始化、驱动延迟提交、音频噪声逐样本生成与首轮呼吸争用同一个可见帧，也不再为复用 GPU 资源而显隐独立的全屏合成 surface；四核及以下设备也不再由首次音频管线建立、定时振荡器启动或 Telegram 原生触觉桥接打断可见帧。Canvas 在演出既有宿主中只承担黑洞和粒子，静态深空背景由低成本 CSS 舞台承担。
 - 程序化星域的视觉身份保持不变，但汇聚阶段只有一套动态黑洞时间轴，避免 WebGL 与 CSS 重复绘制全屏呼吸效果。
