@@ -7,6 +7,7 @@ const WIND_PREPARATION_CHUNK_SIZE = 4_096;
 let audioContext: AudioContext | null = null;
 let preparedWindBuffer: AudioBuffer | null = null;
 let windNoisePreparationStarted = false;
+let windNoisePreparationStopped = false;
 
 type AudioIdleWindow = Window & {
   requestIdleCallback?(
@@ -32,6 +33,7 @@ function getAudioContext(): AudioContext | null {
  */
 export function prepareGachaRitualAudio(): void {
   prepareGachaRitualAudioAssets();
+  if (!preparedWindBuffer) windNoisePreparationStopped = true;
   const context = getAudioContext();
   if (!context) return;
   if (context.state === "suspended")
@@ -73,13 +75,9 @@ export function prepareGachaRitualAudioAssets(): void {
         (((randomState >>> 0) / 4_294_967_295) * 2 - 1) * envelope;
     }
   };
-  const completeOrSchedule = (deadline?: IdleDeadline) => {
-    do fillChunk();
-    while (
-      cursor < samples.length &&
-      deadline !== undefined &&
-      deadline.timeRemaining() > 2
-    );
+  const completeOrSchedule = () => {
+    if (windNoisePreparationStopped) return;
+    fillChunk();
     if (cursor >= samples.length) {
       preparedWindBuffer = buffer;
       return;
@@ -89,7 +87,7 @@ export function prepareGachaRitualAudioAssets(): void {
   schedule(completeOrSchedule);
 }
 
-function schedule(callback: (deadline?: IdleDeadline) => void): void {
+function schedule(callback: () => void): void {
   const idleWindow = window as AudioIdleWindow;
   if (idleWindow.requestIdleCallback) {
     idleWindow.requestIdleCallback(callback, { timeout: 500 });
