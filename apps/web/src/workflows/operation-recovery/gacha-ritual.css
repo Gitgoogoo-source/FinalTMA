@@ -275,7 +275,7 @@
   left: 50%;
   width: min(100%, 430px);
   height: var(--tg-viewport-stable-height, 100dvh);
-  opacity: 0;
+  opacity: 0.001;
   pointer-events: none;
   translate: -50% 0;
   background:
@@ -296,6 +296,7 @@
     ),
     linear-gradient(180deg, #040504 0%, #090b0a 46%, #080806 72%, #020302 100%);
   contain: strict;
+  will-change: opacity;
 }
 
 .gacha-astral-field-surface.is-active {
