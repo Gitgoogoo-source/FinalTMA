@@ -38,6 +38,7 @@ export function GachaAstralCanvas({
     if (!host) return;
     const lease = claimGachaAstralField();
     const { canvas, reducedMotion, renderer } = lease;
+    canvas.dataset.astralStage = "warming";
     host.replaceChildren(canvas);
     let buildStartedAt = performance.now();
     let revealStartedAt: number | null = null;
@@ -103,12 +104,17 @@ export function GachaAstralCanvas({
     window.addEventListener("resize", handleResize);
     renderer.resize();
     draw(buildStartedAt + (reducedMotion ? GACHA_BUILD_DURATION_MS : 0));
+    renderer.finishWarmup();
+    buildStartedAt = performance.now();
+    canvas.dataset.astralStage = "ready";
+    draw(buildStartedAt + (reducedMotion ? GACHA_BUILD_DURATION_MS : 0));
     schedule();
 
     return () => {
       disposed = true;
       if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
       window.removeEventListener("resize", handleResize);
+      delete canvas.dataset.astralStage;
       if (timelineRef.current === timeline) timelineRef.current = null;
       lease.release();
     };

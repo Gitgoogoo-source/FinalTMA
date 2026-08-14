@@ -8,7 +8,7 @@
 
 普通设备固定使用 `520` 条 WebGL 螺旋粒子并将设备像素比封顶 `1.25`；`hardwareConcurrency <= 4` 固定使用 `320` 条粒子、关闭多重采样抗锯齿并将设备像素比封顶 `0.75`。系统启用减少动态效果时只绘制一次由 `96` 个静态金色粒子、最大黑洞和吸积环组成的临界帧，不继续请求动画帧、不播放稀有度爆发。WebGL2 创建失败时，同一个 Canvas 使用 Canvas 2D 同构降级：普通、四核及以下和减少动态效果分别使用 `180 / 120 / 48` 条螺旋粒子或静态粒子，并保留黑洞、吸积弧和金光爆发；四核及以下 Canvas 2D 同样把像素比封顶 `0.75`。WebGL 程序已经创建后如果运行期上下文丢失，既有 4.7 秒门控仍继续进入权威结果，不重试业务请求或推测结果。
 
-渲染器按 [ADR-069](ADR-069-gacha-renderer-prewarm-and-static-stage.md) 在开盒页首屏事实就绪后的空闲时段创建并首次绘制一套 WebGL context、program、buffer 和 vertex array，表现组件挂载时租用同一真实 Canvas，卸载时回收到单实例池，页面离开或质量档变化时才释放；进入揭晓阶段时只更新同一实例的时间轴与稀有度颜色，以 `4000ms + 当前揭晓时间` 继续同一确定性星轨相位，不得因 React 状态切换重新编译着色器、重建缓冲区或让星轨跳回起点。画布只在租用挂载和真实 `resize` 时读取 CSS 尺寸并更新设备像素尺寸，不得在每个动画帧强制布局。Canvas 的 `data-astral-renderer`、`data-astral-quality`、`data-astral-star-count`、`data-astral-breath-count`、`data-astral-breath-periods`、`data-astral-pixel-ratio` 和 `data-astral-startup` 固定暴露当前只读渲染档、呼吸时间线与冷暖启动事实，供真实 Web Inspector 验收。
+渲染器按 [ADR-069](ADR-069-gacha-renderer-prewarm-and-static-stage.md) 在开盒页首屏事实就绪后的空闲时段创建并首次绘制一套 WebGL context、program、buffer 和 vertex array，表现组件挂载时租用同一真实 Canvas，卸载时回收到单实例池，页面离开或质量档变化时才释放；进入揭晓阶段时只更新同一实例的时间轴与稀有度颜色，以 `4000ms + 当前揭晓时间` 继续同一确定性星轨相位，不得因 React 状态切换重新编译着色器、重建缓冲区或让星轨跳回起点。画布只在租用挂载和真实 `resize` 时读取 CSS 尺寸并更新设备像素尺寸，不得在每个动画帧强制布局。Canvas 的 `data-astral-renderer`、`data-astral-quality`、`data-astral-star-count`、`data-astral-breath-count`、`data-astral-breath-periods`、`data-astral-pixel-ratio`、`data-astral-startup` 和 `data-astral-stage` 固定暴露当前只读渲染档、呼吸时间线与冷暖启动事实，供真实 Web Inspector 验收。
 
 ## 后果
 

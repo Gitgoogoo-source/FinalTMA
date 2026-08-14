@@ -2,7 +2,7 @@
 
 ## 决定
 
-默认开盒页首屏事实就绪并完成 `gacha.open` 表现模块加载后，模块在浏览器空闲回调中创建一张脱离文档流的真实 Canvas，按当前 `hardwareConcurrency` 与减少动态效果设置完成 WebGL2 或 Canvas 2D context、program、buffer、vertex array 和一帧中性绘制，并把这些资源保留为全局单实例池。WebGL 路径必须在该空闲任务内调用一次 `finish()`，等待预热绘制和延迟 GPU 工作真实完成后才能把实例标记为 `warm`，禁止只把 draw call 排入驱动队列就宣称已预热。开盒表现挂载时直接把这张 Canvas 放入演出内的既有绝对定位宿主，由宿主的实际尺寸执行一次 drawing buffer 对齐；表现卸载时只把 Canvas 脱离宿主并回收到池中，禁止创建或显隐一张独立的全屏根层 surface。后续同会话开盒继续复用同一 Canvas 与 GPU 资源；质量档发生变化时释放旧实例并按新档重建，页面 `pagehide` 时释放池内资源。池被占用或空闲预热尚未执行时允许创建唯一的即时实例，但不得并行共享一个 WebGL context。
+默认开盒页首屏事实就绪并完成 `gacha.open` 表现模块加载后，模块在浏览器空闲回调中创建一张脱离文档流的真实 Canvas，按当前 `hardwareConcurrency` 与减少动态效果设置完成 WebGL2 或 Canvas 2D context、program、buffer、vertex array 和一帧中性绘制，并把这些资源保留为全局单实例池。WebGL 路径必须在该空闲任务内调用一次 `finish()`，等待预热绘制和延迟 GPU 工作真实完成后才能把实例标记为 `warm`，禁止只把 draw call 排入驱动队列就宣称已预热。开盒表现挂载时直接把这张 Canvas 放入演出内的既有绝对定位宿主，由宿主的实际尺寸执行一次 drawing buffer 对齐和中性绘制，并在 WebGL 路径再次以 `finish()` 完成该全尺寸帧；只有随后发布 `data-astral-stage="ready"` 才启动 4 秒呼吸时间轴，尺寸对齐期间只显示既有静态深空舞台，不得让呼吸进度先行跳过；表现卸载时只把 Canvas 脱离宿主并回收到池中，禁止创建或显隐一张独立的全屏根层 surface。后续同会话开盒继续复用同一 Canvas 与 GPU 资源；质量档发生变化时释放旧实例并按新档重建，页面 `pagehide` 时释放池内资源。池被占用或空闲预热尚未执行时允许创建唯一的即时实例，但不得并行共享一个 WebGL context。
 
 同一表现模块加载完成后，五核及以上设备必须在空闲回调中直接创建可复用的开场 Web Audio 风声 `AudioBuffer`，每次空闲回调最多填充 `4096` 个固定噪声样本并重新排队，禁止在单次 idle deadline 内循环填满整段 Buffer。用户点击只负责停止尚未完成的样本准备并解锁 `AudioContext`；Buffer 已准备时，动画组件挂载只创建轻量音频节点并复用它，不得把整段 Buffer 的创建、复制或逐样本填充放进 `AudioContext.resume()` 的异步回调或首轮可见呼吸。四核及以下设备固定不创建或解锁 `AudioContext`，也不播放风声、振荡器或揭晓噪声音效，并且在开场、服务端成功、揭晓阶段都不触发 Telegram `HapticFeedback`；真实 iPhone Telegram 的原生触觉桥接、Safari 首次音频管线建立和定时振荡器启动都会与可见 Canvas 帧争用。省略这些演出反馈不改变动画计时、业务请求或结果，结果舞台后续用户交互仍保留普通控件反馈。五核及以上设备的 Buffer 尚未准备、音频能力缺失或浏览器拒绝解锁时同样省略本次风声层，禁止回退为可见动画期间的同步生成。
 
