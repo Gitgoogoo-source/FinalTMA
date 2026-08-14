@@ -18,6 +18,33 @@ type AstralFieldOptions = {
   reducedMotion: boolean;
 };
 
+const GACHA_BREATH_PERIODS_SECONDS = [
+  0.7, 0.56, 0.45, 0.37, 0.31, 0.27, 0.24, 0.21, 0.19,
+] as const;
+
+const ACCELERATED_BREATH_GLSL = `
+vec2 acceleratedBreath(float seconds) {
+  float time = clamp(seconds, 0.0, 3.3);
+  if (time < 0.70) return vec2(0.0, time / 0.70);
+  if (time < 1.26) return vec2(1.0, (time - 0.70) / 0.56);
+  if (time < 1.71) return vec2(2.0, (time - 1.26) / 0.45);
+  if (time < 2.08) return vec2(3.0, (time - 1.71) / 0.37);
+  if (time < 2.39) return vec2(4.0, (time - 2.08) / 0.31);
+  if (time < 2.66) return vec2(5.0, (time - 2.39) / 0.27);
+  if (time < 2.90) return vec2(6.0, (time - 2.66) / 0.24);
+  if (time < 3.11) return vec2(7.0, (time - 2.90) / 0.21);
+  return vec2(8.0, (time - 3.11) / 0.19);
+}
+
+float breathingHoleRadius(float seconds) {
+  vec2 breath = acceleratedBreath(seconds);
+  float overall = clamp((breath.x + breath.y) / 9.0, 0.0, 1.0);
+  float growth = pow(overall, 0.76);
+  float pulse = sin(breath.y * 3.14159265);
+  float pulseStrength = mix(0.48, 0.18, growth);
+  return mix(0.026, 0.23, growth) * (1.0 + pulse * pulseStrength);
+}`;
+
 const FULLSCREEN_VERTEX_SHADER = `#version 300 es
 in vec2 a_position;
 out vec2 v_uv;
@@ -46,16 +73,15 @@ float hash(vec2 point) {
   return fract(sin(dot(point, vec2(127.1, 311.7))) * 43758.5453123);
 }
 
+${ACCELERATED_BREATH_GLSL}
+
 void main() {
   vec2 p = v_uv * 2.0 - 1.0;
   p.x *= u_aspect;
   vec2 portal = vec2(0.0, 0.0);
   vec2 q = p - portal;
   float build = smoothstep(0.0, 1.0, u_build);
-  float growth = pow(build, 0.76);
-  float breath = sin(u_time * 7.65 + 0.4);
-  float holeRadius = mix(0.026, 0.23, growth)
-    * (1.0 + breath * mix(0.08, 0.145, build));
+  float holeRadius = breathingHoleRadius(u_time);
   float radius = length(q);
   float normalizedRadius = radius / max(holeRadius, 0.001);
   float angle = atan(q.y, q.x);
@@ -132,12 +158,11 @@ uniform float u_time;
 out float v_alpha;
 out float v_core;
 
+${ACCELERATED_BREATH_GLSL}
+
 void main() {
   float build = smoothstep(0.0, 1.0, u_build);
-  float growth = pow(build, 0.76);
-  float breath = sin(u_time * 7.65 + 0.4);
-  float holeRadius = mix(0.026, 0.23, growth)
-    * (1.0 + breath * mix(0.08, 0.145, build));
+  float holeRadius = breathingHoleRadius(u_time);
   float speed = mix(0.055, 0.31, smoothstep(0.02, 0.92, build));
   float travel = fract(a_star.z + u_time * speed * (0.5 + a_star.w * 0.56));
   float fall = pow(travel, 0.78);
@@ -194,6 +219,10 @@ export function createGachaAstralField(
   canvas: HTMLCanvasElement,
   options: AstralFieldOptions,
 ): AstralFieldRenderer {
+  canvas.dataset.astralBreathCount = String(
+    GACHA_BREATH_PERIODS_SECONDS.length,
+  );
+  canvas.dataset.astralBreathPeriods = GACHA_BREATH_PERIODS_SECONDS.join(",");
   const context = canvas.getContext("webgl2", {
     alpha: true,
     antialias: !options.lowPower,
@@ -404,11 +433,7 @@ function createCanvasFallback(
       const speed = mix(0.055, 0.31, smoothstep(0.02, 0.92, build));
       const centerX = width * 0.5;
       const centerY = height * 0.5;
-      const growth = Math.pow(build, 0.76);
-      const holeRadius =
-        height *
-        mix(0.013, 0.115, growth) *
-        (1 + Math.sin(time * 7.65 + 0.4) * mix(0.08, 0.145, build));
+      const holeRadius = breathingHoleRadius(time, height);
       const accent = colorToCss(
         mixColor([1, 0.64, 0.19], frame.color, reveal * 0.32),
       );
@@ -696,6 +721,36 @@ function mix(from: number, to: number, amount: number): number {
 
 function clamp(value: number): number {
   return Math.min(1, Math.max(0, value));
+}
+
+function breathingHoleRadius(time: number, height: number): number {
+  const breath = acceleratedBreath(time);
+  const overall = clamp(
+    (breath.index + breath.progress) / GACHA_BREATH_PERIODS_SECONDS.length,
+  );
+  const growth = Math.pow(overall, 0.76);
+  const pulse = Math.sin(breath.progress * Math.PI);
+  const pulseStrength = mix(0.48, 0.18, growth);
+  return height * mix(0.013, 0.115, growth) * (1 + pulse * pulseStrength);
+}
+
+function acceleratedBreath(time: number): {
+  index: number;
+  progress: number;
+} {
+  const elapsed = Math.min(3.3, Math.max(0, time));
+  let startedAt = 0;
+  for (let index = 0; index < GACHA_BREATH_PERIODS_SECONDS.length; index += 1) {
+    const period = GACHA_BREATH_PERIODS_SECONDS[index] ?? 0.19;
+    const endedAt = startedAt + period;
+    if (elapsed < endedAt || index === GACHA_BREATH_PERIODS_SECONDS.length - 1)
+      return {
+        index,
+        progress: clamp((elapsed - startedAt) / period),
+      };
+    startedAt = endedAt;
+  }
+  return { index: GACHA_BREATH_PERIODS_SECONDS.length - 1, progress: 1 };
 }
 
 function smoothstep(edge0: number, edge1: number, value: number): number {

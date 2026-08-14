@@ -269,7 +269,7 @@
       transparent 27% 100%
     );
   opacity: 0;
-  animation: gacha-ritual-warp-bloom 3.3s cubic-bezier(0.18, 0.7, 0.2, 1) both;
+  animation: gacha-ritual-warp-bloom 3.3s linear both;
 }
 
 .gacha-ritual-reveal-meteor {
@@ -873,33 +873,77 @@
     opacity: 0.08;
     transform: scale(0.2) rotate(-8deg);
   }
-  18% {
-    opacity: 0.3;
-    transform: scale(0.4) rotate(-1deg);
+  10.606% {
+    opacity: 0.28;
+    transform: scale(0.37) rotate(-4deg);
   }
-  28% {
-    opacity: 0.17;
-    transform: scale(0.34) rotate(3deg);
+  21.212% {
+    opacity: 0.13;
+    transform: scale(0.3) rotate(0deg);
   }
-  47% {
-    opacity: 0.48;
-    transform: scale(0.66) rotate(8deg);
+  29.697% {
+    opacity: 0.36;
+    transform: scale(0.5) rotate(2deg);
   }
-  57% {
-    opacity: 0.3;
-    transform: scale(0.57) rotate(12deg);
+  38.182% {
+    opacity: 0.18;
+    transform: scale(0.41) rotate(5deg);
   }
-  76% {
+  45% {
+    opacity: 0.44;
+    transform: scale(0.63) rotate(7deg);
+  }
+  51.818% {
+    opacity: 0.24;
+    transform: scale(0.52) rotate(10deg);
+  }
+  57.424% {
+    opacity: 0.52;
+    transform: scale(0.74) rotate(12deg);
+  }
+  63.03% {
+    opacity: 0.31;
+    transform: scale(0.63) rotate(14deg);
+  }
+  67.727% {
+    opacity: 0.6;
+    transform: scale(0.84) rotate(16deg);
+  }
+  72.424% {
+    opacity: 0.39;
+    transform: scale(0.73) rotate(18deg);
+  }
+  76.515% {
     opacity: 0.68;
-    transform: scale(0.92) rotate(18deg);
+    transform: scale(0.94) rotate(19deg);
   }
-  86% {
-    opacity: 0.46;
-    transform: scale(0.81) rotate(22deg);
+  80.606% {
+    opacity: 0.48;
+    transform: scale(0.82) rotate(21deg);
+  }
+  84.242% {
+    opacity: 0.75;
+    transform: scale(1.04) rotate(23deg);
+  }
+  87.879% {
+    opacity: 0.56;
+    transform: scale(0.9) rotate(24deg);
+  }
+  91.061% {
+    opacity: 0.82;
+    transform: scale(1.12) rotate(25deg);
+  }
+  94.242% {
+    opacity: 0.64;
+    transform: scale(0.98) rotate(26deg);
+  }
+  97.121% {
+    opacity: 0.9;
+    transform: scale(1.18) rotate(27deg);
   }
   100% {
-    opacity: 0.9;
-    transform: scale(1.08) rotate(28deg);
+    opacity: 0.72;
+    transform: scale(1.06) rotate(28deg);
   }
 }
 
