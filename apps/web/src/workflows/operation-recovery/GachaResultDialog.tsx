@@ -45,13 +45,20 @@ const raritySigilCounts: Record<Rarity, number> = {
 };
 const tenDrawRankPositions = [4, 5, 3, 6, 2, 7, 1, 8, 0, 9] as const;
 const initialCarouselIndex = tenDrawRankPositions[0];
-const initialCarouselLayerRadius = 1;
+const initialRevealedLayerOrder = 0;
 const carouselLayerOffsets = [0, 0.24, 0.34, 0.42, 0.48, 0.53] as const;
 const carouselLayerScales = [1, 0.52, 0.43, 0.36, 0.3, 0.26] as const;
 const carouselLayerOpacities = [1, 0.82, 0.62, 0.44, 0.3, 0.2] as const;
 
 function resultImageKey(item: ResultItem): string {
   return `${item.order}-${item.template_id}`;
+}
+
+function layerRevealOrder(index: number): number {
+  const order = tenDrawRankPositions.indexOf(
+    index as (typeof tenDrawRankPositions)[number],
+  );
+  return order === -1 ? index : order;
 }
 
 function interpolateCarouselLayer(
@@ -233,26 +240,23 @@ function TenDrawResults({
   const layerListRef = useRef<HTMLOListElement>(null);
   const animationFrameRef = useRef<number | null>(null);
   const activeIndexRef = useRef<number>(initialCarouselIndex);
-  const [revealedLayerRadius, setRevealedLayerRadius] = useState(
-    initialCarouselLayerRadius,
+  const [revealedLayerOrder, setRevealedLayerOrder] = useState(
+    initialRevealedLayerOrder,
   );
   const resultKey = carouselResults.map(resultImageKey).join("|");
-  const maximumLayerRadius = Math.max(
-    initialCarouselIndex,
-    carouselResults.length - initialCarouselIndex - 1,
-  );
+  const maximumLayerOrder = Math.max(0, carouselResults.length - 1);
 
   useEffect(() => {
     if (!visible) return;
 
     let cancelled = false;
     let frameId: number | null = null;
-    let radius = initialCarouselLayerRadius;
+    let order = initialRevealedLayerOrder;
     const revealNextLayer = () => {
-      if (cancelled || radius >= maximumLayerRadius) return;
-      radius += 1;
-      setRevealedLayerRadius(radius);
-      if (radius < maximumLayerRadius)
+      if (cancelled || order >= maximumLayerOrder) return;
+      order += 1;
+      setRevealedLayerOrder(order);
+      if (order < maximumLayerOrder)
         frameId = window.requestAnimationFrame(revealNextLayer);
     };
     frameId = window.requestAnimationFrame(() => {
@@ -263,7 +267,7 @@ function TenDrawResults({
       cancelled = true;
       if (frameId !== null) window.cancelAnimationFrame(frameId);
     };
-  }, [maximumLayerRadius, resultKey, visible]);
+  }, [maximumLayerOrder, resultKey, visible]);
 
   const updateCarousel = useCallback((withHaptic: boolean) => {
     const carousel = carouselRef.current;
@@ -376,9 +380,10 @@ function TenDrawResults({
         {carouselResults.map((item, index) => {
           const imageKey = resultImageKey(item);
           const layerDistance = Math.abs(index - initialCarouselIndex);
+          const revealOrder = layerRevealOrder(index);
           const stageVisible =
             imageStatuses[imageKey] === "ready" &&
-            layerDistance <= revealedLayerRadius;
+            revealOrder <= revealedLayerOrder;
           return (
             <li
               key={imageKey}
@@ -403,7 +408,6 @@ function TenDrawResults({
                     carouselLayerOpacities,
                   ),
                   zIndex: 100 - layerDistance * 10,
-                  "--result-order": layerDistance,
                 } as CSSProperties
               }
               aria-label={`${rarityLabels[item.rarity]}藏品：${item.name}，NEW`}

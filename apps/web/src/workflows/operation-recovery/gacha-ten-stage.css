@@ -56,6 +56,14 @@
   overflow: visible;
 }
 
+.gacha-astral-result.is-ten .gacha-astral-backdrop {
+  background: #050504;
+}
+
+.gacha-astral-result.is-ten .gacha-astral-backdrop > * {
+  display: none;
+}
+
 .gacha-astral-layer-list .catalog-image {
   transform: scale(1.14);
   transform-origin: center bottom;
@@ -89,6 +97,25 @@
 
 .gacha-astral-layer-list > li[aria-current="true"] .gacha-astral-rarity {
   font-size: 22px;
+}
+
+.gacha-astral-result.is-ten
+  :is(
+    .gacha-astral-heading,
+    .gacha-astral-identity h3,
+    .gacha-astral-actions .button,
+    .gacha-astral-new
+  ) {
+  text-shadow: none;
+  box-shadow: none;
+}
+
+.gacha-astral-result.is-ten .gacha-astral-sigils i {
+  filter: none;
+}
+
+.gacha-astral-result.is-ten .gacha-astral-actions .button {
+  backdrop-filter: none;
 }
 
 .gacha-astral-carousel {
