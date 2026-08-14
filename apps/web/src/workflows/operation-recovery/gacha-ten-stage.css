@@ -45,8 +45,12 @@
     opacity 80ms linear;
 }
 
-.gacha-astral-layer-list > li.is-stage-visible {
+.gacha-astral-layer-list > li.is-stage-prepared {
   visibility: visible;
+  opacity: 0.001;
+}
+
+.gacha-astral-layer-list > li.is-stage-visible {
   opacity: var(--carousel-opacity);
 }
 

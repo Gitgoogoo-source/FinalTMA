@@ -381,13 +381,12 @@ function TenDrawResults({
           const imageKey = resultImageKey(item);
           const layerDistance = Math.abs(index - initialCarouselIndex);
           const revealOrder = layerRevealOrder(index);
-          const stageVisible =
-            imageStatuses[imageKey] === "ready" &&
-            revealOrder <= revealedLayerOrder;
+          const imageReady = imageStatuses[imageKey] === "ready";
+          const stageVisible = imageReady && revealOrder <= revealedLayerOrder;
           return (
             <li
               key={imageKey}
-              className={`rarity-${item.rarity}${stageVisible ? " is-stage-visible" : ""}`}
+              className={`rarity-${item.rarity}${imageReady ? " is-stage-prepared" : ""}${stageVisible ? " is-stage-visible" : ""}`}
               style={
                 {
                   "--carousel-left": `${
