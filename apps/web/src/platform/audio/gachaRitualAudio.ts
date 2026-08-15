@@ -1,5 +1,3 @@
-import { isLowPowerAnimationDevice } from "../runtime/devicePerformance.ts";
-
 type GachaRitualRarity = "common" | "rare" | "epic" | "legendary" | "mythic";
 
 const BUILD_UP_DURATION_SECONDS = 4;
@@ -19,10 +17,14 @@ type BuildUpAutomation = {
   subFrequency: Float32Array;
 };
 
+type BuildUpAutomationPreparation = {
+  automation: BuildUpAutomation;
+  cursor: number;
+};
+
 let audioContext: AudioContext | null = null;
 let preparedBuildUpAutomation: BuildUpAutomation | null = null;
-let buildUpAutomationPreparationStarted = false;
-let buildUpAutomationPreparationStopped = false;
+let buildUpAutomationPreparation: BuildUpAutomationPreparation | null = null;
 
 type AudioIdleWindow = Window & {
   requestIdleCallback?(
@@ -47,15 +49,21 @@ function getAudioContext(): AudioContext | null {
  * presentation-only degradation and never blocks the gacha operation.
  */
 export function prepareGachaRitualAudio(): void {
-  if (isLowPowerAnimationDevice()) return;
   prepareGachaRitualAudioAssets();
-  if (!preparedBuildUpAutomation) buildUpAutomationPreparationStopped = true;
+  finishBuildUpAutomationPreparation();
   const context = getAudioContext();
   if (!context) return;
-  if (context.state === "suspended")
-    void context.resume().catch(() => undefined);
-  if (context.state !== "running") return;
+  if (context.state === "suspended") {
+    void context
+      .resume()
+      .then(() => primeAudioContext(context))
+      .catch(() => undefined);
+    return;
+  }
+  if (context.state === "running") primeAudioContext(context);
+}
 
+function primeAudioContext(context: AudioContext): void {
   const oscillator = context.createOscillator();
   const gain = context.createGain();
   gain.gain.setValueAtTime(0.0001, context.currentTime);
@@ -67,59 +75,74 @@ export function prepareGachaRitualAudio(): void {
 export function prepareGachaRitualAudioAssets(): void {
   if (
     typeof window === "undefined" ||
-    isLowPowerAnimationDevice() ||
     preparedBuildUpAutomation ||
-    buildUpAutomationPreparationStarted
+    buildUpAutomationPreparation
   )
     return;
-  buildUpAutomationPreparationStarted = true;
-  const automation: BuildUpAutomation = {
-    carrierFrequency: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
-    carrierGain: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
-    colorFrequency: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
-    colorGain: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
-    filterFrequency: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
-    subFrequency: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
+  const preparation: BuildUpAutomationPreparation = {
+    automation: {
+      carrierFrequency: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
+      carrierGain: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
+      colorFrequency: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
+      colorGain: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
+      filterFrequency: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
+      subFrequency: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
+    },
+    cursor: 0,
   };
-  let cursor = 0;
-
-  const fillChunk = () => {
-    const end = Math.min(
-      cursor + BUILD_UP_PREPARATION_CHUNK_SIZE,
-      BUILD_UP_AUTOMATION_SAMPLE_COUNT,
-    );
-    for (; cursor < end; cursor += 1) {
-      const seconds =
-        (cursor / (BUILD_UP_AUTOMATION_SAMPLE_COUNT - 1)) *
-        BUILD_UP_DURATION_SECONDS;
-      const { overall, pulse } = breathAt(seconds);
-      const growth = Math.pow(overall, 0.76);
-      const pulseDepth = mix(1, 0.68, growth);
-      const audiblePulse = pulse * pulseDepth;
-      const carrierFrequency =
-        72 + growth * 46 + audiblePulse * (22 + growth * 8);
-
-      automation.carrierFrequency[cursor] = carrierFrequency;
-      automation.carrierGain[cursor] =
-        0.014 + growth * 0.022 + audiblePulse * (0.016 + growth * 0.007);
-      automation.colorFrequency[cursor] = carrierFrequency * 2.006;
-      automation.colorGain[cursor] =
-        0.0024 + growth * 0.006 + audiblePulse * (0.005 + growth * 0.004);
-      automation.filterFrequency[cursor] =
-        280 + growth * 720 + audiblePulse * (420 + growth * 460);
-      automation.subFrequency[cursor] = carrierFrequency * 0.5;
-    }
-  };
+  buildUpAutomationPreparation = preparation;
   const completeOrSchedule = () => {
-    if (buildUpAutomationPreparationStopped) return;
-    fillChunk();
-    if (cursor >= BUILD_UP_AUTOMATION_SAMPLE_COUNT) {
-      preparedBuildUpAutomation = automation;
+    if (buildUpAutomationPreparation !== preparation) return;
+    fillBuildUpAutomation(preparation, BUILD_UP_PREPARATION_CHUNK_SIZE);
+    if (preparation.cursor >= BUILD_UP_AUTOMATION_SAMPLE_COUNT) {
+      preparedBuildUpAutomation = preparation.automation;
+      buildUpAutomationPreparation = null;
       return;
     }
     schedule(completeOrSchedule);
   };
   schedule(completeOrSchedule);
+}
+
+function finishBuildUpAutomationPreparation(): void {
+  const preparation = buildUpAutomationPreparation;
+  if (!preparation) return;
+  fillBuildUpAutomation(preparation, BUILD_UP_AUTOMATION_SAMPLE_COUNT);
+  preparedBuildUpAutomation = preparation.automation;
+  buildUpAutomationPreparation = null;
+}
+
+function fillBuildUpAutomation(
+  preparation: BuildUpAutomationPreparation,
+  sampleCount: number,
+): void {
+  const { automation } = preparation;
+  const end = Math.min(
+    preparation.cursor + sampleCount,
+    BUILD_UP_AUTOMATION_SAMPLE_COUNT,
+  );
+  for (; preparation.cursor < end; preparation.cursor += 1) {
+    const cursor = preparation.cursor;
+    const seconds =
+      (cursor / (BUILD_UP_AUTOMATION_SAMPLE_COUNT - 1)) *
+      BUILD_UP_DURATION_SECONDS;
+    const { overall, pulse } = breathAt(seconds);
+    const growth = Math.pow(overall, 0.76);
+    const pulseDepth = mix(1, 0.68, growth);
+    const audiblePulse = pulse * pulseDepth;
+    const carrierFrequency =
+      72 + growth * 46 + audiblePulse * (22 + growth * 8);
+
+    automation.carrierFrequency[cursor] = carrierFrequency;
+    automation.carrierGain[cursor] =
+      0.014 + growth * 0.022 + audiblePulse * (0.016 + growth * 0.007);
+    automation.colorFrequency[cursor] = carrierFrequency * 2.006;
+    automation.colorGain[cursor] =
+      0.0024 + growth * 0.006 + audiblePulse * (0.005 + growth * 0.004);
+    automation.filterFrequency[cursor] =
+      280 + growth * 720 + audiblePulse * (420 + growth * 460);
+    automation.subFrequency[cursor] = carrierFrequency * 0.5;
+  }
 }
 
 function schedule(callback: () => void): void {
@@ -132,10 +155,11 @@ function schedule(callback: () => void): void {
 }
 
 export function playGachaRitualBuildUp(): () => void {
-  if (isLowPowerAnimationDevice()) return () => undefined;
+  prepareGachaRitualAudioAssets();
+  finishBuildUpAutomationPreparation();
   const context = getAudioContext();
   const automation = preparedBuildUpAutomation;
-  if (!context || context.state !== "running" || !automation)
+  if (!context || context.state === "closed" || !automation)
     return () => undefined;
 
   const startedAt = context.currentTime;
@@ -262,9 +286,8 @@ function clamp(value: number): number {
 }
 
 export function playGachaRitualReveal(rarity: GachaRitualRarity): () => void {
-  if (isLowPowerAnimationDevice()) return () => undefined;
   const context = getAudioContext();
-  if (!context || context.state !== "running") return () => undefined;
+  if (!context || context.state === "closed") return () => undefined;
 
   const rank = {
     common: 0,
