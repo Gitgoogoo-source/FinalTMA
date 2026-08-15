@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { Button } from "./Button.tsx";
+import { t, tp } from "../../platform/i18n/index.ts";
 
 export function QuantityControl({
   label,
@@ -24,7 +25,7 @@ export function QuantityControl({
       <span>{label}</span>
       <div>
         <Button
-          aria-label={`减少${label}`}
+          aria-label={tp("减少{{0}}", [label])}
           disabled={disabled || value <= min}
           onClick={() => onChange(Math.max(min, value - step))}
         >
@@ -42,7 +43,7 @@ export function QuantityControl({
           onChange={(event) => onChange(Number(event.target.value))}
         />
         <Button
-          aria-label={`增加${label}`}
+          aria-label={tp("增加{{0}}", [label])}
           disabled={disabled || value >= max}
           onClick={() => onChange(Math.min(max, value + step))}
         >
@@ -54,7 +55,7 @@ export function QuantityControl({
         disabled={disabled || value === max}
         onClick={() => onChange(max)}
       >
-        全部
+        {t("全部")}
       </Button>
     </div>
   );

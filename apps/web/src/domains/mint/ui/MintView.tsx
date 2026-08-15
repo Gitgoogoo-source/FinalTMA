@@ -18,6 +18,7 @@ import { Badge } from "../../../shared/ui/Badge.tsx";
 import { Button } from "../../../shared/ui/Button.tsx";
 import { Card } from "../../../shared/ui/Card.tsx";
 import { PageState } from "../../../shared/ui/PageState.tsx";
+import { t, tp } from "../../../platform/i18n/index.ts";
 
 type Transaction = {
   valid_until: number;
@@ -45,7 +46,7 @@ export function MintView(): ReactNode {
 
   const mint = async () => {
     const reserved = await run(
-      "正在锁定 1 个藏品并签发 Mint 凭证",
+      t("正在锁定 1 个藏品并签发 Mint 凭证"),
       "mint.reserve",
       { template_id: templateId },
     );
@@ -60,12 +61,12 @@ export function MintView(): ReactNode {
         messages: transaction.messages,
       });
     } catch {
-      await run("正在取消未提交的 Mint", "mint.cancel", { mint_id: mintId });
+      await run(t("正在取消未提交的 Mint"), "mint.cancel", { mint_id: mintId });
       return;
     }
     const { Cell } = await import("@ton/core");
     const messageHash = Cell.fromBase64(result.boc).hash().toString("hex");
-    await run("交易已提交，正在等待链上确认", "mint.submit", {
+    await run(t("交易已提交，正在等待链上确认"), "mint.submit", {
       mint_id: mintId,
       transaction_hash: messageHash,
     });
@@ -78,7 +79,7 @@ export function MintView(): ReactNode {
         </Button>
         <div>
           <span>TON NFT</span>
-          <h1>Mint 上链</h1>
+          <h1>{t("Mint 上链")}</h1>
         </div>
       </header>
       <PageState
@@ -94,39 +95,40 @@ export function MintView(): ReactNode {
           <Card className="mint-card">
             <CatalogImage
               url={item.image_detail_url}
-              alt={item.name}
+              alt={t(item.name)}
               variant="detail"
               loading="eager"
               fetchPriority="high"
               onAvailability={setImageReady}
             />
             <Badge>
-              {item.rarity} · 第 {item.stage} 阶
+              {tp("{{0}} · 第 {{1}} 阶", [item.rarity, item.stage])}
             </Badge>
-            <h2>{item.name}</h2>
+            <h2>{t(item.name)}</h2>
             <div className="mint-checks">
               <p>
-                <span>游戏内可用数量</span>
+                <span>{t("游戏内可用数量")}</span>
                 <strong>{item.available}</strong>
               </p>
               <p>
-                <span>TON 主钱包</span>
+                <span>{t("TON 主钱包")}</span>
                 <strong>
                   {walletStatus.data?.connected
                     ? walletStatus.data.address
-                    : "未验证"}
+                    : t("未验证")}
                 </strong>
               </p>
               <p>
-                <span>Mint 数量</span>
+                <span>{t("Mint 数量")}</span>
                 <strong>1</strong>
               </p>
             </div>
             <div className="notice">
               <ShieldAlert />
               <p>
-                确认后先原子锁定一个藏品，再由当前已验证钱包提交交易并支付 TON
-                网络费。链上成功前不显示 NFT 已到账。
+                {t(
+                  "确认后将暂时锁定一个藏品，再由当前已验证钱包提交交易并支付 TON 网络费。链上成功前不会显示 NFT 已到账。",
+                )}
               </p>
             </div>
             <Button
@@ -140,7 +142,7 @@ export function MintView(): ReactNode {
               onClick={() => void mint()}
             >
               <Link2 />
-              确认 Mint 1 个藏品
+              {t("确认 Mint 1 个藏品")}
             </Button>
           </Card>
         )}

@@ -7,6 +7,7 @@ import { Button } from "../../../shared/ui/Button.tsx";
 import { Card } from "../../../shared/ui/Card.tsx";
 import { chainTypeLabels, rarityLabels } from "../labels.ts";
 import type { AlbumChain, AlbumNode } from "../types.ts";
+import { t, tp } from "../../../platform/i18n/index.ts";
 
 export function AlbumChainCard({
   chain,
@@ -28,31 +29,41 @@ export function AlbumChainCard({
   ): void;
 }): ReactNode {
   const status = chain.claimed
-    ? "已领取"
+    ? t("已领取")
     : chain.claimable
-      ? "可领取"
+      ? t("可领取")
       : chain.unlocked_count === 0
-        ? "未开始"
-        : "收集中";
+        ? t("未开始")
+        : t("收集中");
   return (
     <Card className={`album-chain-card chain-${chain.chain_type}`}>
       <header className="chain-head">
         <div>
           <Badge>{chainTypeLabels[chain.chain_type]}</Badge>
-          <h2>{chain.theme}</h2>
+          <h2>{t(chain.theme)}</h2>
         </div>
         <div className="chain-progress">
           <strong>{chain.unlocked_count} / 3</strong>
           <span>{status}</span>
         </div>
       </header>
-      <ol className="chain-nodes" aria-label={`${chain.theme}三阶节点`}>
+      <ol
+        className="chain-nodes"
+        aria-label={tp("{{0}}三阶节点", [t(chain.theme)])}
+      >
         {chain.nodes.map((node) => (
           <li key={node.template_id}>
             <button
               type="button"
               className={`album-node ${node.unlocked ? "unlocked" : "locked"}`}
-              aria-label={`${node.name}，第 ${node.stage} 阶，${rarityLabels[node.rarity]}，${node.unlocked ? `已点亮，当前拥有 ${node.owned_count}` : "未点亮，查看获取方式"}`}
+              aria-label={tp("{{0}}，第 {{1}} 阶，{{2}}，{{3}}", [
+                t(node.name),
+                node.stage,
+                rarityLabels[node.rarity],
+                node.unlocked
+                  ? tp("已点亮，当前拥有 {{0}}", [node.owned_count])
+                  : t("未点亮，查看获取方式"),
+              ])}
               onClick={(event: MouseEvent<HTMLButtonElement>) =>
                 onSelectNode(chain, node, event.currentTarget)
               }
@@ -69,15 +80,17 @@ export function AlbumChainCard({
                   <CircleHelp />
                 )}
               </span>
-              <span className="album-node-stage">第 {node.stage} 阶</span>
-              <strong>{node.name}</strong>
+              <span className="album-node-stage">
+                {tp("第 {{0}} 阶", [node.stage])}
+              </span>
+              <strong>{t(node.name)}</strong>
               <small>{rarityLabels[node.rarity]}</small>
               <span className="album-node-owned">
                 {node.unlocked
                   ? node.owned_count > 0
-                    ? `当前拥有：${node.owned_count}`
-                    : "已点亮"
-                  : "未点亮"}
+                    ? tp("当前拥有：{{0}}", [node.owned_count])
+                    : t("已点亮")
+                  : t("未点亮")}
               </span>
             </button>
           </li>
@@ -86,7 +99,11 @@ export function AlbumChainCard({
       <Button
         className={`album-gift ${chain.claimable ? "claimable" : "secondary"}`}
         disabled={claimBlocked || !chain.claimable}
-        aria-label={`${chain.theme}奖励，${claiming ? "领取中" : status}，${chain.reward_fgems} Fgems`}
+        aria-label={tp("{{0}}奖励，{{1}}，{{2}} Fgems", [
+          t(chain.theme),
+          claiming ? t("领取中") : status,
+          chain.reward_fgems,
+        ])}
         onPointerDown={onPrepareClaim}
         onFocus={onPrepareClaim}
         onClick={() => onClaim(chain.chain_id)}
@@ -98,12 +115,12 @@ export function AlbumChainCard({
         )}
         <span>
           {claiming
-            ? "领取中"
+            ? t("领取中")
             : chain.claimed
-              ? "已领取"
+              ? t("已领取")
               : chain.claimable
-                ? "可领取"
-                : "未完成"}
+                ? t("可领取")
+                : t("未完成")}
           <small>{chain.reward_fgems} Fgems</small>
         </span>
       </Button>

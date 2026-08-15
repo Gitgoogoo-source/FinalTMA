@@ -11,6 +11,7 @@ import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 import { Button } from "../../../shared/ui/Button.tsx";
 import { CatalogImage } from "../../../shared/ui/CatalogImage.tsx";
 import { battleElementLabels, battleRarityLabels } from "../labels.ts";
+import { t, tp, useAppLanguage } from "../../../platform/i18n/index.ts";
 
 type TeamOption = RouteOutput<"battle.team_options">["items"][number];
 export type BattleTeamSlots = readonly [
@@ -38,16 +39,17 @@ export function TeamSelector({
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(0);
+  const language = useAppLanguage();
   const filtered = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase("zh-CN");
+    const normalized = query.trim().toLocaleLowerCase(language);
     return normalized
       ? items.filter(
           (item) =>
-            item.name.toLocaleLowerCase("zh-CN").includes(normalized) ||
+            t(item.name).toLocaleLowerCase(language).includes(normalized) ||
             item.template_id.toLocaleLowerCase("en-US").includes(normalized),
         )
       : items;
-  }, [items, query]);
+  }, [items, language, query]);
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, pageCount - 1);
   const visible = filtered.slice(
@@ -80,7 +82,7 @@ export function TeamSelector({
 
   return (
     <div className="battle-team-selector">
-      <section className="battle-team-slots" aria-label="Battle 队伍槽位">
+      <section className="battle-team-slots" aria-label={t("Battle 队伍槽位")}>
         {slots.map((templateId, index) => {
           const item = items.find(
             (candidate) => candidate.template_id === templateId,
@@ -97,7 +99,9 @@ export function TeamSelector({
                   setFocusedId(templateId);
                 }}
               >
-                <small>{index === 0 ? "首发" : `${index + 1} 号位`}</small>
+                <small>
+                  {index === 0 ? t("首发") : tp("{{0}} 号位", [index + 1])}
+                </small>
                 {item ? (
                   <>
                     <CatalogImage
@@ -106,17 +110,17 @@ export function TeamSelector({
                       variant="thumbnail"
                       loading="lazy"
                     />
-                    <strong>{item.name}</strong>
+                    <strong>{t(item.name)}</strong>
                     <span>{battleRarityLabels[item.rarity]}</span>
                   </>
                 ) : (
-                  <span className="battle-empty-slot">选择藏品</span>
+                  <span className="battle-empty-slot">{t("选择藏品")}</span>
                 )}
               </button>
               {item ? (
                 <button
                   type="button"
-                  aria-label={`移除${item.name}`}
+                  aria-label={tp("移除{{0}}", [t(item.name)])}
                   disabled={disabled}
                   onClick={() => {
                     const next = [...slots] as [
@@ -136,7 +140,7 @@ export function TeamSelector({
         })}
       </section>
 
-      <div className="battle-order-actions" aria-label="调整队伍顺序">
+      <div className="battle-order-actions" aria-label={t("调整队伍顺序")}>
         <Button
           className="secondary"
           disabled={disabled || activeSlot === 0}
@@ -157,11 +161,11 @@ export function TeamSelector({
           }}
         >
           <ChevronLeft />
-          前移
+          {t("前移")}
         </Button>
         <span>
           <ArrowLeftRight />
-          槽位顺序决定首发与超时换入顺序
+          {t("槽位顺序决定首发与超时换入顺序")}
         </span>
         <Button
           className="secondary"
@@ -182,18 +186,18 @@ export function TeamSelector({
             setActiveSlot(following);
           }}
         >
-          后移
+          {t("后移")}
           <ChevronRight />
         </Button>
       </div>
 
       <label className="battle-team-search">
         <Search />
-        <span className="sr-only">搜索本人可用藏品</span>
+        <span className="sr-only">{t("搜索本人可用藏品")}</span>
         <input
           value={query}
           disabled={disabled}
-          placeholder="搜索本人可用藏品"
+          placeholder={t("搜索本人可用藏品")}
           onChange={(event) => {
             setQuery(event.target.value);
             setPage(0);
@@ -202,9 +206,11 @@ export function TeamSelector({
       </label>
 
       {loading ? (
-        <div className="battle-selector-state">正在读取本人可用藏品</div>
+        <div className="battle-selector-state">{t("正在加载可用藏品")}</div>
       ) : visible.length === 0 ? (
-        <div className="battle-selector-state">没有符合条件的可用藏品</div>
+        <div className="battle-selector-state">
+          {t("没有符合条件的可用藏品")}
+        </div>
       ) : (
         <div className="battle-option-grid">
           {visible.map((item) => {
@@ -222,17 +228,20 @@ export function TeamSelector({
               >
                 <CatalogImage
                   url={item.image_thumbnail_url}
-                  alt={item.name}
+                  alt={t(item.name)}
                   variant="thumbnail"
                   loading="lazy"
                 />
-                <strong>{item.name}</strong>
+                <strong>{t(item.name)}</strong>
                 <small>
-                  {battleRarityLabels[item.rarity]} · {item.stage} 阶 · 可用{" "}
-                  {item.available_quantity}
+                  {tp("{{0}} · {{1}} 阶 · 可用 {{2}}", [
+                    battleRarityLabels[item.rarity],
+                    item.stage,
+                    item.available_quantity,
+                  ])}
                 </small>
                 {selectedSlot >= 0 ? (
-                  <span>{selectedSlot + 1} 号位</span>
+                  <span>{tp("{{0}} 号位", [selectedSlot + 1])}</span>
                 ) : null}
               </button>
             );
@@ -240,14 +249,14 @@ export function TeamSelector({
         </div>
       )}
 
-      <div className="battle-pagination" aria-label="藏品分页">
+      <div className="battle-pagination" aria-label={t("藏品分页")}>
         <Button
           className="secondary"
           disabled={disabled || safePage === 0}
           onClick={() => setPage((value) => Math.max(0, value - 1))}
         >
           <ChevronLeft />
-          上一页
+          {t("上一页")}
         </Button>
         <span>
           {safePage + 1} / {pageCount}
@@ -257,7 +266,7 @@ export function TeamSelector({
           disabled={disabled || safePage + 1 >= pageCount}
           onClick={() => setPage((value) => Math.min(pageCount - 1, value + 1))}
         >
-          下一页
+          {t("下一页")}
           <ChevronRight />
         </Button>
       </div>
@@ -276,41 +285,47 @@ function TeamOptionDetail({ item }: { item: TeamOption }): ReactNode {
       <div className="battle-option-detail-art">
         <CatalogImage
           url={item.image_detail_url}
-          alt={item.name}
+          alt={t(item.name)}
           variant="detail"
           loading="lazy"
         />
       </div>
       <div>
         <small>
-          {battleRarityLabels[item.rarity]} · {item.stage} 阶 ·{" "}
-          {battleElementLabels[item.element]}
+          {tp("{{0}} · {{1}} 阶 · {{2}}", [
+            battleRarityLabels[item.rarity],
+            item.stage,
+            battleElementLabels[item.element],
+          ])}
         </small>
-        <h3 id="battle-option-detail-name">{item.name}</h3>
+        <h3 id="battle-option-detail-name">{t(item.name)}</h3>
         <dl className="battle-stat-grid">
           <div>
-            <dt>生命</dt>
+            <dt>{t("生命")}</dt>
             <dd>{item.max_hp}</dd>
           </div>
           <div>
-            <dt>攻击</dt>
+            <dt>{t("攻击")}</dt>
             <dd>{item.attack}</dd>
           </div>
           <div>
-            <dt>防御</dt>
+            <dt>{t("防御")}</dt>
             <dd>{item.defense}</dd>
           </div>
           <div>
-            <dt>速度</dt>
+            <dt>{t("速度")}</dt>
             <dd>{item.speed}</dd>
           </div>
         </dl>
         <div className="battle-skill-preview">
           {item.skills.map((skill) => (
             <div key={skill.skill_id}>
-              <strong>{skill.name}</strong>
+              <strong>{t(skill.name)}</strong>
               <span>
-                威力 {skill.power} · 命中 {skill.accuracy_bps / 100}%
+                {tp("威力 {{0}} · 命中 {{1}}%", [
+                  skill.power,
+                  skill.accuracy_bps / 100,
+                ])}
               </span>
             </div>
           ))}

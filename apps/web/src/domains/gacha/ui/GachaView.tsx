@@ -54,6 +54,7 @@ import {
   useOperationCommands,
 } from "../../../workflows/operation-recovery/context.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/context.ts";
+import { t, tp } from "../../../platform/i18n/index.ts";
 type BoxTier = BoxArtTier;
 type Rarity = GachaRarity;
 type GachaViewState = { selectedTier: BoxTier; scrollY: number };
@@ -65,7 +66,7 @@ registerSensitiveStateResetter(() => {
   viewStates.clear();
 });
 
-const pityLoadError = new Error("保底进度加载失败，请重试");
+const pityLoadError = () => new Error(t("保底进度加载失败，请重试"));
 const GachaResumeDialog = lazy(() =>
   import("./GachaResumeDialog.tsx").then((module) => ({
     default: module.GachaResumeDialog,
@@ -270,31 +271,38 @@ export function GachaView(): ReactNode {
       return;
     }
     prepareGachaRitualAudio();
-    void run(count === 10 ? "正在准备十连开盒" : "正在开启盲盒", "gacha.open", {
-      tier,
-      draw_count: count,
-    });
+    void run(
+      count === 10 ? t("正在准备十连开盒") : t("正在开启盲盒"),
+      "gacha.open",
+      {
+        tier,
+        draw_count: count,
+      },
+    );
   };
   return (
     <main className="page gacha-page">
       <header className="page-heading gacha-heading">
         <div>
           <span>POKEPETS LAB</span>
-          <h1>选择你的盲盒</h1>
+          <h1>{t("选择你的盲盒")}</h1>
         </div>
         <Sparkles aria-hidden="true" />
       </header>
       {targetRarity && visibleItems.length > 0 && (
         <Card className="gacha-target" role="status">
           <strong>
-            可产出{gachaRarityPresentation[targetRarity].label}的盲盒
+            {tp("可产出{{0}}的盲盒", [
+              gachaRarityPresentation[targetRarity].label,
+            ])}
           </strong>
           <p>
-            共 {visibleItems.length}{" "}
-            档；下方概率为固定公示，价格与保底按当前规则显示。
+            {tp("共 {{0}} 档；下方概率为固定公示，价格与保底按当前规则显示。", [
+              visibleItems.length,
+            ])}
           </p>
           <Button className="secondary" onClick={() => setParams({})}>
-            查看全部盲盒
+            {t("查看全部盲盒")}
           </Button>
         </Card>
       )}
@@ -302,7 +310,7 @@ export function GachaView(): ReactNode {
         <Suspense fallback={null}>
           <GachaResumeDialog
             tier={resumedBox.tier}
-            displayName={resumedBox.display_name}
+            displayName={t(resumedBox.display_name)}
             drawCount={resumedCount}
             cost={resumedCost}
             freeSingle={resumedFreeSingle}
@@ -324,7 +332,7 @@ export function GachaView(): ReactNode {
       )}
       <PageState
         loading={boxes.isLoading}
-        error={items.length === 0 && boxes.error ? pityLoadError : null}
+        error={items.length === 0 && boxes.error ? pityLoadError() : null}
         onRetry={() => void boxes.refetch()}
         empty={items.length === 0}
       >
@@ -339,7 +347,7 @@ export function GachaView(): ReactNode {
                     src={boxArtUrl(selectedBox.tier, 768)}
                     srcSet={boxHeroSrcSet(selectedBox.tier)}
                     sizes={boxHeroSizes}
-                    alt={selectedBox.display_name}
+                    alt={t(selectedBox.display_name)}
                     loading="eager"
                     fetchPriority="high"
                     decoding="async"
@@ -385,7 +393,7 @@ export function GachaView(): ReactNode {
             <div
               className="gacha-tier-selector"
               role="group"
-              aria-label="盲盒档次"
+              aria-label={t("盲盒档次")}
             >
               {visibleItems.map((box) => {
                 const active = box.tier === selectedBox.tier;
@@ -423,7 +431,7 @@ export function GachaView(): ReactNode {
                         }
                       />
                     </span>
-                    <strong>{box.display_name}</strong>
+                    <strong>{t(box.display_name)}</strong>
                     <i aria-hidden="true" />
                   </button>
                 );
@@ -447,7 +455,10 @@ export function GachaView(): ReactNode {
                       <article
                         key={rarity}
                         role="listitem"
-                        aria-label={`${presentation.label}稀有度代表图，公示总出货概率 ${probability}%`}
+                        aria-label={tp(
+                          "{{0}}稀有度代表图，公示总出货概率 {{1}}%",
+                          [presentation.label, probability],
+                        )}
                       >
                         <span className={`preview-art rarity-${rarity}`}>
                           <img
@@ -475,8 +486,11 @@ export function GachaView(): ReactNode {
                       className="pity-ring"
                       aria-label={
                         validPity
-                          ? `当前进度 ${validPity.progress} / ${validPity.limit}`
-                          : "保底进度暂不可用"
+                          ? tp("当前进度 {{0}} / {{1}}", [
+                              validPity.progress,
+                              validPity.limit,
+                            ])
+                          : t("保底进度暂不可用")
                       }
                       style={
                         {
@@ -493,21 +507,27 @@ export function GachaView(): ReactNode {
                     <div className="pity-copy">
                       {validPity ? (
                         <strong className="pity-target">
-                          {`还需 ${validPity.limit - validPity.progress} 次，必得${gachaRarityPresentation[validPity.target_rarity].label}`}
+                          {tp("还需 {{0}} 次，必得{{1}}", [
+                            validPity.limit - validPity.progress,
+                            gachaRarityPresentation[validPity.target_rarity]
+                              .label,
+                          ])}
                         </strong>
                       ) : !pityFailed ? (
-                        <span className="pity-placeholder">保底进度加载中</span>
+                        <span className="pity-placeholder">
+                          {t("保底进度加载中")}
+                        </span>
                       ) : null}
                       {boxes.isFetching ? (
-                        <small className="pity-status">刷新中</small>
+                        <small className="pity-status">{t("刷新中")}</small>
                       ) : pityFailed ? (
                         <span className="pity-error">
-                          保底进度加载失败，请重试
+                          {t("保底进度加载失败，请重试")}
                           <button
                             type="button"
                             onClick={() => void boxes.refetch()}
                           >
-                            重试
+                            {t("重试")}
                           </button>
                         </span>
                       ) : null}
@@ -518,12 +538,12 @@ export function GachaView(): ReactNode {
                   </div>
                 ) : (
                   <div className="gacha-rule-failure" role="alert">
-                    <strong>开盒规则加载失败，请重新加载</strong>
+                    <strong>{t("开盒规则加载失败，请重新加载")}</strong>
                     <Button
                       disabled={boxes.isFetching}
                       onClick={() => void boxes.refetch()}
                     >
-                      {boxes.isFetching ? "正在重新加载" : "重新加载"}
+                      {boxes.isFetching ? t("正在重新加载") : t("重新加载")}
                     </Button>
                   </div>
                 )}
@@ -545,15 +565,15 @@ export function GachaView(): ReactNode {
                 onClick={() => open(selectedBox.tier, 1)}
               >
                 {blocked ? (
-                  "开盒中"
+                  t("开盒中")
                 ) : (
                   <>
                     <span>
-                      {rulesComplete ? "开 1 次" : "加载失败"}
+                      {rulesComplete ? t("开 1 次") : t("加载失败")}
                       {rulesComplete && (
                         <small>
                           {freeSingle
-                            ? `免费 · 剩余 ${freeSingleCount} 次`
+                            ? tp("免费 · 剩余 {{0}} 次", [freeSingleCount])
                             : `${selectedBox.single_price} K-coin`}
                         </small>
                       )}
@@ -574,13 +594,13 @@ export function GachaView(): ReactNode {
                 onFocus={() => preload("gacha.open")}
                 onClick={() => open(selectedBox.tier, 10)}
               >
-                <b className="draw-discount">9折</b>
+                <b className="draw-discount">{t("9折")}</b>
                 {blocked ? (
-                  "开盒中"
+                  t("开盒中")
                 ) : (
                   <>
                     <span>
-                      {rulesComplete ? "开 10 次" : "加载失败"}
+                      {rulesComplete ? t("开 10 次") : t("加载失败")}
                       {rulesComplete && (
                         <small>{selectedBox.ten_price} K-coin</small>
                       )}

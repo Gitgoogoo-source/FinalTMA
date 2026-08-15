@@ -11,6 +11,7 @@ import {
 import { AppModal } from "../../../shared/ui/AppModal.tsx";
 import { Badge } from "../../../shared/ui/Badge.tsx";
 import { Button } from "../../../shared/ui/Button.tsx";
+import { t } from "../../../platform/i18n/index.ts";
 
 type Challenge = { payload: string; expiresAt: string };
 
@@ -49,13 +50,13 @@ export function WalletDialog({ close }: { close(): void }): ReactNode {
     const proof = connection.connectItems?.tonProof?.proof;
     if (!proof) {
       queueMicrotask(() => {
-        setError("钱包未返回 TON Proof，请重新连接");
+        setError(t("钱包未返回 TON Proof，请重新连接"));
         setPhase("idle");
       });
       return;
     }
     queueMicrotask(() => setPhase("verifying"));
-    void run("正在验证 TON 钱包", "wallet.verify", {
+    void run(t("正在验证 TON 钱包"), "wallet.verify", {
       account: {
         address: connection.account.address,
         chain: connection.account.chain,
@@ -97,12 +98,12 @@ export function WalletDialog({ close }: { close(): void }): ReactNode {
       });
       await tonConnect.openModal();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "钱包连接失败");
+      setError(cause instanceof Error ? cause.message : t("钱包连接失败"));
       setPhase("idle");
     }
   };
   const disconnect = () =>
-    void run("正在断开 TON 钱包", "wallet.disconnect", {}).then(
+    void run(t("正在断开 TON 钱包"), "wallet.disconnect", {}).then(
       async (result) => {
         if (result) await tonConnect.disconnect();
       },
@@ -111,12 +112,12 @@ export function WalletDialog({ close }: { close(): void }): ReactNode {
     <AppModal labelledBy="wallet-dialog-title" onClose={close}>
       <div className="modal wallet">
         <WalletCards size={42} />
-        <Badge>{status.data?.connected ? "已验证" : "未连接"}</Badge>
-        <h2 id="wallet-dialog-title">TON 主钱包</h2>
+        <Badge>{status.data?.connected ? t("已验证") : t("未连接")}</Badge>
+        <h2 id="wallet-dialog-title">{t("TON 主钱包")}</h2>
         {status.isLoading ? (
-          <p>正在读取钱包状态</p>
+          <p>{t("正在加载钱包状态")}</p>
         ) : status.error ? (
-          <Button onClick={() => void status.refetch()}>重新加载</Button>
+          <Button onClick={() => void status.refetch()}>{t("重新加载")}</Button>
         ) : status.data?.connected ? (
           <>
             <div className="verified-wallet">
@@ -129,7 +130,7 @@ export function WalletDialog({ close }: { close(): void }): ReactNode {
                 </small>
               </div>
             </div>
-            <p>该地址是当前账号唯一经过 TON Proof 验证的主钱包。</p>
+            <p>{t("该地址是当前账号唯一经过 TON Proof 验证的主钱包。")}</p>
             <Button
               autoFocus
               className="danger"
@@ -137,14 +138,16 @@ export function WalletDialog({ close }: { close(): void }): ReactNode {
               onClick={disconnect}
             >
               <Link2Off />
-              断开钱包
+              {t("断开钱包")}
             </Button>
           </>
         ) : (
           <>
             <ShieldCheck size={34} />
             <p>
-              连接钱包后必须完成 TON Proof；钱包地址不能替代 Telegram 登录。
+              {t(
+                "连接钱包后必须完成 TON Proof；钱包地址不能替代 Telegram 登录。",
+              )}
             </p>
             <Button
               autoFocus
@@ -152,16 +155,16 @@ export function WalletDialog({ close }: { close(): void }): ReactNode {
               onClick={() => void connect()}
             >
               {phase === "opening"
-                ? "请在钱包中确认"
+                ? t("请在钱包中确认")
                 : phase === "verifying"
-                  ? "正在验证"
-                  : "连接并验证钱包"}
+                  ? t("正在验证")
+                  : t("连接并验证钱包")}
             </Button>
           </>
         )}
         {error && <p className="error-text">{error}</p>}
         <Button className="secondary" onClick={close}>
-          关闭
+          {t("关闭")}
         </Button>
       </div>
     </AppModal>

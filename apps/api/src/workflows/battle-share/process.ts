@@ -19,6 +19,7 @@ type PreparedShareLease = {
   create_operation_id: string;
   creator_telegram_id: string | number;
   creator_display_name: string;
+  preferred_language: "en" | "zh-CN";
   rarity_summary: { rarity: string; count: number }[];
   entry_fee: number;
   invite_token_hash: string;
@@ -33,12 +34,12 @@ export type PreparedShareDelivery = {
   failed: number;
 };
 
-const rarityLabels: Readonly<Record<string, string>> = {
-  common: "普通",
-  rare: "稀有",
-  epic: "史诗",
-  legendary: "传说",
-  mythic: "神话",
+const rarityLabels: Readonly<Record<string, readonly [string, string]>> = {
+  common: ["Common", "普通"],
+  rare: ["Rare", "稀有"],
+  epic: ["Epic", "史诗"],
+  legendary: ["Legendary", "传说"],
+  mythic: ["Mythic", "神话"],
 };
 
 export async function deliverPreparedBattleShares(
@@ -98,7 +99,10 @@ async function deliverOne(
     return "deferred";
   }
   const userId = telegramUserId(lease.creator_telegram_id);
-  const raritySummary = formatRaritySummary(lease.rarity_summary);
+  const raritySummary = formatRaritySummary(
+    lease.rarity_summary,
+    lease.preferred_language,
+  );
   const deepLink = battleDeepLink(token);
   let prepared: { id: string; expiration_date: number };
   try {
@@ -108,6 +112,7 @@ async function deliverOne(
       creatorDisplayName: lease.creator_display_name,
       entryFee: lease.entry_fee,
       raritySummary,
+      language: lease.preferred_language,
       deepLink,
       signal,
     });
@@ -185,15 +190,17 @@ function telegramUserId(value: string | number): number {
 
 function formatRaritySummary(
   summary: PreparedShareLease["rarity_summary"],
+  language: PreparedShareLease["preferred_language"],
 ): string {
   return summary
     .map((item) => {
-      const label = rarityLabels[item.rarity];
-      if (!label || !Number.isInteger(item.count) || item.count < 1)
+      const labels = rarityLabels[item.rarity];
+      if (!labels || !Number.isInteger(item.count) || item.count < 1)
         throw new Error("Invalid Battle rarity summary from database");
+      const label = language === "en" ? labels[0] : labels[1];
       return `${label} ×${item.count}`;
     })
-    .join("、");
+    .join(language === "en" ? ", " : "、");
 }
 
 function battleDeepLink(token: string): string {

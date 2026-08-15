@@ -25,20 +25,21 @@ import { useNewMarkers } from "../../../workflows/new-markers/context.ts";
 import { getCollectionSkills } from "../collectionSkills.ts";
 import type { InventoryItem } from "../types.ts";
 import { useInventoryDetailPrewarm } from "../useInventoryDetailPrewarm.ts";
+import { localized, t, tp } from "../../../platform/i18n/index.ts";
 
-const rarityLabels: Record<InventoryItem["rarity"], string> = {
+const rarityLabels: Record<InventoryItem["rarity"], string> = localized({
   common: "普通",
   rare: "稀有",
   epic: "史诗",
   legendary: "传说",
   mythic: "神话",
-};
+});
 
-const chainTypeLabels: Record<InventoryItem["chain_type"], string> = {
+const chainTypeLabels: Record<InventoryItem["chain_type"], string> = localized({
   normal: "普通链",
   advanced: "高级链",
   top: "顶级链",
-};
+});
 
 const rarityOptions: InventoryItem["rarity"][] = [
   "common",
@@ -193,7 +194,7 @@ export function InventoryView({
     <main className="page inventory-page">
       <Button
         className="inventory-atlas-button"
-        aria-label="打开图鉴"
+        aria-label={t("打开图鉴")}
         onPointerEnter={() => preparePage("/album")}
         onPointerDown={() => preparePage("/album")}
         onFocus={() => preparePage("/album")}
@@ -203,7 +204,7 @@ export function InventoryView({
         }}
       >
         <BookOpen />
-        <span>图鉴</span>
+        <span>{t("图鉴")}</span>
       </Button>
       <PageState
         loading={query.isLoading}
@@ -215,8 +216,10 @@ export function InventoryView({
       >
         {targetId && item?.template_id === targetId && (
           <p className="inventory-location" role="status">
-            已定位：{item.name}
-            {targetAction === "evolve" ? "，请查看进化操作" : ""}
+            {tp("已定位：{{0}} {{1}}", [
+              t(item.name),
+              targetAction === "evolve" ? t("，请查看进化操作") : "",
+            ])}
           </p>
         )}
         {item && (
@@ -242,8 +245,8 @@ export function InventoryView({
                 }
                 aria-label={
                   item.template_id === targetId && targetAction === "evolve"
-                    ? `${item.name}进化操作`
-                    : "藏品操作"
+                    ? tp("{{0}}进化操作", [t(item.name)])
+                    : t("藏品操作")
                 }
               >
                 {renderActions(item, imageReady)}
@@ -287,7 +290,10 @@ export function InventoryView({
                       <div
                         key={page[0]?.template_id ?? pageIndex}
                         className="thumbnail-strip inventory-thumbnail-page"
-                        aria-label={`藏品选择第 ${pageIndex + 1} 页，共 ${thumbnailPages.length} 页`}
+                        aria-label={tp("藏品选择第 {{0}} 页，共 {{1}} 页", [
+                          pageIndex + 1,
+                          thumbnailPages.length,
+                        ])}
                       >
                         {page.map((candidate) => {
                           const selected =
@@ -300,7 +306,16 @@ export function InventoryView({
                               key={candidate.template_id}
                               className={selected ? "selected" : ""}
                               aria-pressed={selected}
-                              aria-label={`选择${candidate.name}，${rarityLabels[candidate.rarity]}，第 ${candidate.stage} 阶，可用 ${candidate.available} 个${isNew ? "，本次新获得" : ""}`}
+                              aria-label={tp(
+                                "选择{{0}}，{{1}}，第 {{2}} 阶，可用 {{3}} 个{{4}}",
+                                [
+                                  t(candidate.name),
+                                  rarityLabels[candidate.rarity],
+                                  candidate.stage,
+                                  candidate.available,
+                                  isNew ? t("，本次新获得") : "",
+                                ],
+                              )}
                               onClick={() => {
                                 if (!selected) {
                                   setSelection({
@@ -318,7 +333,7 @@ export function InventoryView({
                             >
                               <CatalogImage
                                 url={candidate.image_thumbnail_url}
-                                alt={candidate.name}
+                                alt={t(candidate.name)}
                                 variant="thumbnail"
                                 loading="lazy"
                               />
@@ -347,8 +362,8 @@ export function InventoryView({
                   </div>
                 ) : (
                   <div className="inventory-filter-empty" role="status">
-                    <strong>没有符合筛选的藏品</strong>
-                    <span>换一个筛选条件看看吧</span>
+                    <strong>{t("没有符合筛选的藏品")}</strong>
+                    <span>{t("换一个筛选条件看看吧")}</span>
                   </div>
                 )}
               </div>
@@ -364,48 +379,53 @@ export function InventoryView({
           >
             <CatalogImage
               url={targetTemplate.image_thumbnail_url}
-              alt={targetTemplate.name}
+              alt={t(targetTemplate.name)}
               variant="thumbnail"
               loading="eager"
             />
             <div>
               <Badge>
-                {targetTemplate.rarity} · 第 {targetTemplate.stage} 阶
+                {tp("{{0}} · 第 {{1}} 阶", [
+                  targetTemplate.rarity,
+                  targetTemplate.stage,
+                ])}
               </Badge>
-              <h2 id="inventory-target-empty-title">{targetTemplate.name}</h2>
-              <p>当前可用：0</p>
+              <h2 id="inventory-target-empty-title">
+                {t(targetTemplate.name)}
+              </h2>
+              <p>{t("当前可用：0")}</p>
               {targetAction === "evolve" && (
-                <p>当前没有这只上一阶材料，无法进行进化。</p>
+                <p>{t("当前没有这只上一阶材料，无法进行进化。")}</p>
               )}
               <Button
                 className="secondary"
                 onClick={() => navigate("/inventory")}
               >
-                查看当前藏品
+                {t("查看当前藏品")}
               </Button>
             </div>
           </section>
         )}
         {targetId && catalog.isLoading && (
           <div className="inventory-location" role="status">
-            正在定位目标藏品
+            {t("正在定位目标藏品")}
           </div>
         )}
         {targetId && catalog.error && (
           <div className="inventory-location" role="alert">
-            目标藏品加载失败，请重新进入图鉴后再试
+            {t("目标藏品加载失败，请重新进入图鉴后再试")}
           </div>
         )}
         {targetId && catalog.data && !targetTemplate && (
           <div className="inventory-location" role="alert">
-            目标藏品不存在
+            {t("目标藏品不存在")}
           </div>
         )}
       </PageState>
       {!query.isLoading && ownedItems.length === 0 && !targetId && (
         <Card>
-          <h2>当前没有可用藏品。</h2>
-          <p>当前账号尚未持有藏品。</p>
+          <h2>{t("当前没有可用藏品。")}</h2>
+          <p>{t("当前账号尚未持有藏品。")}</p>
           <Button
             onPointerEnter={() => preparePage("/")}
             onPointerDown={() => preparePage("/")}
@@ -415,7 +435,7 @@ export function InventoryView({
               navigate("/");
             }}
           >
-            去开盲盒
+            {t("去开盲盒")}
           </Button>
         </Card>
       )}
@@ -466,10 +486,10 @@ function InventoryFilterControls({
 
   return (
     <div ref={controlsRef} className="inventory-filter-controls">
-      <div className="inventory-filter-strip" aria-label="筛选宠物藏品">
+      <div className="inventory-filter-strip" aria-label={t("筛选宠物藏品")}>
         <InventoryFilterButton
           icon={<Settings2 aria-hidden="true" />}
-          label={rarity === null ? "全部稀有度" : rarityLabels[rarity]}
+          label={rarity === null ? t("全部稀有度") : rarityLabels[rarity]}
           active={rarity !== null || openFilter === "rarity"}
           expanded={openFilter === "rarity"}
           onClick={() =>
@@ -478,7 +498,7 @@ function InventoryFilterControls({
         />
         <InventoryFilterButton
           icon={<Layers3 aria-hidden="true" />}
-          label={stage === null ? "全部阶段" : `第 ${stage} 阶`}
+          label={stage === null ? t("全部阶段") : tp("第 {{0}} 阶", [stage])}
           active={stage !== null || openFilter === "stage"}
           expanded={openFilter === "stage"}
           onClick={() =>
@@ -487,7 +507,9 @@ function InventoryFilterControls({
         />
         <InventoryFilterButton
           icon={<GitBranch aria-hidden="true" />}
-          label={chainType === null ? "全部链型" : chainTypeLabels[chainType]}
+          label={
+            chainType === null ? t("全部链型") : chainTypeLabels[chainType]
+          }
           active={chainType !== null || openFilter === "chainType"}
           expanded={openFilter === "chainType"}
           onClick={() =>
@@ -503,12 +525,12 @@ function InventoryFilterControls({
           id="inventory-filter-options"
           className="inventory-filter-panel"
           role="group"
-          aria-label="选择藏品筛选条件"
+          aria-label={t("选择藏品筛选条件")}
         >
           {openFilter === "rarity" ? (
             <>
               <InventoryFilterOption
-                label="全部稀有度"
+                label={t("全部稀有度")}
                 selected={rarity === null}
                 onClick={() => {
                   onRarityChange(null);
@@ -531,7 +553,7 @@ function InventoryFilterControls({
           {openFilter === "stage" ? (
             <>
               <InventoryFilterOption
-                label="全部阶段"
+                label={t("全部阶段")}
                 selected={stage === null}
                 onClick={() => {
                   onStageChange(null);
@@ -541,7 +563,7 @@ function InventoryFilterControls({
               {stageOptions.map((value) => (
                 <InventoryFilterOption
                   key={value}
-                  label={`第 ${value} 阶`}
+                  label={tp("第 {{0}} 阶", [value])}
                   selected={stage === value}
                   onClick={() => {
                     onStageChange(value);
@@ -554,7 +576,7 @@ function InventoryFilterControls({
           {openFilter === "chainType" ? (
             <>
               <InventoryFilterOption
-                label="全部链型"
+                label={t("全部链型")}
                 selected={chainType === null}
                 onClick={() => {
                   onChainTypeChange(null);
@@ -578,7 +600,7 @@ function InventoryFilterControls({
       ) : null}
 
       <span className="inventory-filter-status" aria-live="polite">
-        当前显示 {resultCount} 件藏品
+        {tp("当前显示 {{0}} 件藏品", [resultCount])}
       </span>
     </div>
   );

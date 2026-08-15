@@ -2,6 +2,8 @@
 
 浏览器不安装或调用 Supabase 客户端，不接收 `service_role`、`IDENTITY_SECURITY_SECRET`、Bot Token、Cron Secret、`ABLY_API_KEY`、`BATTLE_INVITE_SECRET`、`BATTLE_OUTBOX_SECRET`、TON 签名私钥或任何 `VITE_*` 机密。Telegram 是唯一登录身份；不使用 Supabase Auth、`auth.users`、Supabase Session、JWT 或 Refresh Token。登录来源、Telegram 用户、`initData` 和预认证请求只以 `IDENTITY_SECURITY_SECRET` 域隔离 HMAC 指纹进入限流与幂等表；访问令牌按 [ADR-038](adr/ADR-038-local-session-proof-and-login-rpc-consolidation.md) 包含版本、session UUID 和域隔离 HMAC，浏览器只把它视为 opaque bearer。日志不记录原 IP、原 `initData` 或 bearer token。
 
+账号语言按 [ADR-074](adr/ADR-074-account-language-and-en-us-localization.md) 只通过同源 bearer `POST /api/me/language` 写入，数据库重新裁决 session、账号状态和 `en | zh-CN` 允许值。浏览器的 Telegram ID 隔离语言提示只改善认证前首帧，不能证明身份或覆盖数据库偏好；前端仍禁止直连 Supabase Postgres、RPC、Auth 或 Data API。
+
 Battle 阶段化结构日志只接受 [ADR-028](adr/ADR-028-battle-request-observability.md) 的固定耗时、调用次数和 outbox 聚合计数。日志不记录用户、session、operation、room、event、channel、token、capability、请求/响应内容、RPC 名称或原始外部错误；`request_id` 与 `route_id` 只用于同一请求的运行诊断。
 
 Data API 只暴露 `api` schema。安全迁移撤销 `PUBLIC`、`anon`、`authenticated` 对内部 schema、表、视图、序列和函数的权限，也撤销 `service_role` 对内部对象的直接权限；`inventory.quantity_read_model` 与 `inventory.item_read_model` 额外使用 `security_invoker = true`，仍不能被非 owner 角色直接读取。Functions 的 `service_role` 只执行 `api` schema 中的 SECURITY DEFINER RPC。

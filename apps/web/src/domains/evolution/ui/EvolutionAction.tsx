@@ -9,6 +9,7 @@ import {
 } from "../../../workflows/operation-recovery/context.ts";
 import { evolutionRoute, type EvolutionRarity } from "../config.ts";
 import { EvolutionConfirmationDialog } from "./EvolutionConfirmationDialog.tsx";
+import { t, tp } from "../../../platform/i18n/index.ts";
 
 export function EvolutionAction({
   item,
@@ -48,7 +49,7 @@ export function EvolutionAction({
   const confirm = async (quantity: number) => {
     if (!route) return;
     setConfirming(false);
-    await run("进化仪式进行中", "inventory.evolve", {
+    await run(t("进化仪式进行中"), "inventory.evolve", {
       template_id: item.template_id,
       quantity,
     });
@@ -58,14 +59,14 @@ export function EvolutionAction({
     <div className="evolution-action">
       <Button
         className="inventory-action-button inventory-action-button--evolve"
-        aria-label={reason ? `进化：${reason}` : "进化"}
+        aria-label={reason ? tp("进化：{{0}}", [reason]) : t("进化")}
         disabled={reason !== null}
         title={reason ?? undefined}
         onPointerDown={() => preload("inventory.evolve")}
         onFocus={() => preload("inventory.evolve")}
         onClick={() => setConfirming(true)}
       >
-        <span>进化</span>
+        <span>{t("进化")}</span>
       </Button>
       {confirming && route ? (
         <EvolutionConfirmationDialog
@@ -94,10 +95,10 @@ function evolutionDisabledReason({
   evolving: boolean;
   routeAvailable: boolean;
 }): string | null {
-  if (evolving) return "进化仪式进行中";
-  if (disabled) return "进化仪式尚未结束";
-  if (item.stage >= 3) return "该藏品已经是最终形态，无法继续进化";
-  if (!routeAvailable) return "当前藏品暂不支持进化";
-  if (!imageReady) return "藏品形象尚未就绪";
+  if (evolving) return t("进化仪式进行中");
+  if (disabled) return t("进化仪式尚未结束");
+  if (item.stage >= 3) return t("该藏品已经是最终形态，无法继续进化");
+  if (!routeAvailable) return t("当前藏品暂不支持进化");
+  if (!imageReady) return t("藏品形象尚未就绪");
   return null;
 }

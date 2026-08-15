@@ -22,6 +22,7 @@ type InvoiceDetails = {
   invoice_payload: string;
   stars_amount: number;
   kind: "kcoin_topup" | "vip";
+  preferred_language: "en" | "zh-CN";
 };
 
 export async function createStarsOrder(
@@ -49,15 +50,24 @@ export async function createStarsOrder(
     const details = await rpc<InvoiceDetails>("payment_invoice_details", {
       p_order_id: payment.id,
     });
+    const english = details.preferred_language === "en";
     const invoiceUrl = await createInvoiceLink({
       title:
         details.kind === "vip"
-          ? "PokePets VIP 月卡"
-          : `充值 ${details.stars_amount} K-coin`,
+          ? english
+            ? "PokePets VIP Pass"
+            : "PokePets VIP 月卡"
+          : english
+            ? `Top Up ${details.stars_amount} K-coin`
+            : `充值 ${details.stars_amount} K-coin`,
       description:
         details.kind === "vip"
-          ? "30 个 UTC 自然日的 PokePets VIP 权益"
-          : `${details.stars_amount} Telegram Stars 兑换 ${details.stars_amount} K-coin`,
+          ? english
+            ? "30 days of PokePets VIP benefits (UTC)"
+            : "30 个 UTC 自然日的 PokePets VIP 权益"
+          : english
+            ? `Exchange ${details.stars_amount} Telegram Stars for ${details.stars_amount} K-coin`
+            : `${details.stars_amount} Telegram Stars 兑换 ${details.stars_amount} K-coin`,
       payload: details.invoice_payload,
       stars: details.stars_amount,
     });

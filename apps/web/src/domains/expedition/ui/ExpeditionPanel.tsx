@@ -13,19 +13,20 @@ import {
   useOperationBlocked,
   useOperationCommands,
 } from "../../../workflows/operation-recovery/context.ts";
+import { localized, t, tp } from "../../../platform/i18n/index.ts";
 
-const tierNames = {
+const tierNames = localized({
   normal: "普通",
   intermediate: "中级",
   advanced: "高级",
-} as const;
-const rarityNames: Record<string, string> = {
+} as const);
+const rarityNames: Record<string, string> = localized({
   common: "普通",
   rare: "稀有",
   epic: "史诗",
   legendary: "传说",
   mythic: "神话",
-};
+});
 type Tier = keyof typeof tierNames;
 
 export function ExpeditionPanel(): ReactNode {
@@ -80,7 +81,7 @@ export function ExpeditionPanel(): ReactNode {
 
   const create = () => {
     if (!selectionTier) return;
-    void run("正在创建远征", "expedition.create", {
+    void run(t("正在创建远征"), "expedition.create", {
       tier: selectionTier,
       items: Object.entries(selection)
         .filter(([, quantity]) => quantity > 0)
@@ -92,7 +93,7 @@ export function ExpeditionPanel(): ReactNode {
     });
   };
   const claim = (expeditionId: string) =>
-    void run("正在领取远征奖励", "expedition.claim", {
+    void run(t("正在领取远征奖励"), "expedition.claim", {
       expedition_id: expeditionId,
     });
 
@@ -102,13 +103,15 @@ export function ExpeditionPanel(): ReactNode {
         <Compass />
         <div>
           <span>EXPEDITION</span>
-          <h2>藏品远征</h2>
+          <h2>{t("藏品远征")}</h2>
         </div>
       </div>
       {query.isLoading ? (
-        <p>正在加载远征状态</p>
+        <p>{t("正在加载远征状态")}</p>
       ) : query.error ? (
-        <Button onClick={() => void query.refetch()}>重新加载远征</Button>
+        <Button onClick={() => void query.refetch()}>
+          {t("重新加载远征")}
+        </Button>
       ) : (
         <div ref={grid} className="expedition-grid">
           {(rules ?? []).map((rule) => {
@@ -126,7 +129,7 @@ export function ExpeditionPanel(): ReactNode {
                     <Compass aria-hidden="true" />
                   </span>
                   <div>
-                    <strong>{tierNames[tier]}远征</strong>
+                    <strong>{tp("{{0}}远征", [tierNames[tier]])}</strong>
                     <small>
                       {rule.allowed_rarities
                         .map((rarity) => rarityNames[rarity] ?? rarity)
@@ -137,19 +140,19 @@ export function ExpeditionPanel(): ReactNode {
                     {usedToday[tier]}/{rule.daily_limit}
                   </span>
                 </div>
-                <span>{rule.duration_minutes} 分钟完成</span>
+                <span>{tp("{{0}} 分钟完成", [rule.duration_minutes])}</span>
                 {running ? (
                   <div className="active-expedition">
                     <Timer />
                     <div>
-                      <strong>{isReady ? "待领取" : "远征中"}</strong>
+                      <strong>{isReady ? t("待领取") : t("远征中")}</strong>
                       <small>{running.completes_at}</small>
                     </div>
                     <Button
                       disabled={blocked || !isReady}
                       onClick={() => claim(running.id)}
                     >
-                      领取 {running.reward_fgems} Fgems
+                      {tp("领取 {{0}} Fgems", [running.reward_fgems])}
                     </Button>
                   </div>
                 ) : (
@@ -160,7 +163,7 @@ export function ExpeditionPanel(): ReactNode {
                       setSelectionTier(tier);
                     }}
                   >
-                    开始远征
+                    {t("开始远征")}
                   </Button>
                 )}
               </Card>
@@ -175,13 +178,15 @@ export function ExpeditionPanel(): ReactNode {
         >
           <div className="modal expedition-picker">
             <h2 id="expedition-picker-title">
-              选择{tierNames[selectionTier]}远征藏品
+              {tp("选择{{0}}远征藏品", [tierNames[selectionTier]])}
             </h2>
-            <p>请选择正好 3 个当前可用的藏品单位。</p>
+            <p>{t("请选择正好 3 个当前可用的藏品单位。")}</p>
             {eligible.isLoading ? (
-              <p>正在读取可派遣藏品</p>
+              <p>{t("正在加载可派遣藏品")}</p>
             ) : eligible.error ? (
-              <Button onClick={() => void eligible.refetch()}>重新加载</Button>
+              <Button onClick={() => void eligible.refetch()}>
+                {t("重新加载")}
+              </Button>
             ) : (
               <div className="selection-list">
                 {items.map((item) => {
@@ -191,15 +196,18 @@ export function ExpeditionPanel(): ReactNode {
                     <Card key={id} className={count ? "selected" : ""}>
                       <CatalogImage
                         url={item.image_thumbnail_url}
-                        alt={item.name}
+                        alt={t(item.name)}
                         variant="thumbnail"
                         loading="lazy"
                       />
                       <div>
-                        <strong>{item.name}</strong>
+                        <strong>{t(item.name)}</strong>
                         <small>
-                          {item.rarity} · 第 {item.stage} 阶 ·{" "}
-                          {item.unit_reward_fgems} Fgems
+                          {tp("{{0}} · 第 {{1}} 阶 · {{2}} Fgems", [
+                            item.rarity,
+                            item.stage,
+                            item.unit_reward_fgems,
+                          ])}
                         </small>
                       </div>
                       <Button
@@ -232,20 +240,20 @@ export function ExpeditionPanel(): ReactNode {
                 })}
               </div>
             )}
-            <strong>预计奖励：{expectedReward} Fgems</strong>
+            <strong>{tp("预计奖励：{{0}} Fgems", [expectedReward])}</strong>
             <div className="button-row">
               <Button
                 className="secondary"
                 disabled={blocked}
                 onClick={() => setSelectionTier(null)}
               >
-                取消
+                {t("取消")}
               </Button>
               <Button
                 disabled={blocked || eligible.isLoading || selectedCount !== 3}
                 onClick={create}
               >
-                开始远征
+                {t("开始远征")}
               </Button>
             </div>
           </div>

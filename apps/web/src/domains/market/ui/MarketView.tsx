@@ -51,6 +51,7 @@ import {
   type MarketSoldCoinBurst,
 } from "./marketSoldCoinEffect.ts";
 import "./market-density.css";
+import { formatNumber, t, tp } from "../../../platform/i18n/index.ts";
 
 type BuyFilter = "price" | "rarity" | "stage" | "sort";
 type BuySort = "catalog" | "price-asc" | "price-desc" | "available";
@@ -232,7 +233,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
         return;
       }
       void run(
-        "购买中",
+        t("购买中"),
         "market.purchase",
         {
           template_id: item.template_id,
@@ -261,10 +262,12 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
         activeTemplateIds.size >= limit &&
         !activeTemplateIds.has(item.template_id)
       ) {
-        setFeedback(`最多同时出售 ${limit} 种藏品，请先售罄或下架一种藏品`);
+        setFeedback(
+          tp("最多同时出售 {{0}} 种藏品，请先售罄或下架一种藏品", [limit]),
+        );
         return;
       }
-      void run("正在创建出售", "market.create_listing", {
+      void run(t("正在创建出售"), "market.create_listing", {
         template_id: item.template_id,
         quantity,
       });
@@ -277,7 +280,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
     const templateId = pendingDelist.template_id;
     setPendingDelist(null);
     void run(
-      "正在下架该藏品的全部未成交数量",
+      t("正在下架该藏品的全部未成交数量"),
       "market.cancel_template_listings",
       { template_id: templateId },
     );
@@ -337,35 +340,39 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
       />
       {tab === "buy" && purchaseTarget && targetListing.data && (
         <Card className="market-target" role="status">
-          <strong>已定位：{targetListing.data.name}</strong>
+          <strong>{tp("已定位：{{0}}", [t(targetListing.data.name)])}</strong>
           <p>
             {targetListing.data.available_quantity > 0
-              ? `当前可买 ${targetListing.data.available_quantity} 个。`
+              ? tp("当前可买 {{0}} 个。", [
+                  targetListing.data.available_quantity,
+                ])
               : targetListing.data.own_listed_quantity > 0
-                ? "市场当前仅有你的挂单，不能购买自己的挂单。"
-                : "市场当前没有有效挂单，该藏品不在购买列表中。"}
+                ? t("市场当前仅有你的挂单，不能购买自己的挂单。")
+                : t("市场当前没有有效挂单，该藏品不在购买列表中。")}
           </p>
           <Button className="secondary" onClick={() => setParams({})}>
-            查看全部在售藏品
+            {t("查看全部在售藏品")}
           </Button>
         </Card>
       )}
       {tab === "buy" && purchaseTarget && targetListing.isLoading && (
         <Card className="market-target" role="status">
-          正在定位图鉴藏品的实时市场状态
+          {t("正在定位图鉴藏品的实时市场状态")}
         </Card>
       )}
       {tab === "buy" && purchaseTarget && targetListing.error && (
         <Card className="market-target" role="alert">
-          <strong>目标藏品定位失败</strong>
-          <p>完整市场目录仍可浏览，请重新进入图鉴后再试。</p>
+          <strong>{t("目标藏品定位失败")}</strong>
+          <p>{t("完整市场目录仍可浏览，请重新进入图鉴后再试。")}</p>
         </Card>
       )}
       {resumedTemplate && (
         <Card className="resume-intent">
-          <strong>充值已到账</strong>
+          <strong>{t("充值已到账")}</strong>
           <p>
-            已恢复原购买选择。库存、单价、数量与总价将按当前真实状态重新确认，不会自动成交。
+            {t(
+              "已恢复原购买选择。库存、单价、数量与总价将按最新状态重新确认，不会自动成交。",
+            )}
           </p>
           <Button
             disabled={
@@ -385,7 +392,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
               }
             }}
           >
-            重新确认购买
+            {t("重新确认购买")}
           </Button>
         </Card>
       )}
@@ -395,7 +402,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
           <div className="market-filter-strip">
             <MarketFilterButton
               icon={<Coins />}
-              label={priceFilter === null ? "价格" : `${priceFilter} K`}
+              label={priceFilter === null ? t("价格") : `${priceFilter} K`}
               active={priceFilter !== null || openFilter === "price"}
               expanded={openFilter === "price"}
               onClick={() =>
@@ -405,7 +412,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
             <MarketFilterButton
               icon={<ShoppingBag />}
               label={
-                rarityFilter === null ? "稀有度" : rarityLabel(rarityFilter)
+                rarityFilter === null ? t("稀有度") : rarityLabel(rarityFilter)
               }
               active={rarityFilter !== null || openFilter === "rarity"}
               expanded={openFilter === "rarity"}
@@ -415,7 +422,11 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
             />
             <MarketFilterButton
               icon={<Layers3 />}
-              label={stageFilter === null ? "阶级" : `第 ${stageFilter} 阶`}
+              label={
+                stageFilter === null
+                  ? t("阶级")
+                  : tp("第 {{0}} 阶", [stageFilter])
+              }
               active={stageFilter !== null || openFilter === "stage"}
               expanded={openFilter === "stage"}
               onClick={() =>
@@ -437,7 +448,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
               {openFilter === "price" && (
                 <>
                   <FilterOption
-                    label="全部价格"
+                    label={t("全部价格")}
                     selected={priceFilter === null}
                     onClick={() => {
                       setPriceFilter(null);
@@ -460,7 +471,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
               {openFilter === "rarity" && (
                 <>
                   <FilterOption
-                    label="全部稀有度"
+                    label={t("全部稀有度")}
                     selected={rarityFilter === null}
                     onClick={() => {
                       setRarityFilter(null);
@@ -483,7 +494,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
               {openFilter === "stage" && (
                 <>
                   <FilterOption
-                    label="全部阶级"
+                    label={t("全部阶级")}
                     selected={stageFilter === null}
                     onClick={() => {
                       setStageFilter(null);
@@ -493,7 +504,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
                   {stageOptions.map((stage) => (
                     <FilterOption
                       key={stage}
-                      label={`第 ${stage} 阶`}
+                      label={tp("第 {{0}} 阶", [stage])}
                       selected={stageFilter === stage}
                       onClick={() => {
                         setStageFilter(stage);
@@ -506,10 +517,10 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
               {openFilter === "sort" &&
                 (
                   [
-                    ["catalog", "默认排序"],
-                    ["price-asc", "价格从低到高"],
-                    ["price-desc", "价格从高到低"],
-                    ["available", "可买数量优先"],
+                    ["catalog", t("默认排序")],
+                    ["price-asc", t("价格从低到高")],
+                    ["price-desc", t("价格从高到低")],
+                    ["available", t("可买数量优先")],
                   ] as const
                 ).map(([value, label]) => (
                   <FilterOption
@@ -525,7 +536,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
             </div>
           )}
           <div className="market-result-summary" aria-live="polite">
-            <span>{visible.length} 件藏品</span>
+            <span>{tp("{{0}} 件藏品", [visible.length])}</span>
             {(priceFilter !== null ||
               rarityFilter !== null ||
               stageFilter !== null ||
@@ -540,7 +551,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
                   setOpenFilter(null);
                 }}
               >
-                重置
+                {t("重置")}
               </button>
             )}
           </div>
@@ -549,15 +560,17 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
       {feedback && (
         <Card className="resume-intent">
           <strong>{feedback}</strong>
-          <p>管理页中的模板售罄或全部下架后会立即释放一个名额。</p>
-          <Button onClick={() => void mine.refetch()}>刷新在售状态</Button>
+          <p>{t("管理页中的模板售罄或全部下架后会立即释放一个名额。")}</p>
+          <Button onClick={() => void mine.refetch()}>
+            {t("刷新在售状态")}
+          </Button>
         </Card>
       )}
       {tab === "manage" && mine.error && hasManageContent && (
         <Card className="resume-intent" role="status" aria-live="polite">
-          <strong>出售状态暂未更新</strong>
-          <p>已保留当前设备上的成交提醒，可以稍后再试。</p>
-          <Button onClick={() => void mine.refetch()}>重新加载</Button>
+          <strong>{t("出售状态暂未更新")}</strong>
+          <p>{t("已保留当前设备上的成交提醒，可以稍后再试。")}</p>
+          <Button onClick={() => void mine.refetch()}>{t("重新加载")}</Button>
         </Card>
       )}
       {tab === "sell" ? (
@@ -592,7 +605,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
               <MarketListingQuotaStatus
                 listingQuota={sellable.data?.listing_quota}
               />
-              <div className="page-state">暂无可出售藏品</div>
+              <div className="page-state">{t("暂无可出售藏品")}</div>
             </Card>
           )}
         </PageState>
@@ -603,7 +616,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
             tab === "manage" && hasManageContent
               ? null
               : tab === "manage" && state.error
-                ? new Error("出售状态暂未更新，请重新加载")
+                ? new Error(t("出售状态暂未更新，请重新加载"))
                 : (state.error as Error | null)
           }
           onRetry={() => void state.refetch()}
@@ -657,10 +670,14 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
             <div className="market-filter-empty">
               <PackageSearch aria-hidden="true" />
               <strong>
-                {sorted.length ? "没有符合条件的藏品" : "市场暂无有效挂单"}
+                {sorted.length
+                  ? t("没有符合条件的藏品")
+                  : t("市场暂无有效挂单")}
               </strong>
               <span>
-                {sorted.length ? "调整筛选后再试" : "有玩家上架后将在这里显示"}
+                {sorted.length
+                  ? t("调整筛选后再试")
+                  : t("有玩家上架后将在这里显示")}
               </span>
             </div>
           )}
@@ -673,11 +690,12 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
         >
           <div className="modal">
             <div className="operation-mark confirming">!</div>
-            <h2 id="market-delist-confirm-title">确认全部下架</h2>
+            <h2 id="market-delist-confirm-title">{t("确认全部下架")}</h2>
             <p>
-              将下架“{pendingDelist.name}
-              ”结算时仍未成交的全部数量。当前显示出售中
-              {pendingDelist.available} 个，最终释放数量以后端原子裁决为准。
+              {tp(
+                "将下架“{{0}}”结算时仍未成交的全部数量。当前显示出售中 {{1}} 个，确认后以最新结果为准。",
+                [t(pendingDelist.name), pendingDelist.available],
+              )}
             </p>
             <Button
               disabled={blocked}
@@ -685,14 +703,14 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
               onFocus={() => preload("market.cancel_template_listings")}
               onClick={confirmDelist}
             >
-              确认全部下架
+              {t("确认全部下架")}
             </Button>
             <Button
               className="secondary"
               disabled={blocked}
               onClick={() => setPendingDelist(null)}
             >
-              取消
+              {t("取消")}
             </Button>
           </div>
         </AppModal>
@@ -759,27 +777,27 @@ function rarityOrder(value: string): number {
 function rarityLabel(value: string | undefined): string {
   return (
     {
-      common: "普通",
-      rare: "稀有",
-      epic: "史诗",
-      legendary: "传说",
-      mythic: "神话",
+      common: t("普通"),
+      rare: t("稀有"),
+      epic: t("史诗"),
+      legendary: t("传说"),
+      mythic: t("神话"),
     }[value?.toLowerCase() ?? ""] ??
     value ??
-    "未知"
+    t("未知")
   );
 }
 
 function formatKCoin(value: number): string {
-  return new Intl.NumberFormat("zh-CN").format(value);
+  return formatNumber(value);
 }
 
 function sortLabel(value: BuySort): string {
   return {
-    catalog: "排序",
-    "price-asc": "价格升序",
-    "price-desc": "价格降序",
-    available: "数量优先",
+    catalog: t("排序"),
+    "price-asc": t("价格升序"),
+    "price-desc": t("价格降序"),
+    available: t("数量优先"),
   }[value];
 }
 
@@ -822,8 +840,9 @@ type MarketListingQuota = {
 function listingQuotaLimitMessage(
   listingQuota: MarketListingQuota | undefined,
 ): string | null {
-  if (listingQuota?.lifetime_remaining === 0) return "账号累计上架次数已达上限";
-  if (listingQuota?.daily_remaining === 0) return "今日上架次数已用完";
+  if (listingQuota?.lifetime_remaining === 0)
+    return t("账号累计上架次数已达上限");
+  if (listingQuota?.daily_remaining === 0) return t("今日上架次数已用完");
   return null;
 }
 
@@ -841,11 +860,12 @@ function MarketListingQuotaStatus({
       aria-live="polite"
     >
       <span>
-        今日剩余 <strong>{listingQuota.daily_remaining}</strong> / 200
+        {t("今日剩余")} <strong>{listingQuota.daily_remaining}</strong> / 200
       </span>
       <i aria-hidden="true">·</i>
       <span>
-        累计 <strong>{formatKCoin(listingQuota.lifetime_used)}</strong> / 20,000
+        {t("累计")} <strong>{formatKCoin(listingQuota.lifetime_used)}</strong> /
+        20,000
       </span>
       {quotaLimitMessage && <small>{quotaLimitMessage}</small>}
     </div>
@@ -868,24 +888,24 @@ function MarketListingCard({
       <div className="market-listing-art">
         <CatalogImage
           url={item.image_thumbnail_url}
-          alt={item.name}
+          alt={t(item.name)}
           variant="thumbnail"
           loading="lazy"
         />
       </div>
       <div className="market-listing-copy">
-        <h2>{item.name}</h2>
+        <h2>{t(item.name)}</h2>
         <div className="market-listing-tags">
           <Badge>
             {rarityLabel(item.rarity)}
-            {item.stage ? ` · 第 ${item.stage} 阶` : ""}
+            {item.stage ? tp("· 第 {{0}} 阶", [item.stage]) : ""}
           </Badge>
           <span className="market-listing-status">
-            出售中 ×{item.available}
+            {tp("出售中 ×{{0}}", [item.available])}
           </span>
         </div>
         <p>
-          官方单价
+          {t("官方单价")}
           <strong>
             {formatKCoin(item.unit_price)} <small>K-coin</small>
           </strong>
@@ -899,7 +919,7 @@ function MarketListingCard({
         onClick={onDelist}
       >
         <PackageMinus />
-        下架
+        {t("下架")}
       </Button>
     </Card>
   );
@@ -920,30 +940,36 @@ function MarketSoldCard({
     <button
       type="button"
       className="card market-listing-card market-listing-sold"
-      aria-label={`${event.name} 已售出 ${event.quantity} 个，点击播放金币特效并隐藏这条成交提醒`}
+      aria-label={tp(
+        "{{0}} 已售出 {{1}} 个，点击播放金币特效并隐藏这条成交提醒",
+        [t(event.name), event.quantity],
+      )}
       disabled={dismissing}
       onClick={(clickEvent) => onDismiss(clickEvent.currentTarget)}
     >
       <div className="market-listing-art">
         <CatalogImage
           url={imageUrl}
-          alt={event.name}
+          alt={t(event.name)}
           variant="thumbnail"
           loading="lazy"
         />
       </div>
       <div className="market-listing-copy">
-        <h2>{event.name}</h2>
+        <h2>{t(event.name)}</h2>
         <div className="market-listing-tags">
           <Badge>
-            {rarityLabel(event.rarity)} · 第 {event.stage} 阶
+            {tp("{{0}} · 第 {{1}} 阶", [
+              rarityLabel(event.rarity),
+              event.stage,
+            ])}
           </Badge>
           <span className="market-listing-status">
-            已售出 ×{event.quantity}
+            {tp("已售出 ×{{0}}", [event.quantity])}
           </span>
         </div>
         <p>
-          成交单价
+          {t("成交单价")}
           <strong>
             {formatKCoin(event.unit_price)} <small>K-coin</small>
           </strong>
@@ -996,11 +1022,11 @@ function MarketSellWorkbench({
   const quotaLimitMessage = listingQuotaLimitMessage(listingQuota);
   return (
     <div className="market-sell-workbench">
-      <Card className="market-sell-hero" aria-label="当前选中的出售藏品">
+      <Card className="market-sell-hero" aria-label={t("当前选中的出售藏品")}>
         <div className="market-sell-hero-art">
           <CatalogImage
             url={selected.image_detail_url ?? selected.image_thumbnail_url}
-            alt={selected.name}
+            alt={t(selected.name)}
             variant={selected.image_detail_url ? "detail" : "thumbnail"}
             loading="eager"
             fetchPriority="high"
@@ -1009,30 +1035,34 @@ function MarketSellWorkbench({
         </div>
         <div className="market-sell-hero-copy">
           <Badge>{rarityLabel(selected.rarity)}</Badge>
-          <h2>{selected.name}</h2>
+          <h2>{t(selected.name)}</h2>
           <p>
-            {chainLabel(selected.chain_type)} · 第 {selected.stage ?? 1} 阶
+            {tp("{{0}} · 第 {{1}} 阶", [
+              chainLabel(selected.chain_type),
+              selected.stage ?? 1,
+            ])}
           </p>
           <span className="market-sell-owned">
-            你拥有 <strong>{selected.total ?? available}</strong> 份 · 出售中
+            {t("你拥有")} <strong>{selected.total ?? available}</strong>{" "}
+            {t("份 · 出售中")}
             <strong>{selected.listed ?? 0}</strong>
           </span>
           <div className="market-sell-hero-facts">
             <span>
               <Crown aria-hidden="true" />
-              <small>稀有度</small>
+              <small>{t("稀有度")}</small>
               <strong>{rarityLabel(selected.rarity)}</strong>
             </span>
             <span>
               <Layers3 aria-hidden="true" />
-              <small>当前状态</small>
-              <strong>可售 {available} 份</strong>
+              <small>{t("当前状态")}</small>
+              <strong>{tp("可售 {{0}} 份", [available])}</strong>
             </span>
           </div>
         </div>
       </Card>
 
-      <div className="market-sell-gallery" aria-label="选择要出售的藏品">
+      <div className="market-sell-gallery" aria-label={t("选择要出售的藏品")}>
         {items.map((item) => {
           const active = item.template_id === selected.template_id;
           return (
@@ -1040,13 +1070,16 @@ function MarketSellWorkbench({
               key={item.template_id}
               type="button"
               className={active ? "active" : ""}
-              aria-label={`选择${item.name}，可出售 ${item.available} 份`}
+              aria-label={tp("选择{{0}}，可出售 {{1}} 份", [
+                t(item.name),
+                item.available,
+              ])}
               aria-pressed={active}
               onClick={() => onSelect(item.template_id)}
             >
               <CatalogImage
                 url={item.image_thumbnail_url}
-                alt={item.name}
+                alt={t(item.name)}
                 variant="thumbnail"
                 loading="lazy"
               />
@@ -1064,19 +1097,19 @@ function MarketSellWorkbench({
       <Card className="market-sell-metrics" aria-live="polite">
         <MarketSellMetric
           icon={<Coins />}
-          label="官方单价"
+          label={t("官方单价")}
           value={`${selected.unit_price} K`}
-          detail="固定价格"
+          detail={t("固定价格")}
         />
         <MarketSellMetric
           icon={<ShieldCheck />}
-          label="预计成交"
+          label={t("预计成交")}
           value={`${gross} K`}
-          detail={`${quantity} 份藏品`}
+          detail={tp("{{0}} 份藏品", [quantity])}
         />
         <MarketSellMetric
           icon={<Percent />}
-          label="平台手续费"
+          label={t("平台手续费")}
           value={`${fee} K`}
           detail={`${feeBps / 100}%`}
         />
@@ -1085,11 +1118,11 @@ function MarketSellWorkbench({
       <Card className="market-sell-form">
         <div className="market-sell-quantity-row">
           <span>
-            出售数量 <Info aria-hidden="true" />
+            {t("出售数量")} <Info aria-hidden="true" />
           </span>
           <div className="quantity">
             <Button
-              aria-label="减少出售数量"
+              aria-label={t("减少出售数量")}
               disabled={quantity <= 1}
               onClick={() => setQuantity((value) => Math.max(1, value - 1))}
             >
@@ -1097,7 +1130,7 @@ function MarketSellWorkbench({
             </Button>
             <strong>{quantity}</strong>
             <Button
-              aria-label="增加出售数量"
+              aria-label={t("增加出售数量")}
               disabled={quantity >= available}
               onClick={() =>
                 setQuantity((value) => Math.min(available, value + 1))
@@ -1109,13 +1142,14 @@ function MarketSellWorkbench({
         </div>
         <div className="market-sell-settlement">
           <span>
-            预计基础到账<strong>{net} K-coin</strong>
+            {t("预计基础到账")}
+            <strong>{net} K-coin</strong>
           </span>
           <span>
-            月卡预计返还
-            <strong>{vipActive ? `${vipRebate} K-coin` : "未开通"}</strong>
+            {t("月卡预计返还")}
+            <strong>{vipActive ? `${vipRebate} K-coin` : t("未开通")}</strong>
           </span>
-          <small>实际手续费和返还按后续每次真实成交明细计算</small>
+          <small>{t("实际手续费和返还按后续每次真实成交明细计算")}</small>
         </div>
         <MarketListingQuotaStatus listingQuota={listingQuota} />
         <Button
@@ -1133,16 +1167,16 @@ function MarketSellWorkbench({
           onClick={() => onSubmit(selected, quantity)}
         >
           {listingInProgress ? (
-            <span>出售中</span>
+            <span>{t("出售中")}</span>
           ) : (
             <>
               <span>
                 <Tags aria-hidden="true" />
-                确认出售
+                {t("确认出售")}
               </span>
               <i aria-hidden="true" />
               <span>
-                预计到手 <strong>{finalNet}</strong> K
+                {t("预计到手")} <strong>{finalNet}</strong> K
               </span>
             </>
           )}
@@ -1177,9 +1211,9 @@ function MarketSellMetric({
 
 function chainLabel(value: MarketViewItem["chain_type"]): string {
   return {
-    normal: "普通链",
-    advanced: "高级链",
-    top: "顶级链",
+    normal: t("普通链"),
+    advanced: t("高级链"),
+    top: t("顶级链"),
   }[value ?? "normal"];
 }
 
@@ -1213,7 +1247,7 @@ function MarketCard({
       <div className="market-art">
         <CatalogImage
           url={item.image_thumbnail_url}
-          alt={item.name}
+          alt={t(item.name)}
           variant="thumbnail"
           loading="lazy"
           onAvailability={setImageReady}
@@ -1221,34 +1255,34 @@ function MarketCard({
         {tab !== "buy" && (
           <Badge>
             {rarityLabel(item.rarity)}
-            {item.stage ? ` · 第 ${item.stage} 阶` : ""}
+            {item.stage ? tp("· 第 {{0}} 阶", [item.stage]) : ""}
           </Badge>
         )}
       </div>
       <div className="market-copy">
-        <h2>{item.name}</h2>
+        <h2>{t(item.name)}</h2>
         {tab === "buy" && (
           <Badge>
             {rarityLabel(item.rarity)}
-            {item.stage ? ` · 第 ${item.stage} 阶` : ""}
+            {item.stage ? tp("· 第 {{0}} 阶", [item.stage]) : ""}
           </Badge>
         )}
         {tab !== "buy" && (
           <div className="market-meta">
             <p>
-              官方单价 <strong>{price} K</strong>
+              {t("官方单价")} <strong>{price} K</strong>
             </p>
             <p>
-              可用 <strong>{available}</strong>
+              {t("可用")} <strong>{available}</strong>
             </p>
           </div>
         )}
       </div>
       {tab === "buy" && (
         <div className="market-buy-facts">
-          <small>官方单价</small>
+          <small>{t("官方单价")}</small>
           <strong>{price} K</strong>
-          <span>可买 {available}</span>
+          <span>{tp("可买 {{0}}", [available])}</span>
         </div>
       )}
       {tab === "sell" && available > 0 && (
@@ -1286,16 +1320,16 @@ function MarketCard({
         }}
       >
         {tab === "buy" && available < 1 ? (
-          <>{item.own_listed_quantity ? "自己的挂单" : "暂无挂单"}</>
+          <>{item.own_listed_quantity ? t("自己的挂单") : t("暂无挂单")}</>
         ) : tab === "buy" ? (
           <>
             <ShoppingCart />
-            {available < 1 ? "暂无在售" : "购买"}
+            {available < 1 ? t("暂无在售") : t("购买")}
           </>
         ) : (
           <>
             <PackagePlus />
-            确认出售
+            {t("确认出售")}
           </>
         )}
       </Button>
@@ -1308,28 +1342,30 @@ function MarketCard({
             <div className="market-purchase-preview">
               <CatalogImage
                 url={item.image_thumbnail_url}
-                alt={item.name}
+                alt={t(item.name)}
                 variant="thumbnail"
                 loading="eager"
               />
               <div>
                 <Badge>
                   {rarityLabel(item.rarity)}
-                  {item.stage ? ` · 第 ${item.stage} 阶` : ""}
+                  {item.stage ? tp("· 第 {{0}} 阶", [item.stage]) : ""}
                 </Badge>
-                <h2 id={`market-purchase-${item.template_id}`}>{item.name}</h2>
-                <span>当前可买 {available} 个</span>
+                <h2 id={`market-purchase-${item.template_id}`}>
+                  {t(item.name)}
+                </h2>
+                <span>{tp("当前可买 {{0}} 个", [available])}</span>
               </div>
             </div>
             <div className="market-purchase-price">
-              <span>官方单价</span>
+              <span>{t("官方单价")}</span>
               <strong>{price} K-coin</strong>
             </div>
             <div className="market-purchase-quantity">
-              <span>购买数量</span>
+              <span>{t("购买数量")}</span>
               <div className="quantity">
                 <Button
-                  aria-label="减少购买数量"
+                  aria-label={t("减少购买数量")}
                   disabled={purchaseInProgress}
                   onClick={() => setQuantity((value) => Math.max(1, value - 1))}
                 >
@@ -1337,7 +1373,7 @@ function MarketCard({
                 </Button>
                 <strong>{quantity}</strong>
                 <Button
-                  aria-label="增加购买数量"
+                  aria-label={t("增加购买数量")}
                   disabled={purchaseInProgress}
                   onClick={() =>
                     setQuantity((value) => Math.min(available, value + 1))
@@ -1349,18 +1385,19 @@ function MarketCard({
             </div>
             <div className="market-purchase-totals">
               <span>
-                预计总价<strong>{price * quantity} K-coin</strong>
+                {t("预计总价")}
+                <strong>{price * quantity} K-coin</strong>
               </span>
               <span>
-                当前余额
+                {t("当前余额")}
                 <strong>
-                  {balance === undefined ? "正在读取" : `${balance} K-coin`}
+                  {balance === undefined ? t("正在加载") : `${balance} K-coin`}
                 </strong>
               </span>
             </div>
             {balance !== undefined && balance < price * quantity && (
               <p className="market-purchase-warning">
-                K-coin 余额不足，确认后将进入充值流程。
+                {t("K-coin 余额不足，确认后将进入充值流程。")}
               </p>
             )}
             <Button
@@ -1378,11 +1415,11 @@ function MarketCard({
               }}
             >
               {purchaseInProgress ? (
-                "购买中"
+                t("购买中")
               ) : (
                 <>
                   <ShoppingCart />
-                  确认购买
+                  {t("确认购买")}
                 </>
               )}
             </Button>
@@ -1391,7 +1428,7 @@ function MarketCard({
               disabled={purchaseInProgress}
               onClick={() => setConfirming(false)}
             >
-              取消
+              {t("取消")}
             </Button>
           </div>
         </AppModal>

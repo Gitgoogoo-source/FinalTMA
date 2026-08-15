@@ -7,6 +7,7 @@ import {
   preloadGlobalDialog,
   type LoadedGlobalDialog,
 } from "./global-dialog-loader.ts";
+import { t } from "../../platform/i18n/index.ts";
 
 export function GlobalDialogs({
   active,
@@ -41,11 +42,11 @@ export function GlobalDialogs({
         aria-modal="true"
       >
         <div className="modal" role="alert">
-          <h2>画面暂时无法显示</h2>
-          <p>状态已保留，重新加载画面不会重复执行操作。</p>
-          <Button onClick={() => load(active)}>重新加载画面</Button>
+          <h2>{t("画面暂时无法显示")}</h2>
+          <p>{t("状态已保留，重新加载画面不会重复执行操作。")}</p>
+          <Button onClick={() => load(active)}>{t("重新加载画面")}</Button>
           <Button className="secondary" onClick={close}>
-            稍后再看
+            {t("稍后再看")}
           </Button>
         </div>
       </div>
@@ -65,8 +66,8 @@ export function GlobalDialogs({
       aria-modal="true"
     >
       <div className="modal" role="status">
-        <h2>正在打开</h2>
-        <p>精彩内容马上呈现。</p>
+        <h2>{t("正在打开")}</h2>
+        <p>{t("精彩内容马上呈现。")}</p>
       </div>
     </div>
   );

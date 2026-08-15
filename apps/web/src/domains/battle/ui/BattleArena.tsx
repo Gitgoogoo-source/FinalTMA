@@ -14,6 +14,7 @@ import {
   type BattleLocalActionIntent,
 } from "../useBattleAnimation.ts";
 import { BattleModal } from "./BattleModal.tsx";
+import { t, tp } from "../../../platform/i18n/index.ts";
 
 type SelfMember = BattleSelfTeamDto[number];
 type Skill = SelfMember["skills"][number];
@@ -109,11 +110,12 @@ export function BattleArena({
       className="battle-arena"
       data-battle-phase={snapshot.status}
       data-battle-has-resolution={presentation.feedback ? "true" : "false"}
-      aria-label="Battle 单战场"
+      aria-label={t("Battle 单战场")}
     >
       <header className="battle-turn-hud">
         <span>
-          <Swords />第 {Math.max(1, snapshot.round_no)} / 20 回合 · 行动
+          <Swords />
+          {t("第")} {Math.max(1, snapshot.round_no)} {t("/ 20 回合 · 行动")}
           {Math.max(1, snapshot.action_ordinal)}
         </span>
         <strong>
@@ -122,18 +124,18 @@ export function BattleArena({
         </strong>
         <span className="battle-side-chip">
           {snapshot.active_actor === "self"
-            ? "轮到我方"
+            ? t("轮到我方")
             : snapshot.active_actor === "opponent"
-              ? "轮到对手"
+              ? t("轮到对手")
               : snapshot.side === "creator"
-                ? "创建方"
-                : "接受方"}
+                ? t("创建方")
+                : t("接受方")}
         </span>
       </header>
 
       <ArenaSide
         actor="opponent"
-        label="对手"
+        label={t("对手")}
         team={presentation.opponentTeam}
         active={opponentActive}
       />
@@ -151,35 +153,37 @@ export function BattleArena({
         <ActionFeedback event={presentation.feedback} />
         <small>
           {presentation.runtimePreparing
-            ? "战斗准备中；倒计时与操作保持可用"
+            ? t("战斗准备中；倒计时与操作保持可用")
             : presentation.busy
-              ? "动作正在依次播放；操作区保持可用"
+              ? t("动作正在依次播放；操作区保持可用")
               : snapshot.status !== "active_turn"
-                ? "战斗已经结算"
+                ? t("战斗已经结算")
                 : snapshot.active_actor === "self"
-                  ? "你的 15 秒行动窗口已经开放"
-                  : "等待对手在其 15 秒行动窗口内操作"}
+                  ? t("你的 15 秒行动窗口已经开放")
+                  : t("等待对手在其 15 秒行动窗口内操作")}
         </small>
       </div>
 
       <ArenaSide
         actor="self"
-        label="我方"
+        label={t("我方")}
         team={presentation.selfTeam}
         active={selfActive}
       />
 
       <section
         className="battle-action-hud"
-        aria-label="当前行动"
+        aria-label={t("当前行动")}
         data-waiting-for-opponent={waitingForOpponent ? "true" : "false"}
       >
         <div className="battle-command-strip" aria-live="polite">
           <strong>{actionPrompt(snapshot, actionIntent)}</strong>
           <span>
-            回合 {Math.max(1, snapshot.round_no)} · 行动
-            {Math.max(1, snapshot.action_ordinal)} ·{" "}
-            {formatBattleTime(remainingSeconds)}
+            {tp("回合 {{0}} · 行动 {{1}} · {{2}}", [
+              Math.max(1, snapshot.round_no),
+              Math.max(1, snapshot.action_ordinal),
+              formatBattleTime(remainingSeconds),
+            ])}
           </span>
         </div>
 
@@ -199,7 +203,7 @@ export function BattleArena({
               onClick={() => setSwitchOpen(true)}
             >
               <ArrowDownUp />
-              更换宠物
+              {t("更换宠物")}
             </Button>
           </>
         ) : available &&
@@ -219,10 +223,10 @@ export function BattleArena({
             icon={<Shield />}
             text={
               actionIntent
-                ? `已提交：${actionIntent}`
+                ? tp("已提交：{{0}}", [actionIntent])
                 : snapshot.status !== "active_turn"
-                  ? "战斗已结算，正在完成剩余表现"
-                  : "正在同步当前可用动作"
+                  ? t("战斗已结算，正在完成剩余表现")
+                  : t("正在同步当前可用动作")
             }
           />
         )}
@@ -233,8 +237,8 @@ export function BattleArena({
       snapshot.status === "active_turn" &&
       snapshot.active_action_mode === "normal" ? (
         <SwitchSheet
-          title="主动换宠"
-          description="选择后立即提交，换宠消耗本次行动且不会同时攻击。"
+          title={t("主动换宠")}
+          description={t("选择后立即提交，换宠消耗本次行动且不会同时攻击。")}
           candidates={candidates}
           disabled={!available}
           backgroundRef={modalBackgroundRef}
@@ -250,12 +254,12 @@ function actionPrompt(
   snapshot: BattleRoomSnapshotDto,
   actionIntent: string | null,
 ): string {
-  if (actionIntent) return `已提交：${actionIntent}`;
-  if (snapshot.status !== "active_turn") return "战斗已经结算";
-  if (snapshot.active_actor !== "self") return "等待对手行动";
+  if (actionIntent) return tp("已提交：{{0}}", [actionIntent]);
+  if (snapshot.status !== "active_turn") return t("战斗已经结算");
+  if (snapshot.active_actor !== "self") return t("等待对手行动");
   return snapshot.active_action_mode === "replace_attack"
-    ? "选择存活宠物，再直接选择其反击技能"
-    : "选择技能或主动换宠";
+    ? t("选择存活宠物，再直接选择其反击技能")
+    : t("选择技能或主动换宠");
 }
 
 function SkillGrid({
@@ -276,9 +280,12 @@ function SkillGrid({
           disabled={disabled}
           onClick={() => choose(skill.position, skill.name, skill.effect_key)}
         >
-          <span>{skill.name}</span>
+          <span>{t(skill.name)}</span>
           <small>
-            威力 {skill.power} · 命中 {skill.accuracy_bps / 100}%
+            {tp("威力 {{0}} · 命中 {{1}}%", [
+              skill.power,
+              skill.accuracy_bps / 100,
+            ])}
           </small>
         </button>
       ))}
@@ -307,7 +314,7 @@ function ReplacementAction({
   if (!selected)
     return (
       <div className="battle-replace-action">
-        <strong>第一步：选择存活宠物</strong>
+        <strong>{t("第一步：选择存活宠物")}</strong>
         <SwitchCandidates
           candidates={candidates}
           disabled={disabled}
@@ -318,13 +325,15 @@ function ReplacementAction({
   return (
     <div className="battle-replace-action">
       <div className="battle-replace-heading">
-        <strong>第二步：选择 {selected.name} 的反击技能</strong>
+        <strong>
+          {tp("第二步：选择 {{0}} 的反击技能", [t(selected.name)])}
+        </strong>
         <button
           type="button"
           disabled={disabled}
           onClick={() => chooseMember(null)}
         >
-          重新选宠
+          {t("重新选宠")}
         </button>
       </div>
       <SkillGrid
@@ -358,7 +367,7 @@ function ArenaSide({
     <div
       className={`battle-arena-side ${actor}`}
       data-battle-actor={actor}
-      aria-label={`${label}队伍`}
+      aria-label={tp("{{0}}队伍", [label])}
     >
       <div className="battle-bench">
         {team.map((member) => (
@@ -368,7 +377,7 @@ function ArenaSide({
           >
             <CatalogImage
               url={member.image_thumbnail_url}
-              alt={`${member.name}${member.alive ? "" : "，已击倒"}`}
+              alt={`${t(member.name)}${member.alive ? "" : t("，已击倒")}`}
               variant="thumbnail"
               loading="lazy"
             />
@@ -381,7 +390,7 @@ function ArenaSide({
           <div className="battle-active-art" data-battle-active-sprite>
             <CatalogImage
               url={active.image_detail_url}
-              alt={active.name}
+              alt={t(active.name)}
               variant="detail"
               loading="eager"
               fetchPriority="high"
@@ -389,18 +398,22 @@ function ArenaSide({
           </div>
           <div className="battle-pet-hud">
             <span>
-              {label} · {battleRarityLabels[active.rarity]} · {active.stage} 阶
+              {tp("{{0}} · {{1}} · {{2}} 阶", [
+                label,
+                battleRarityLabels[active.rarity],
+                active.stage,
+              ])}
             </span>
-            <strong>{active.name}</strong>
+            <strong>{t(active.name)}</strong>
             {"current_hp" in active ? (
               <HpBar
-                label={`${active.name}生命`}
+                label={tp("{{0}}生命", [t(active.name)])}
                 percent={(active.current_hp / active.max_hp) * 100}
                 text={`${active.current_hp} / ${active.max_hp}`}
               />
             ) : (
               <HpBar
-                label={`${active.name}生命百分比`}
+                label={tp("{{0}}生命百分比", [t(active.name)])}
                 percent={active.hp_percent}
                 text={`${Math.round(active.hp_percent)}%`}
               />
@@ -409,7 +422,7 @@ function ArenaSide({
         </div>
       ) : (
         <div className="battle-empty-active">
-          {team.length === 0 ? "正在确认参战阵容" : "等待存活宠物换入"}
+          {team.length === 0 ? t("正在确认参战阵容") : t("等待存活宠物换入")}
         </div>
       )}
     </div>
@@ -449,39 +462,51 @@ function ActionFeedback({
   if (!event)
     return (
       <div className="battle-resolution" aria-live="polite">
-        等待权威动作结果
+        {t("等待最新动作结果")}
       </div>
     );
   return (
     <div className="battle-resolution" aria-live="assertive">
       {event.actions.map((action, index) => {
-        const actor = action.actor === "self" ? "我方" : "对手";
+        const actor = action.actor === "self" ? t("我方") : t("对手");
         if (action.kind === "attack") {
           const damage = action.hit
             ? action.actor === "self"
-              ? `${Math.max(0, action.target_hp_percent_before - action.target_hp_percent_after).toFixed(2)}% 生命`
-              : `${Math.max(0, action.target_current_hp_before - action.target_current_hp_after)} 点伤害`
+              ? tp("{{0}}% 生命", [
+                  Math.max(
+                    0,
+                    action.target_hp_percent_before -
+                      action.target_hp_percent_after,
+                  ).toFixed(2),
+                ])
+              : tp("{{0}} 点伤害", [
+                  Math.max(
+                    0,
+                    action.target_current_hp_before -
+                      action.target_current_hp_after,
+                  ),
+                ])
             : null;
           return (
             <span key={`${actor}-${index}`}>
               <strong>
-                {actor}使用{action.skill_name}
+                {tp("{{0}}使用{{1}}", [actor, t(action.skill_name)])}
               </strong>
               {action.hit
                 ? action.effectiveness === "super_effective"
-                  ? `，命中并造成 ${damage}，效果拔群`
+                  ? tp("，命中并造成 {{0}}，效果拔群", [damage])
                   : action.effectiveness === "not_effective"
-                    ? `，命中并造成 ${damage}，效果有限`
-                    : `，命中并造成 ${damage}`
-                : "，未命中"}
-              {action.knockout ? "，目标被击倒" : ""}
+                    ? tp("，命中并造成 {{0}}，效果有限", [damage])
+                    : tp("，命中并造成 {{0}}", [damage])
+                : t("，未命中")}
+              {action.knockout ? t("，目标被击倒") : ""}
             </span>
           );
         }
         return (
           <span key={`${actor}-${index}`}>
-            <strong>{actor}换入</strong>
-            {action.switch_to.name}
+            <strong>{tp("{{0}}换入", [actor])}</strong>
+            {t(action.switch_to.name)}
           </span>
         );
       })}
@@ -527,7 +552,7 @@ function SwitchSheet({
       panelClassName="battle-switch-sheet"
       backgroundRef={backgroundRef}
       dismissible
-      closeLabel="关闭换宠选择"
+      closeLabel={t("关闭换宠选择")}
       onClose={close}
     >
       <h2 id="battle-voluntary-switch-title">{title}</h2>
@@ -564,15 +589,19 @@ function SwitchCandidates({
         >
           <CatalogImage
             url={member.image_thumbnail_url}
-            alt={member.name}
+            alt={t(member.name)}
             variant="thumbnail"
             loading="lazy"
           />
           <span>
-            <strong>{member.name}</strong>
+            <strong>{t(member.name)}</strong>
             <small>
-              {battleRarityLabels[member.rarity]} · {member.stage} 阶 · HP{" "}
-              {member.current_hp}/{member.max_hp}
+              {tp("{{0}} · {{1}} 阶 · HP {{2}}/{{3}}", [
+                battleRarityLabels[member.rarity],
+                member.stage,
+                member.current_hp,
+                member.max_hp,
+              ])}
             </small>
           </span>
         </button>

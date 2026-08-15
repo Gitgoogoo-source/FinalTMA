@@ -62,6 +62,7 @@ import {
   type Task,
   type VisibleTaskCategory,
 } from "../visibility.ts";
+import { localized, t, tp } from "../../../platform/i18n/index.ts";
 
 type TaskFilter = "all" | VisibleTaskCategory;
 type TaskViewState = { category: TaskFilter; scrollY: number };
@@ -73,27 +74,28 @@ registerSensitiveStateResetter(() => {
   viewStates.clear();
 });
 
-const taskCategoryLabels: Record<VisibleTaskCategory, string> = {
+const taskCategoryLabels: Record<VisibleTaskCategory, string> = localized({
   gacha: "开盒",
   daily: "每日",
   market: "交易",
   inventory: "藏品",
   album: "图鉴",
-};
-const taskFilters: ReadonlyArray<{ key: TaskFilter; label: string }> = [
-  { key: "all", label: "全部" },
-  { key: "daily", label: "每日" },
-  { key: "gacha", label: "开盒" },
-  { key: "market", label: "交易" },
-  { key: "inventory", label: "藏品" },
-  { key: "album", label: "图鉴" },
-] as const;
-const taskStatusLabels: Record<Task["status"], string> = {
+});
+const taskFilters: ReadonlyArray<{ key: TaskFilter; label: string }> =
+  localized([
+    { key: "all", label: "全部" },
+    { key: "daily", label: "每日" },
+    { key: "gacha", label: "开盒" },
+    { key: "market", label: "交易" },
+    { key: "inventory", label: "藏品" },
+    { key: "album", label: "图鉴" },
+  ] as const);
+const taskStatusLabels: Record<Task["status"], string> = localized({
   not_started: "未开始",
   in_progress: "进行中",
   claimable: "可领取",
   claimed: "已领取",
-};
+});
 
 const taskCodeIcons: Record<Task["code"], LucideIcon> = {
   gacha_1: PackageOpen,
@@ -114,7 +116,7 @@ const taskCodeIcons: Record<Task["code"], LucideIcon> = {
   wallet_verified: BadgeCheck,
   mint_success: TicketCheck,
 };
-const checkInRewards = [
+const checkInRewards = localized([
   { amount: "20", unit: "Fgems", kind: "fgems" },
   { amount: "30", unit: "Fgems", kind: "fgems" },
   { amount: "50", unit: "Fgems", kind: "fgems" },
@@ -122,7 +124,7 @@ const checkInRewards = [
   { amount: "100", unit: "Fgems", kind: "fgems" },
   { amount: "150", unit: "Fgems", kind: "fgems" },
   { amount: "1", unit: "稀有盒资格", kind: "box" },
-] as const;
+] as const);
 
 function TaskIconArtwork({ taskCode }: { taskCode: Task["code"] }): ReactNode {
   if (taskCode === "gacha_1") {
@@ -193,7 +195,7 @@ export function TasksView({
   const checkIn = async () => {
     setCheckingIn(true);
     try {
-      await run("正在确认今日签到", "tasks.check_in", {});
+      await run(t("正在确认今日签到"), "tasks.check_in", {});
     } finally {
       setCheckingIn(false);
     }
@@ -201,7 +203,7 @@ export function TasksView({
   const claim = async (taskCode: Task["code"]) => {
     setClaimingCode(taskCode);
     try {
-      await run("正在领取任务奖励", "tasks.claim", {
+      await run(t("正在领取任务奖励"), "tasks.claim", {
         task_code: taskCode,
       });
     } finally {
@@ -255,14 +257,18 @@ export function TasksView({
         <Card className="checkin-card">
           <div className="checkin-heading">
             <div>
-              <span>7 日签到</span>
+              <span>{t("7 日签到")}</span>
             </div>
             <Button
               id="task-checkin-action"
               disabled={blocked || checkingIn || claimedToday}
               onClick={() => void checkIn()}
             >
-              {claimedToday ? "今日已签到" : checkingIn ? "领取中" : "立即签到"}
+              {claimedToday
+                ? t("今日已签到")
+                : checkingIn
+                  ? t("领取中")
+                  : t("立即签到")}
             </Button>
           </div>
           <div className="checkin-progress" aria-hidden="true">
@@ -278,7 +284,11 @@ export function TasksView({
               );
             })}
           </div>
-          <div className="checkin-days" role="list" aria-label="七日签到奖励">
+          <div
+            className="checkin-days"
+            role="list"
+            aria-label={t("七日签到奖励")}
+          >
             {checkInRewards.map((reward, index) => {
               const day = index + 1;
               const claimed = day <= cycleProgress;
@@ -288,9 +298,18 @@ export function TasksView({
                   key={day}
                   role="listitem"
                   className={`${claimed ? "claimed" : ""} ${active ? "active" : ""}`}
-                  aria-label={`第 ${day} 天，${reward.amount} ${reward.unit}，${claimed ? "已领取" : active ? "当前待领取" : "未解锁"}`}
+                  aria-label={tp("第 {{0}} 天，{{1}} {{2}}，{{3}}", [
+                    day,
+                    reward.amount,
+                    reward.unit,
+                    claimed
+                      ? t("已领取")
+                      : active
+                        ? t("当前待领取")
+                        : t("未解锁"),
+                  ])}
                 >
-                  <small>第 {day} 天</small>
+                  <small>{tp("第 {{0}} 天", [day])}</small>
                   <span className="checkin-reward-art">
                     {reward.kind === "box" ? (
                       <img
@@ -337,7 +356,7 @@ export function TasksView({
       <nav
         id="task-filters"
         className="task-filter-strip"
-        aria-label="任务分类"
+        aria-label={t("任务分类")}
       >
         {taskFilters.map((item) => (
           <button
@@ -369,11 +388,11 @@ export function TasksView({
                 <div className="task-card-meta">
                   <Badge>{taskCategoryLabels[task.category]}</Badge>
                   <span className={`task-status ${task.status}`}>
-                    {claiming ? "领取中" : taskStatusLabels[task.status]}
+                    {claiming ? t("领取中") : taskStatusLabels[task.status]}
                   </span>
                 </div>
-                <h3>{task.title}</h3>
-                <p className="task-description">{task.description}</p>
+                <h3>{t(task.title)}</h3>
+                <p className="task-description">{t(task.description)}</p>
                 <p className="task-progress">
                   <span>
                     {task.progress} / {task.target}
@@ -401,12 +420,12 @@ export function TasksView({
                 }}
               >
                 {claiming
-                  ? "领取中"
+                  ? t("领取中")
                   : canClaim
-                    ? "领取"
+                    ? t("领取")
                     : canComplete
-                      ? "去完成"
-                      : "已领取"}
+                      ? t("去完成")
+                      : t("已领取")}
               </Button>
             </Card>
           );

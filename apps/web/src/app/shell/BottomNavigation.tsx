@@ -13,14 +13,15 @@ import {
 } from "../../platform/navigation/index.tsx";
 import { usePageModulePreparation } from "../../shared/navigation/pageModulePreparation.ts";
 import { useOperationNavigationLocked } from "../../workflows/operation-recovery/context.ts";
+import { localized, t, tp } from "../../platform/i18n/index.ts";
 
-const navigation = [
+const navigation = localized([
   { path: "/market", label: "交易", icon: ShoppingBasket },
   { path: "/game", label: "游戏", icon: Gamepad2 },
   { path: "/", label: "开盒", icon: Boxes },
   { path: "/inventory", label: "藏品", icon: PackageSearch },
   { path: "/tasks", label: "任务", icon: ListChecks },
-] as const;
+] as const);
 
 export function BottomNavigation(): ReactNode {
   const location = useAppLocation();
@@ -30,7 +31,7 @@ export function BottomNavigation(): ReactNode {
   return (
     <nav
       className="bottom-nav"
-      aria-label="主导航"
+      aria-label={t("主导航")}
       data-locked={navigationLocked}
     >
       {navigation.map(({ path, label, icon: Icon }) => {
@@ -46,7 +47,7 @@ export function BottomNavigation(): ReactNode {
             key={path}
             className={active ? "active" : ""}
             aria-current={active ? "page" : undefined}
-            aria-label={`前往${label}`}
+            aria-label={tp("前往{{0}}", [label])}
             aria-disabled={navigationLocked}
             disabled={navigationLocked}
             onPointerEnter={prepare}

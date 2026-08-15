@@ -15,6 +15,11 @@ import {
   transitionToBanned,
 } from "../session/store.ts";
 import { getWebPublicConfig } from "../env/index.ts";
+import {
+  apiErrorMessage,
+  synchronizeAccountLanguage,
+  t,
+} from "../i18n/index.ts";
 import { telegram } from "../telegram/index.ts";
 
 export class ApiFailure extends Error {
@@ -61,7 +66,7 @@ export async function apiRequest<Id extends RouteId>(
     throw new ApiFailure(
       0,
       "CLIENT_CONTRACT_LOAD_FAILED",
-      "功能资源暂时无法加载，请重试",
+      t("功能资源暂时无法加载，请重试"),
       true,
       null,
     );
@@ -235,8 +240,8 @@ async function send<Id extends RouteId>(
       0,
       "NETWORK_ERROR",
       route.idempotent
-        ? "网络中断，结果仍在确认，请勿重复操作"
-        : "网络异常，请稍后重试",
+        ? t("网络中断，结果仍在确认，请勿重复操作")
+        : t("网络异常，请稍后重试"),
       true,
       operationId,
     );
@@ -248,14 +253,14 @@ async function send<Id extends RouteId>(
       return new ApiFailure(
         response.status,
         "RESPONSE_INVALID",
-        "收到的结果暂时无法确认",
+        t("收到的结果暂时无法确认"),
         true,
         operationId,
       );
     return new ApiFailure(
       response.status,
       parsed.data.error.code,
-      parsed.data.error.message,
+      apiErrorMessage(parsed.data.error.code, parsed.data.error.message),
       parsed.data.error.retryable,
       parsed.data.operation_id,
     );
@@ -284,7 +289,7 @@ async function send<Id extends RouteId>(
     return new ApiFailure(
       response.status,
       "RESPONSE_INVALID",
-      "收到的结果暂时无法确认",
+      t("收到的结果暂时无法确认"),
       true,
       operationId,
     );
@@ -300,7 +305,7 @@ async function recoverSession(): Promise<void> {
       throw new ApiFailure(
         401,
         "TELEGRAM_REENTRY_REQUIRED",
-        "请从 Telegram Mini App 重新打开应用",
+        t("请从 Telegram Mini App 重新打开应用"),
         false,
         null,
       );
@@ -318,7 +323,7 @@ async function recoverSession(): Promise<void> {
       throw new ApiFailure(
         403,
         "ACCOUNT_RESTRICTED",
-        "账户当前不可执行此操作",
+        t("账户当前不可执行此操作"),
         false,
         null,
       );
@@ -327,7 +332,7 @@ async function recoverSession(): Promise<void> {
       throw new ApiFailure(
         401,
         "TELEGRAM_REENTRY_REQUIRED",
-        "请从 Telegram Mini App 重新打开应用",
+        t("请从 Telegram Mini App 重新打开应用"),
         false,
         null,
       );
@@ -341,14 +346,16 @@ async function recoverSession(): Promise<void> {
       entryHandoffState: result.data.entry_handoff_state,
       entryHandoffCode: result.data.entry_handoff_code,
       entryHandoffResult: result.data.entry_handoff_result,
+      preferredLanguage: result.data.preferred_language,
       recovering: true,
     } as const;
+    synchronizeAccountLanguage(result.data.preferred_language);
     replaceSession(next);
     if (next.entryHandoffState === "pending")
       throw new ApiFailure(
         409,
         "ENTRY_HANDOFF_PENDING",
-        "邀请绑定结果确认中，请稍后刷新",
+        t("邀请绑定结果确认中，请稍后刷新"),
         true,
         null,
       );

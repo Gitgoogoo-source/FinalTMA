@@ -13,6 +13,7 @@ import { Badge } from "../../../shared/ui/Badge.tsx";
 import { Button } from "../../../shared/ui/Button.tsx";
 import { chainTypeLabels, rarityLabels } from "../labels.ts";
 import type { AlbumChain, AlbumNode } from "../types.ts";
+import { t, tp } from "../../../platform/i18n/index.ts";
 
 export function AlbumNodeDialog({
   chain,
@@ -56,13 +57,13 @@ export function AlbumNodeDialog({
     >
       <header>
         <div>
-          <span>{node.unlocked ? "藏品详情" : "获取方式"}</span>
-          <h2 id="album-node-dialog-title">{node.name}</h2>
+          <span>{node.unlocked ? t("藏品详情") : t("获取方式")}</span>
+          <h2 id="album-node-dialog-title">{t(node.name)}</h2>
         </div>
         <button
           type="button"
           className="album-dialog-close"
-          aria-label="关闭弹窗"
+          aria-label={t("关闭弹窗")}
           onClick={onClose}
         >
           <X aria-hidden="true" />
@@ -72,7 +73,7 @@ export function AlbumNodeDialog({
         {node.unlocked ? (
           <CatalogImage
             url={node.image_detail_url}
-            alt={node.name}
+            alt={t(node.name)}
             variant="detail"
             loading="eager"
             fetchPriority="high"
@@ -84,21 +85,25 @@ export function AlbumNodeDialog({
       <div className="album-dialog-meta">
         <Badge>{chainTypeLabels[chain.chain_type]}</Badge>
         <Badge>{rarityLabels[node.rarity]}</Badge>
-        <Badge>第 {node.stage} 阶</Badge>
+        <Badge>{tp("第 {{0}} 阶", [node.stage])}</Badge>
       </div>
-      <p id="album-node-dialog-description">所属链条：{chain.theme}</p>
+      <p id="album-node-dialog-description">
+        {tp("所属链条：{{0}}", [t(chain.theme)])}
+      </p>
       {node.unlocked ? (
         <>
           <div className="album-owned-summary" aria-live="polite">
             <span>
-              图鉴状态<strong>已点亮</strong>
+              {t("图鉴状态")}
+              <strong>{t("已点亮")}</strong>
             </span>
             <span>
-              当前拥有<strong>{node.owned_count}</strong>
+              {t("当前拥有")}
+              <strong>{node.owned_count}</strong>
             </span>
           </div>
           {node.owned_count === 0 && (
-            <p>你曾经获得过该藏品，但当前库存为 0。</p>
+            <p>{t("你曾经获得过该藏品，但当前库存为 0。")}</p>
           )}
           <Button
             onPointerEnter={() => onPrepareNavigate(inventoryPath)}
@@ -107,7 +112,7 @@ export function AlbumNodeDialog({
             onClick={() => onNavigate(inventoryPath)}
           >
             <PackageSearch aria-hidden="true" />
-            去藏品查看
+            {t("去藏品查看")}
           </Button>
         </>
       ) : (
@@ -119,7 +124,7 @@ export function AlbumNodeDialog({
             onClick={() => onNavigate(marketPath)}
           >
             <ShoppingBag aria-hidden="true" />
-            去交易市场购买
+            {t("去交易市场购买")}
           </Button>
           <Button
             onPointerEnter={() => onPrepareNavigate(gachaPath)}
@@ -128,7 +133,7 @@ export function AlbumNodeDialog({
             onClick={() => onNavigate(gachaPath)}
           >
             <Sparkles aria-hidden="true" />
-            去开盲盒
+            {t("去开盲盒")}
           </Button>
           {node.stage > 1 && evolutionPath && (
             <Button
@@ -138,7 +143,7 @@ export function AlbumNodeDialog({
               onClick={() => onNavigate(evolutionPath)}
             >
               <Dna aria-hidden="true" />
-              去进化
+              {t("去进化")}
             </Button>
           )}
         </div>

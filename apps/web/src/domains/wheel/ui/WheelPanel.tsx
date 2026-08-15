@@ -31,6 +31,7 @@ import {
   useWheelPresentationEpoch,
 } from "../../../workflows/operation-recovery/context.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/context.ts";
+import { localized, t, tp } from "../../../platform/i18n/index.ts";
 
 type WheelSpinResult = RouteOutput<"wheel.spin">;
 type WheelReward = WheelSpinResult["rewards"][number];
@@ -46,7 +47,7 @@ type WheelSlot = {
   Icon: LucideIcon;
 };
 
-const WHEEL_SLOTS: readonly WheelSlot[] = [
+const WHEEL_SLOTS: readonly WheelSlot[] = localized([
   {
     key: "fgems-20",
     kind: "fgems",
@@ -135,7 +136,7 @@ const WHEEL_SLOTS: readonly WheelSlot[] = [
     secondary: "普通",
     Icon: Ticket,
   },
-] as const;
+] as const);
 
 const SECTOR_ANGLE = 360 / WHEEL_SLOTS.length;
 const MINIMUM_SPIN_MS = 720;
@@ -220,7 +221,7 @@ function WheelPanelRuntime({
     startContinuousSpin(rotor.current, activeAnimation, rotation);
     const startedAt = performance.now();
     const result = await run(
-      "幸运转盘正在转动",
+      t("幸运转盘正在转动"),
       "wheel.spin",
       { count },
       {
@@ -273,16 +274,20 @@ function WheelPanelRuntime({
         <Sparkles />
         <div>
           <span>LUCKY WHEEL</span>
-          <h2>幸运转盘</h2>
+          <h2>{t("幸运转盘")}</h2>
         </div>
-        <strong className="wheel-remaining-badge">剩余 {remaining} 次</strong>
+        <strong className="wheel-remaining-badge">
+          {tp("剩余 {{0}} 次", [remaining])}
+        </strong>
       </div>
 
       {resumedCount && (
         <div className="resume-intent">
-          <strong>充值已到账</strong>
+          <strong>{t("充值已到账")}</strong>
           <p>
-            已恢复原转盘选择，将按当前余额与今日次数重新确认，不会自动转动。
+            {t(
+              "已恢复原转盘选择，将按当前余额与今日次数重新确认，不会自动转动。",
+            )}
           </p>
           <Button
             disabled={interactionLocked}
@@ -293,17 +298,17 @@ function WheelPanelRuntime({
               void spin(resumedCount);
             }}
           >
-            重新确认转动 {resumedCount} 次
+            {tp("重新确认转动 {{0}} 次", [resumedCount])}
           </Button>
         </div>
       )}
 
       {query.isLoading && query.data === undefined ? (
-        <p className="wheel-preparing">转盘准备中…</p>
+        <p className="wheel-preparing">{t("转盘准备中…")}</p>
       ) : query.error && query.data === undefined ? (
         <div className="wheel-preparing">
-          <p>转盘暂时没有准备好</p>
-          <Button onClick={() => void query.refetch()}>再试一次</Button>
+          <p>{t("转盘暂时没有准备好")}</p>
+          <Button onClick={() => void query.refetch()}>{t("再试一次")}</Button>
         </div>
       ) : (
         <>
@@ -324,7 +329,7 @@ function WheelPanelRuntime({
           <div
             className={`wheel-stage motion-${motion}`}
             aria-busy={interactionLocked}
-            aria-label="包含 11 个奖励格的幸运转盘"
+            aria-label={t("包含 11 个奖励格的幸运转盘")}
           >
             <Triangle className="wheel-pointer" aria-hidden="true" />
             <div className="wheel-frame">
@@ -358,7 +363,7 @@ function WheelPanelRuntime({
                 ))}
               </div>
               <span className="wheel-hub" aria-live="polite">
-                <small>{motion === "idle" ? "今日" : "正在转动"}</small>
+                <small>{motion === "idle" ? t("今日") : t("正在转动")}</small>
                 <strong>
                   {motion === "idle" ? `${spinCount}/${dailyLimit}` : "…"}
                 </strong>
@@ -370,11 +375,12 @@ function WheelPanelRuntime({
           <div className="wheel-price-line" aria-hidden="true">
             <Coins />
             <span>
-              单次 <strong>{query.data?.single_cost ?? 20} K-coin</strong>
+              {t("单次")}{" "}
+              <strong>{query.data?.single_cost ?? 20} K-coin</strong>
             </span>
             <i />
             <span>
-              十次 <strong>{query.data?.ten_cost ?? 180} K-coin</strong>
+              {t("十次")} <strong>{query.data?.ten_cost ?? 180} K-coin</strong>
             </span>
           </div>
 
@@ -386,10 +392,12 @@ function WheelPanelRuntime({
               onClick={() => void spin(1)}
             >
               {interactionLocked
-                ? "转动中..."
+                ? t("转动中...")
                 : remaining < 1
-                  ? "今日次数已用完"
-                  : `转动 1 次 · ${query.data?.single_cost ?? 20} K-coin`}
+                  ? t("今日次数已用完")
+                  : tp("转动 1 次 · {{0}} K-coin", [
+                      query.data?.single_cost ?? 20,
+                    ])}
             </Button>
             <Button
               className="secondary"
@@ -399,17 +407,19 @@ function WheelPanelRuntime({
               onClick={() => void spin(10)}
             >
               {interactionLocked
-                ? "转动中..."
+                ? t("转动中...")
                 : remaining < 10
-                  ? "剩余次数不足"
-                  : `转动 10 次 · ${query.data?.ten_cost ?? 180} K-coin`}
+                  ? t("剩余次数不足")
+                  : tp("转动 10 次 · {{0}} K-coin", [
+                      query.data?.ten_cost ?? 180,
+                    ])}
             </Button>
           </div>
 
           <details className="wheel-rules">
             <summary>
               <ListChecks aria-hidden="true" />
-              查看奖品概率与规则
+              {t("查看奖品概率与规则")}
               <ChevronRight aria-hidden="true" />
             </summary>
             <div className="wheel-rule-grid">
@@ -441,14 +451,15 @@ function WheelPanelRuntime({
                 100 K-coin <strong>2%</strong>
               </span>
               <span>
-                免费普通资格 <strong>4.3%</strong>
+                {t("免费普通资格")} <strong>4.3%</strong>
               </span>
               <span>
-                免费稀有资格 <strong>0.2%</strong>
+                {t("免费稀有资格")} <strong>0.2%</strong>
               </span>
               <p>
-                转盘格子大小不代表概率。免费资格达到当日上限后，将按规则替换为
-                Fgems，并在结果中说明。
+                {t(
+                  "转盘格子大小不代表概率。免费资格达到当日上限后，将按规则替换为 Fgems，并在结果中说明。",
+                )}
               </p>
             </div>
           </details>
@@ -472,23 +483,24 @@ function MilestoneProgress({
   milestone20Claimed: boolean;
 }): ReactNode {
   return (
-    <section className="wheel-progress" aria-label="今日转盘里程碑">
+    <section className="wheel-progress" aria-label={t("今日转盘里程碑")}>
       <p>
         {spinCount >= dailyLimit ? (
-          <>今日转盘次数已用完 · 累计奖励已全部获得</>
+          <>{t("今日转盘次数已用完 · 累计奖励已全部获得")}</>
         ) : spinCount >= 20 ? (
           <>
-            累计奖励已全部获得 · 今日还可转
-            <strong> {dailyLimit - spinCount}</strong> 次
+            {t("累计奖励已全部获得 · 今日还可转")}
+            <strong> {dailyLimit - spinCount}</strong> {t("次")}
           </>
         ) : spinCount >= 10 ? (
           <>
-            已获得 25 Fgems · 再转 <strong>{20 - spinCount}</strong> 次可获得
+            {t("已获得 25 Fgems · 再转")} <strong>{20 - spinCount}</strong>{" "}
+            {t("次可获得")}
             <em> 25 Fgems</em>
           </>
         ) : (
           <>
-            再转 <strong>{10 - spinCount}</strong> 次可获得
+            {t("再转")} <strong>{10 - spinCount}</strong> {t("次可获得")}
             <em> 25 Fgems</em>
           </>
         )}

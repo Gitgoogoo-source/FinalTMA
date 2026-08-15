@@ -34,6 +34,7 @@ import {
   preloadOperationRegistryRuntime,
   type OperationRegistryRuntimeModule,
 } from "./runtime-loader.ts";
+import { t } from "../../platform/i18n/index.ts";
 
 type PendingRun = {
   generation: string;
@@ -221,7 +222,7 @@ export function OperationRegistryProvider({
       {RuntimeProvider ? <RuntimeProvider host={runtimeHost} /> : null}
       {loadFailed && (pendingRun || recoveryPending) ? (
         <button className="operation-resume" type="button" onClick={load}>
-          画面无法打开，重试
+          {t("画面无法打开，重试")}
         </button>
       ) : null}
     </OperationRegistryContext.Provider>

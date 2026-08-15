@@ -25,6 +25,7 @@ import {
   loadMarketPage,
   loadTasksPage,
 } from "./pageRoutes.ts";
+import { t } from "../../platform/i18n/index.ts";
 
 const pages: readonly {
   path: MainPagePath;
@@ -104,7 +105,9 @@ export function PersistentPages({
                 search={active ? search : ""}
               >
                 <Suspense
-                  fallback={<main className="page-state">正在加载页面</main>}
+                  fallback={
+                    <main className="page-state">{t("正在加载页面")}</main>
+                  }
                 >
                   <Page />
                 </Suspense>

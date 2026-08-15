@@ -10,6 +10,7 @@ import {
   useOperationBlocked,
   useOperationCommands,
 } from "../../../workflows/operation-recovery/context.ts";
+import { t, tp } from "../../../platform/i18n/index.ts";
 
 type Benefit = "fgems" | "freeBox";
 type Feedback = {
@@ -101,8 +102,8 @@ export function VipDailyBenefits(): ReactNode {
     setFeedback((current) => ({ ...current, [benefit]: undefined }));
     const result = await run(
       benefit === "fgems"
-        ? "正在领取 VIP 每日 100 Fgems"
-        : "正在领取 VIP 免费稀有盲盒资格",
+        ? t("正在领取 VIP 每日 100 Fgems")
+        : t("正在领取 VIP 免费稀有盲盒资格"),
       routeId,
       {},
       {
@@ -144,7 +145,7 @@ export function VipDailyBenefits(): ReactNode {
     pending: fgemsPending,
     loading: unavailable,
     loadFailed,
-    available: "领取 100 Fgems",
+    available: t("领取 100 Fgems"),
   });
   const freeBoxAction = benefitButtonText({
     active,
@@ -154,7 +155,7 @@ export function VipDailyBenefits(): ReactNode {
     pending: freeBoxPending,
     loading: unavailable,
     loadFailed,
-    available: "领取免费稀有盲盒",
+    available: t("领取免费稀有盲盒"),
   });
   const fgemsVisualState = benefitVisualState({
     active,
@@ -190,7 +191,7 @@ export function VipDailyBenefits(): ReactNode {
   return (
     <aside
       className="vip-daily-benefits"
-      aria-label={`月卡每日权益，${statusText}`}
+      aria-label={tp("月卡每日权益，{{0}}", [statusText])}
       aria-live="polite"
     >
       <div className="vip-benefit-grid">
@@ -198,7 +199,9 @@ export function VipDailyBenefits(): ReactNode {
           <Button
             className={`vip-benefit-tile fgems ${fgemsVisualState}`}
             disabled={fgemsDisabled}
-            aria-label={`100 Fgems，每个 UTC+0 日手动领取，${fgemsAction}`}
+            aria-label={tp("100 Fgems，每个 UTC+0 日手动领取，{{0}}", [
+              fgemsAction,
+            ])}
             onPointerEnter={prepareDetails}
             onPointerDown={prepareDetails}
             onFocus={prepareDetails}
@@ -215,7 +218,7 @@ export function VipDailyBenefits(): ReactNode {
           <BenefitFeedback
             feedback={fgemsFeedbackStatus}
             claimed={fgemsClaimed}
-            success="领取成功，Fgems +100"
+            success={t("领取成功，Fgems +100")}
           />
         </article>
 
@@ -223,7 +226,10 @@ export function VipDailyBenefits(): ReactNode {
           <Button
             className={`vip-benefit-tile free-box ${freeBoxVisualState}`}
             disabled={freeBoxDisabled}
-            aria-label={`免费稀有盲盒 1 次，全部来源当前可用 ${data?.free_rare_box_available ?? "—"} 次，${freeBoxAction}`}
+            aria-label={tp(
+              "免费稀有盲盒 1 次，全部来源当前可用 {{0}} 次，{{1}}",
+              [data?.free_rare_box_available ?? "—", freeBoxAction],
+            )}
             onPointerEnter={prepareDetails}
             onPointerDown={prepareDetails}
             onFocus={prepareDetails}
@@ -240,7 +246,7 @@ export function VipDailyBenefits(): ReactNode {
           <BenefitFeedback
             feedback={freeBoxFeedbackStatus}
             claimed={freeBoxClaimed}
-            success="领取成功，免费稀有盲盒次数 +1"
+            success={t("领取成功，免费稀有盲盒次数 +1")}
           />
         </article>
       </div>
@@ -287,8 +293,8 @@ function BenefitFeedback({
       {feedback === "success"
         ? success
         : claimed
-          ? "今日权益已领取，未重复发放"
-          : "领取未成功，已刷新真实状态"}
+          ? t("今日权益已领取，未重复发放")
+          : t("领取未成功，已刷新最新状态")}
     </span>
   );
 }
@@ -331,11 +337,12 @@ function benefitButtonText({
   loadFailed: boolean;
   available: string;
 }): string {
-  if (pending) return "领取中";
-  if (loadFailed) return "加载失败，点击重试";
-  if (loading) return "状态加载中";
-  if (active) return claimed ? (used ? "今日已使用" : "今日已领取") : available;
-  return expired ? "月卡已过期" : "购买月卡后可领取";
+  if (pending) return t("领取中");
+  if (loadFailed) return t("加载失败，点击重试");
+  if (loading) return t("状态加载中");
+  if (active)
+    return claimed ? (used ? t("今日已使用") : t("今日已领取")) : available;
+  return expired ? t("月卡已过期") : t("购买月卡后可领取");
 }
 
 function vipStatusText(
@@ -343,12 +350,18 @@ function vipStatusText(
   paymentPending: boolean,
   loading: boolean,
 ): string {
-  if (loading) return "正在确认月卡状态";
-  if (!data) return "月卡状态确认失败";
+  if (loading) return t("正在确认月卡状态");
+  if (!data) return t("月卡状态确认失败");
   if (paymentPending)
-    return data.active ? "月卡有效，续费结果仍在确认" : "月卡付款结果仍在确认";
+    return data.active
+      ? t("月卡有效，续费结果仍在确认")
+      : t("月卡付款结果仍在确认");
   if (data.active)
-    return `有效期至 ${data.ends_on} · 剩余 ${data.remaining_days} 个权益日`;
-  if (data.ends_on) return `已于 ${data.ends_on} 到期，进入详情可重新购买`;
-  return "进入交易市场月卡详情后可购买";
+    return tp("有效期至 {{0}} · 剩余 {{1}} 个权益日", [
+      data.ends_on,
+      data.remaining_days,
+    ]);
+  if (data.ends_on)
+    return tp("已于 {{0}} 到期，进入详情可重新购买", [data.ends_on]);
+  return t("进入交易市场月卡详情后可购买");
 }

@@ -2,6 +2,7 @@ import { PackageSearch, ShoppingBag, Tags } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 
 import { focusTaskTarget } from "../../../shared/navigation/focusTaskTarget.ts";
+import { localized, t } from "../../../platform/i18n/index.ts";
 
 export type MarketTab = "buy" | "sell" | "manage";
 
@@ -9,11 +10,11 @@ const tabs: ReadonlyArray<{
   id: MarketTab;
   label: string;
   icon: typeof ShoppingBag;
-}> = [
+}> = localized([
   { id: "buy", label: "购买", icon: ShoppingBag },
   { id: "sell", label: "出售", icon: Tags },
   { id: "manage", label: "管理", icon: PackageSearch },
-];
+]);
 
 export function MarketTabs({
   activeTab,
@@ -40,7 +41,7 @@ export function MarketTabs({
   }, [activeTab, focusActive, focusReady]);
 
   return (
-    <nav className="segmented market-tabs" aria-label="交易市场页签">
+    <nav className="segmented market-tabs" aria-label={t("交易市场页签")}>
       {tabs.map(({ id, label, icon: Icon }) => (
         <button
           key={id}
@@ -50,7 +51,7 @@ export function MarketTabs({
           type="button"
           className={activeTab === id ? "active" : ""}
           aria-label={
-            id === "manage" && manageAttention ? "管理，有藏品已售出" : label
+            id === "manage" && manageAttention ? t("管理，有藏品已售出") : label
           }
           aria-current={activeTab === id ? "page" : undefined}
           onClick={() => onSelect(id)}

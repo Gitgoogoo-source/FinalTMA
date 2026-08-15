@@ -5050,6 +5050,7 @@ returns table (
   create_operation_id uuid,
   creator_telegram_id bigint,
   creator_display_name text,
+  preferred_language text,
   rarity_summary jsonb,
   entry_fee bigint,
   invite_token_hash text,
@@ -5092,6 +5093,7 @@ begin
   select
     r.id, r.create_operation_id, u.telegram_id,
     btrim(u.first_name || ' ' || coalesce(u.last_name, '')),
+    u.preferred_language,
     battle.rarity_summary(r.id), tier.entry_fee, r.invite_token_hash,
     leased.attempt_count, r.prepare_deadline
   from leased

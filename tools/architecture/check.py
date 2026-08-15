@@ -237,6 +237,10 @@ def verify_web_boundaries() -> None:
                 allowed = specifier == "@pokepets/api-contracts/app-client" or specifier.startswith(
                     "@pokepets/api-contracts/app-client/"
                 )
+                allowed = allowed or (
+                    source == WEB_ROOT / "platform/i18n/catalog.ts"
+                    and specifier == "@pokepets/api-contracts/localization"
+                )
                 if not allowed and not (
                     source.is_relative_to(WEB_ROOT / "dormant")
                     and specifier == "@pokepets/api-contracts/dormant-app"
@@ -3009,6 +3013,7 @@ def verify_package_exports() -> None:
         "./dormant-app",
         "./integrations",
         "./jobs",
+        "./localization",
         "./server",
     }
     if exports != expected:

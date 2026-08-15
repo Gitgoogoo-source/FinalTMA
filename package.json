@@ -25,6 +25,7 @@
     "format:check": "prettier --check .",
     "contracts:openapi": "pnpm --filter @pokepets/api-contracts openapi",
     "contracts:check": "python3 tools/contracts/check_openapi.py",
+    "i18n:check": "node --experimental-strip-types tools/i18n/check.ts",
     "db:lint": "supabase db lint --local --schema api,identity,catalog,operations,economy,inventory,gacha,evolution,expedition,wheel,battle,market,payments,vip,tasks,referral,album,onchain,risk,admin --level warning --fail-on error",
     "db:migrations:check": "supabase db diff --from migrations --to migrations --use-migra --schema api,identity,catalog,operations,economy,inventory,gacha,evolution,expedition,wheel,battle,market,payments,vip,tasks,referral,album,onchain,risk,admin",
     "db:diff:check": "python3 tools/db/check_schema.py",
@@ -46,7 +47,7 @@
     "manifest:check:production": "python3 tools/web/check_manifest.py production",
     "architecture:check": "python3 tools/architecture/check.py",
     "chain:build": "pnpm --filter @pokepets/ton build",
-    "validate:static": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm contracts:check && pnpm catalog:check && pnpm db:migrations:check && pnpm db:lint && pnpm db:diff:check && pnpm architecture:check && pnpm manifest:check && APP_ENV=development pnpm build",
+    "validate:static": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm contracts:check && pnpm i18n:check && pnpm catalog:check && pnpm db:migrations:check && pnpm db:lint && pnpm db:diff:check && pnpm architecture:check && pnpm manifest:check && APP_ENV=development pnpm build",
     "deploy:preview": "vercel deploy",
     "deploy:production": "vercel deploy --prod"
   },

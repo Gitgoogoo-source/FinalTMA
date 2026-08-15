@@ -169,6 +169,10 @@
                               "format": "uuid",
                               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                             },
+                            "preferred_language": {
+                              "type": "string",
+                              "enum": ["en", "zh-CN"]
+                            },
                             "expires_at": {
                               "type": "string",
                               "format": "date-time",
@@ -247,6 +251,10 @@
                                               "type": "string",
                                               "enum": ["normal", "banned"]
                                             },
+                                            "preferred_language": {
+                                              "type": "string",
+                                              "enum": ["en", "zh-CN"]
+                                            },
                                             "referral_code": {
                                               "type": "string"
                                             }
@@ -258,6 +266,7 @@
                                             "first_name",
                                             "last_name",
                                             "status",
+                                            "preferred_language",
                                             "referral_code"
                                           ],
                                           "additionalProperties": false
@@ -1068,6 +1077,7 @@
                             "account_status",
                             "access_token",
                             "user_id",
+                            "preferred_language",
                             "expires_at",
                             "entry_handoff_state",
                             "entry_kind",
@@ -1438,6 +1448,10 @@
                                   "type": "string",
                                   "enum": ["normal", "banned"]
                                 },
+                                "preferred_language": {
+                                  "type": "string",
+                                  "enum": ["en", "zh-CN"]
+                                },
                                 "referral_code": { "type": "string" }
                               },
                               "required": [
@@ -1447,6 +1461,7 @@
                                 "first_name",
                                 "last_name",
                                 "status",
+                                "preferred_language",
                                 "referral_code"
                               ],
                               "additionalProperties": false
@@ -2453,6 +2468,10 @@
                               "type": "string",
                               "enum": ["normal", "banned"]
                             },
+                            "preferred_language": {
+                              "type": "string",
+                              "enum": ["en", "zh-CN"]
+                            },
                             "referral_code": { "type": "string" }
                           },
                           "required": [
@@ -2462,6 +2481,7 @@
                             "first_name",
                             "last_name",
                             "status",
+                            "preferred_language",
                             "referral_code"
                           ],
                           "additionalProperties": false
@@ -2678,6 +2698,244 @@
         },
         "x-refresh-scopes": [],
         "x-cache-policy": "no-store"
+      }
+    },
+    "/api/me/language": {
+      "post": {
+        "operationId": "identity_language_update",
+        "tags": ["identity"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "preferred_language": {
+                          "type": "string",
+                          "enum": ["en", "zh-CN"]
+                        }
+                      },
+                      "required": ["preferred_language"],
+                      "additionalProperties": false
+                    },
+                    "request_id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "operation_id": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                        },
+                        { "type": "null" }
+                      ]
+                    }
+                  },
+                  "required": ["data", "request_id", "operation_id"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errors: REQUEST_INVALID, IDEMPOTENCY_KEY_NOT_ALLOWED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "401": {
+            "description": "Errors: SESSION_EXPIRED, SESSION_REPLACED, SESSION_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "403": {
+            "description": "Errors: ACCOUNT_RESTRICTED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "413": {
+            "description": "Errors: REQUEST_TOO_LARGE",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "415": {
+            "description": "Errors: CONTENT_TYPE_INVALID",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "500": {
+            "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "502": {
+            "description": "Errors: RESPONSE_INVALID",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          }
+        },
+        "x-idempotency-required": false,
+        "x-idempotency-forbidden": true,
+        "x-allow-pending-entry-handoff": false,
+        "x-error-codes": [
+          "DATABASE_RPC_FAILED",
+          "INTERNAL_ERROR",
+          "REQUEST_INVALID",
+          "RESPONSE_INVALID",
+          "CONTENT_TYPE_INVALID",
+          "REQUEST_TOO_LARGE",
+          "ACCOUNT_RESTRICTED",
+          "SESSION_EXPIRED",
+          "SESSION_REPLACED",
+          "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
+          "IDEMPOTENCY_KEY_NOT_ALLOWED"
+        ],
+        "x-error-definitions": {
+          "DATABASE_RPC_FAILED": {
+            "status": 500,
+            "message": "数据库操作失败",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "query_operation"
+          },
+          "INTERNAL_ERROR": {
+            "status": 500,
+            "message": "服务暂时不可用",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "query_operation"
+          },
+          "REQUEST_INVALID": {
+            "status": 400,
+            "message": "请求参数无效",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RESPONSE_INVALID": {
+            "status": 502,
+            "message": "服务响应格式无效",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
+          },
+          "CONTENT_TYPE_INVALID": {
+            "status": 415,
+            "message": "请求体必须使用 application/json",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "REQUEST_TOO_LARGE": {
+            "status": 413,
+            "message": "请求体过大",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "ACCOUNT_RESTRICTED": {
+            "status": 403,
+            "message": "账户当前不可执行此操作",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
+          },
+          "SESSION_EXPIRED": {
+            "status": 401,
+            "message": "会话已过期",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "SESSION_REPLACED": {
+            "status": 401,
+            "message": "会话已被替换",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "SESSION_REQUIRED": {
+            "status": 401,
+            "message": "请从 Telegram 重新进入应用",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
+          },
+          "IDEMPOTENCY_KEY_NOT_ALLOWED": {
+            "status": 400,
+            "message": "该接口不接受 Idempotency-Key",
+            "retryable": false,
+            "refreshScope": "battle",
+            "recoveryAction": "refresh"
+          }
+        },
+        "x-refresh-scopes": ["all"],
+        "x-cache-policy": "no-store",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "preferred_language": {
+                    "type": "string",
+                    "enum": ["en", "zh-CN"]
+                  }
+                },
+                "required": ["preferred_language"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
       }
     },
     "/api/catalog": {

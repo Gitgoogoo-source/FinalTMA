@@ -21,6 +21,7 @@ import {
   type CatalogImageVariant,
 } from "../../shared/ui/catalogImageUrl.ts";
 import { GachaAstralBackdrop } from "./GachaAstralBackdrop.tsx";
+import { localized, t, tp } from "../../platform/i18n/index.ts";
 
 type GachaResult = RouteOutput<"gacha.open">;
 type ResultItem = GachaResult["results"][number];
@@ -33,13 +34,13 @@ const rarityRanks: Record<Rarity, number> = {
   legendary: 3,
   mythic: 4,
 };
-const rarityLabels: Record<Rarity, string> = {
+const rarityLabels: Record<Rarity, string> = localized({
   common: "普通",
   rare: "稀有",
   epic: "史诗",
   legendary: "传说",
   mythic: "神话",
-};
+});
 const raritySigilCounts: Record<Rarity, number> = {
   common: 1,
   rare: 2,
@@ -190,8 +191,8 @@ export function GachaResultDialog({
     >
       <GachaAstralBackdrop calm />
       <header className="gacha-astral-heading">
-        <small>{single ? "灵契降临" : "群星共鸣"}</small>
-        <h2 id="gacha-result-title">召唤结果</h2>
+        <small>{single ? t("灵契降临") : t("群星共鸣")}</small>
+        <h2 id="gacha-result-title">{t("召唤结果")}</h2>
       </header>
 
       {single ? (
@@ -214,13 +215,13 @@ export function GachaResultDialog({
       {error ? <p className="operation-ack-error">{error}</p> : null}
       <div className="gacha-astral-actions">
         <Button disabled={busy} onClick={onRepeat}>
-          {busy ? "请稍候" : "再开一次"}
+          {busy ? t("请稍候") : t("再开一次")}
         </Button>
         <Button className="secondary" disabled={busy} onClick={onInventory}>
-          去藏品查看
+          {t("去藏品查看")}
         </Button>
         <Button className="secondary" disabled={busy} onClick={onConfirm}>
-          确定
+          {t("确定")}
         </Button>
       </div>
     </div>
@@ -247,7 +248,7 @@ function SingleResult({
         <CatalogImage
           key={`${imageKey}:${retryEpoch}`}
           url={item.image_detail_url}
-          alt={item.name}
+          alt={t(item.name)}
           variant="detail"
           loading="eager"
           fetchPriority="high"
@@ -416,7 +417,7 @@ function TenDrawResults({
   };
 
   return (
-    <section className="gacha-astral-ten" aria-label="十连召唤结果">
+    <section className="gacha-astral-ten" aria-label={t("十连召唤结果")}>
       <ol ref={layerListRef} className="gacha-astral-layer-list">
         {carouselResults.map((item, index) => {
           const imageKey = resultImageKey(item);
@@ -450,7 +451,10 @@ function TenDrawResults({
                   zIndex: 100 - layerDistance * 10,
                 } as CSSProperties
               }
-              aria-label={`${rarityLabels[item.rarity]}藏品：${item.name}，NEW`}
+              aria-label={tp("{{0}}藏品：{{1}}，NEW", [
+                rarityLabels[item.rarity],
+                t(item.name),
+              ])}
               aria-current={index === initialCarouselIndex ? "true" : undefined}
               aria-posinset={index + 1}
               aria-setsize={carouselResults.length}
@@ -463,7 +467,7 @@ function TenDrawResults({
                 <CatalogImage
                   key={`${imageKey}:${retryEpoch}`}
                   url={item.image_thumbnail_url}
-                  alt={item.name}
+                  alt={t(item.name)}
                   variant="thumbnail"
                   loading="eager"
                   fetchPriority={
@@ -482,7 +486,7 @@ function TenDrawResults({
         ref={carouselRef}
         className="gacha-astral-carousel"
         role="group"
-        aria-label="十连召唤结果，左右滑动查看"
+        aria-label={t("十连召唤结果，左右滑动查看")}
         tabIndex={0}
         onKeyDown={handleKeyDown}
         onScroll={scheduleCarouselUpdate}
@@ -507,13 +511,13 @@ function ResultIdentity({ item }: { item: ResultItem }): ReactNode {
       </strong>
       <span
         className="gacha-astral-sigils"
-        aria-label={`${raritySigilCounts[item.rarity]} 枚稀有度星印`}
+        aria-label={tp("{{0}} 枚稀有度星印", [raritySigilCounts[item.rarity]])}
       >
         {Array.from({ length: raritySigilCounts[item.rarity] }, (_, index) => (
           <i key={index} aria-hidden="true" />
         ))}
       </span>
-      <h3>{item.name}</h3>
+      <h3>{t(item.name)}</h3>
     </div>
   );
 }

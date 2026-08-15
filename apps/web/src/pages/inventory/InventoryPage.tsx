@@ -14,6 +14,7 @@ import { usePageSearchParams } from "../../shared/navigation/pageActivity.tsx";
 import { usePageModulePreparation } from "../../shared/navigation/pageModulePreparation.ts";
 import { useOperationBlocked } from "../../workflows/operation-recovery/context.ts";
 import "../../shared/styles/inventory-page.css";
+import { t } from "../../platform/i18n/index.ts";
 
 export function InventoryPage(): ReactNode {
   const navigate = useAppNavigate();
@@ -46,7 +47,7 @@ export function InventoryPage(): ReactNode {
           disabled={blocked || !imageReady || item.available < 1}
           onClick={() => setSellItem(item)}
         >
-          <span>出售</span>
+          <span>{t("出售")}</span>
         </Button>
       </TaskActionTarget>
     </>

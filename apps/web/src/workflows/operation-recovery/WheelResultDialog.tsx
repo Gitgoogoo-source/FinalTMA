@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 
 import { Button } from "../../shared/ui/Button.tsx";
+import { localized, t, tp } from "../../platform/i18n/index.ts";
 
 type WheelResult = RouteOutput<"wheel.spin">;
 type WheelReward = WheelResult["rewards"][number];
@@ -10,7 +11,7 @@ type WheelReward = WheelResult["rewards"][number];
 const rewardVisuals: Record<
   WheelReward["kind"],
   { image: string; name: string }
-> = {
+> = localized({
   fgems: { image: "/assets/wheel/fgems.webp", name: "Fgems" },
   kcoin: { image: "/assets/wheel/kcoin.webp", name: "K-coin" },
   free_normal_box: {
@@ -21,7 +22,7 @@ const rewardVisuals: Record<
     image: "/assets/wheel/free-rare.webp",
     name: "免费稀有",
   },
-};
+});
 
 export function WheelResultDialog({
   result,
@@ -48,13 +49,13 @@ export function WheelResultDialog({
 
       <header className="wheel-result-heading">
         <Sparkles aria-hidden="true" />
-        <h2 id="wheel-result-title">奖励到手</h2>
+        <h2 id="wheel-result-title">{t("奖励到手")}</h2>
         <Sparkles aria-hidden="true" />
       </header>
 
       <ol
         className="wheel-result-grid"
-        aria-label={`${result.count} 次有序奖励`}
+        aria-label={tp("{{0}} 次有序奖励", [result.count])}
       >
         {rewards.map((reward) => {
           const visual = rewardVisuals[reward.kind];
@@ -62,7 +63,10 @@ export function WheelResultDialog({
             <li
               key={`${reward.order}-${reward.kind}`}
               className={`wheel-reward-card reward-${reward.kind}`}
-              aria-label={`第 ${reward.order} 次，${rewardAccessibleLabel(reward)}`}
+              aria-label={tp("第 {{0}} 次，{{1}}", [
+                reward.order,
+                rewardAccessibleLabel(reward),
+              ])}
             >
               <img src={visual.image} alt="" aria-hidden="true" />
               <strong>{rewardDisplayLabel(reward)}</strong>
@@ -72,9 +76,12 @@ export function WheelResultDialog({
       </ol>
 
       {result.milestone.awarded_fgems > 0 ? (
-        <div className="wheel-result-bonus" aria-label="额外获得里程碑奖励">
+        <div
+          className="wheel-result-bonus"
+          aria-label={t("额外获得里程碑奖励")}
+        >
           <img src={rewardVisuals.fgems.image} alt="" aria-hidden="true" />
-          <span>额外获得</span>
+          <span>{t("额外获得")}</span>
           <strong>+{result.milestone.awarded_fgems} Fgems</strong>
         </div>
       ) : null}
@@ -83,7 +90,7 @@ export function WheelResultDialog({
         className="result-sheet-confirm wheel-result-confirm"
         onClick={onConfirm}
       >
-        确定
+        {t("确定")}
       </Button>
     </div>
   );
@@ -98,10 +105,10 @@ function rewardDisplayLabel(reward: WheelReward): string {
 
 function rewardAccessibleLabel(reward: WheelReward): string {
   if (reward.kind === "free_normal_box") {
-    return `免费普通盲盒资格 ${reward.amount} 次`;
+    return tp("免费普通盲盒资格 {{0}} 次", [reward.amount]);
   }
   if (reward.kind === "free_rare_box") {
-    return `免费稀有盲盒资格 ${reward.amount} 次`;
+    return tp("免费稀有盲盒资格 {{0}} 次", [reward.amount]);
   }
   return rewardDisplayLabel(reward);
 }

@@ -5,17 +5,18 @@ import { haptic, selectionHaptic } from "../../platform/telegram/index.ts";
 import { Button } from "../../shared/ui/Button.tsx";
 import { CatalogImage } from "../../shared/ui/CatalogImage.tsx";
 import type { OperationPhase, OperationPresentation } from "./context.ts";
+import { localized, t, tp } from "../../platform/i18n/index.ts";
 
 type DecompositionResult = RouteOutput<"inventory.decompose">;
 
 const CEREMONY_DURATION_MS = 2_000;
 const STAGE_BACKGROUND = "/assets/decomposition/ritual-stage.webp";
-const rejectedMessages: Record<string, string> = {
+const rejectedMessages: Record<string, string> = localized({
   INSUFFICIENT_INVENTORY: "可用数量已变化，请重新确认",
   INVENTORY_RESERVED: "藏品状态已变化，请刷新后重试",
   IDEMPOTENCY_KEY_REUSED: "藏品状态已变化，请刷新后重试",
   INTERNAL_ERROR: "分解失败，请稍后重试",
-};
+});
 
 export function DecompositionOperationDialog({
   operationId,
@@ -82,10 +83,12 @@ export function DecompositionOperationDialog({
       <DecompositionStage className="decomposition-stage--failed">
         <RestoredPet presentation={presentation} />
         <section className="decomposition-result" aria-live="polite">
-          <p className="decomposition-result-kicker">宠物安然无恙</p>
-          <h2 id="decomposition-result-title">分解未完成</h2>
-          <p>{rejectedMessages[errorCode ?? ""] ?? "分解失败，请稍后重试"}</p>
-          <Button onClick={onCollect}>返回藏品页</Button>
+          <p className="decomposition-result-kicker">{t("宠物安然无恙")}</p>
+          <h2 id="decomposition-result-title">{t("分解未完成")}</h2>
+          <p>
+            {rejectedMessages[errorCode ?? ""] ?? t("分解失败，请稍后重试")}
+          </p>
+          <Button onClick={onCollect}>{t("返回藏品页")}</Button>
         </section>
       </DecompositionStage>
     );
@@ -93,10 +96,10 @@ export function DecompositionOperationDialog({
   return (
     <DecompositionStage className="decomposition-stage--waiting">
       <section className="decomposition-result" aria-live="polite">
-        <p className="decomposition-result-kicker">晶辉仍在凝聚</p>
-        <h2 id="decomposition-result-title">仪式尚未结束</h2>
-        <p>请让这束晶辉继续完成变化</p>
-        <Button onClick={onRecover}>继续凝聚</Button>
+        <p className="decomposition-result-kicker">{t("晶辉仍在凝聚")}</p>
+        <h2 id="decomposition-result-title">{t("仪式尚未结束")}</h2>
+        <p>{t("请让这束晶辉继续完成变化")}</p>
+        <Button onClick={onRecover}>{t("继续凝聚")}</Button>
       </section>
     </DecompositionStage>
   );
@@ -113,7 +116,7 @@ function DecompositionCeremony({
         id="decomposition-result-title"
         className="decomposition-stage-sr-title"
       >
-        分解仪式
+        {t("分解仪式")}
       </h2>
       <ShatteringPet presentation={presentation} />
     </DecompositionStage>
@@ -129,19 +132,17 @@ function DecompositionSuccess({
   presentation: OperationPresentation | null;
   onCollect(): void;
 }): ReactNode {
-  const name = presentation?.name ?? "当前宠物";
+  const name = t(presentation?.name ?? "当前宠物");
   return (
     <DecompositionStage className="decomposition-stage--success">
       <section className="decomposition-result" aria-live="polite">
-        <p className="decomposition-result-kicker">分解完成</p>
+        <p className="decomposition-result-kicker">{t("分解完成")}</p>
         <h2 id="decomposition-result-title">
           <strong>+{result.fgems_earned}</strong>
           <span>Fgems</span>
         </h2>
-        <p>
-          {name} × {result.quantity} 已化作晶辉
-        </p>
-        <Button onClick={onCollect}>收下</Button>
+        <p>{tp("{{0}} × {{1}} 已化作晶辉", [name, result.quantity])}</p>
+        <Button onClick={onCollect}>{t("收下")}</Button>
       </section>
     </DecompositionStage>
   );
@@ -214,7 +215,7 @@ function RestoredPet({
     <div className="decomposition-restored-pet">
       <CatalogImage
         url={presentation.imagePath}
-        alt={presentation.name ?? "宠物"}
+        alt={t(presentation.name ?? "宠物")}
         variant="detail"
         loading="eager"
         fetchPriority="high"

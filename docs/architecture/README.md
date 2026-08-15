@@ -52,6 +52,8 @@ Battle 队伍选择与有效邀请接受页按 [ADR-058](adr/ADR-058-battle-team
 
 身份读取按 [ADR-049](adr/ADR-049-identity-initial-state-and-summary-read-model.md) 分成入口 `identity.initial` 与日常 `identity.summary`。完成入口交接的认证在登录事务提交后由同一 Function 取得初始状态，并随令牌一并返回；临时读取失败返回空值，Web 保留 session 并命令式重试。`summary` 写入 React Query，`recovery` 只写入当前 session generation 内存；顶部人工刷新、前台恢复、业务 `refreshScopes`、页面返回和 Battle 终局只允许回正 `identity.summary`，不得重新读取 `identity.initial`。
 
+账号语言按 [ADR-074](adr/ADR-074-account-language-and-en-us-localization.md) 固定支持 `en` 与 `zh-CN`，首次与新账号默认英语。数据库账号偏好覆盖按 Telegram ID 隔离的首帧本地提示；左上角既有身份区域打开全局账号菜单，不新增或增高顶部控件。静态文案、稳定错误码和共享 ID 化游戏内容注册表共同覆盖 Web、Telegram 外部消息与 NFT 元数据，任何语言切换都不改变模板、技能、任务、属性、概率、资产或 Battle 规则。
+
 目录交付按 [ADR-042](adr/ADR-042-catalog-pointer-immutable-release.md) 分成动态小指针与不可变完整内容。资源切换只改变 `catalog.current`；checksum + release key URL 永不原地改写或清除缓存。`useCatalogQuery()` 在新内容读取期间保留上一份成功快照，只有全新 WebView 没有快照时才进入原有初始错误状态。空库 migration 不恢复 Storage 对象登记或当前指针；数据库重建后必须按 [ADR-050](adr/ADR-050-catalog-post-rebuild-readiness-gate.md) 先发布历史 v1、再发布当前 v2，并由失效即失败的 `assets:release status` 与无运行中变更租约共同放行。
 
 ## 可信边界

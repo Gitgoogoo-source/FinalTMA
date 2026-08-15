@@ -84,6 +84,7 @@ import {
 } from "./BattleScreens.tsx";
 import type { BattleTeamSlots } from "./TeamSelector.tsx";
 import "./battle-core.css";
+import { t, tp } from "../../../platform/i18n/index.ts";
 
 type Invite = RouteOutput<"battle.current_invite">;
 type InviteRoom = Extract<Invite, { room_id: string }>;
@@ -649,7 +650,7 @@ export function BattleView(): ReactNode {
       if (!order) {
         if (!topups.isLoading) {
           handledResume.current.add(resumeOrderId);
-          setResumeNotice("未找到可恢复的充值操作，请重新选择 Battle 操作");
+          setResumeNotice(t("未找到可恢复的充值操作，请重新选择 Battle 操作"));
           setParams({}, { replace: true });
         }
         return;
@@ -672,8 +673,10 @@ export function BattleView(): ReactNode {
         setForceHome(false);
         setResumeNotice(
           order.intent.kind === "battle_matchmaking"
-            ? "充值返回后已恢复原档位和队伍，请重新点击随机匹配；页面不会自动入队。"
-            : "充值返回后已恢复原档位和队伍，请重新确认；页面不会自动创建。",
+            ? t(
+                "充值返回后已恢复原档位和队伍，请重新点击随机匹配；页面不会自动入队。",
+              )
+            : t("充值返回后已恢复原档位和队伍，请重新确认；页面不会自动创建。"),
         );
       } else if (
         inviteRoom &&
@@ -683,10 +686,10 @@ export function BattleView(): ReactNode {
         setFlow({ kind: "accept", roomId: inviteRoom.room_id });
         setForceHome(false);
         setResumeNotice(
-          "充值返回后已恢复原邀请和队伍，请重新确认；页面不会自动接受。",
+          t("充值返回后已恢复原邀请和队伍，请重新确认；页面不会自动接受。"),
         );
       } else if (!invite.isLoading) {
-        setResumeNotice("原邀请已不可接受，页面没有自动支付或占用藏品");
+        setResumeNotice(t("原邀请已不可接受，页面没有自动支付或占用藏品"));
         setForceHome(false);
       } else {
         handledResume.current.delete(resumeOrderId);
@@ -1104,7 +1107,7 @@ export function BattleView(): ReactNode {
         )
           completeNativeShareAttempt(
             attempt,
-            "挑战卡已发送，房间继续等待首位有效对手",
+            t("挑战卡已发送，房间继续等待首位有效对手"),
           );
       },
       (failure) => {
@@ -1144,7 +1147,7 @@ export function BattleView(): ReactNode {
         { kind: "battle_create", tier: tier.id, template_ids: selection },
         tier.entry_fee - balance,
       );
-      setResumeNotice("请完成充值；返回后仍需重新确认创建");
+      setResumeNotice(t("请完成充值；返回后仍需重新确认创建"));
       return;
     }
     setCreateHandoffActive(true);
@@ -1177,7 +1180,7 @@ export function BattleView(): ReactNode {
         },
         inviteRoom.entry_fee - balance,
       );
-      setResumeNotice("请完成充值；返回后仍需重新确认接受");
+      setResumeNotice(t("请完成充值；返回后仍需重新确认接受"));
       return;
     }
     const snapshot = await command.execute(
@@ -1210,7 +1213,7 @@ export function BattleView(): ReactNode {
         },
         tier.entry_fee - balance,
       );
-      setResumeNotice("请完成充值；返回后仍需重新点击随机匹配");
+      setResumeNotice(t("请完成充值；返回后仍需重新点击随机匹配"));
       return;
     }
     setCreateHandoffActive(false);
@@ -1288,7 +1291,7 @@ export function BattleView(): ReactNode {
       (room.action_ordinal !== 1 && room.action_ordinal !== 2)
     )
       return;
-    setActionIntent(`换入${name}`);
+    setActionIntent(tp("换入{{0}}", [name]));
     const snapshot = await command.execute("battle.action", {
       room_id: room.room_id,
       kind: "switch",
@@ -1331,7 +1334,7 @@ export function BattleView(): ReactNode {
       effectKey,
       teamSlot,
     });
-    setActionIntent(`换入并使用${name}`);
+    setActionIntent(tp("换入并使用{{0}}", [name]));
     const snapshot = await command.execute("battle.action", {
       room_id: room.room_id,
       kind: "replace_attack",
@@ -1375,20 +1378,20 @@ export function BattleView(): ReactNode {
     shareAttemptRef.current = attempt;
     setShareState({
       ...attempt,
-      message: "已打开 Telegram 分享面板，房间仍保持等待",
+      message: t("已打开 Telegram 分享面板，房间仍保持等待"),
     });
     const opened = sharePreparedMessage(room.prepared_message_id, (shared) => {
       completeNativeShareAttempt(
         attempt,
         shared
-          ? "挑战卡已发送，房间继续等待首位有效对手"
-          : "分享面板已关闭或发送未完成，房间继续等待，可再次分享",
+          ? t("挑战卡已发送，房间继续等待首位有效对手")
+          : t("分享面板已关闭或发送未完成，房间继续等待，可再次分享"),
       );
     });
     if (!opened)
       applyShareAttemptFeedback(
         attempt,
-        "当前 Telegram 版本不支持发送挑战卡，请更新 Telegram 后重试",
+        t("当前 Telegram 版本不支持发送挑战卡，请更新 Telegram 后重试"),
       );
   };
 
@@ -1912,11 +1915,11 @@ function terminalObservationsFor(
 
 function shareFailureText(failure: TelegramShareFailure): string {
   const messages: Record<TelegramShareFailure, string> = {
-    UNSUPPORTED: "当前 Telegram 版本不支持发送挑战卡，请更新后重试",
-    MESSAGE_EXPIRED: "挑战卡已失效，正在重新读取房间状态",
-    MESSAGE_SEND_FAILED: "挑战卡发送失败，房间继续等待，可再次分享",
-    USER_DECLINED: "已关闭分享面板，房间继续等待，可再次分享",
-    UNKNOWN_ERROR: "挑战卡未发送，房间继续等待，可再次分享",
+    UNSUPPORTED: t("当前 Telegram 版本不支持发送挑战卡，请更新后重试"),
+    MESSAGE_EXPIRED: t("挑战卡已失效，正在重新读取房间状态"),
+    MESSAGE_SEND_FAILED: t("挑战卡发送失败，房间继续等待，可再次分享"),
+    USER_DECLINED: t("已关闭分享面板，房间继续等待，可再次分享"),
+    UNKNOWN_ERROR: t("挑战卡未发送，房间继续等待，可再次分享"),
   };
   return messages[failure];
 }

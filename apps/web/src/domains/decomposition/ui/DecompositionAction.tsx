@@ -5,6 +5,7 @@ import { useApiQuery } from "../../../platform/query/index.ts";
 import { Button } from "../../../shared/ui/Button.tsx";
 import { useOperationCommands } from "../../../workflows/operation-recovery/context.ts";
 import { DecompositionConfirmationDialog } from "./DecompositionConfirmationDialog.tsx";
+import { t } from "../../../platform/i18n/index.ts";
 
 type InventoryItem = RouteOutput<"inventory.list">["items"][number];
 
@@ -28,7 +29,7 @@ export function DecompositionAction({
   const confirm = async (quantity: number) => {
     setConfirming(false);
     await run(
-      "分解仪式",
+      t("分解仪式"),
       "inventory.decompose",
       {
         template_id: item.template_id,
@@ -56,7 +57,11 @@ export function DecompositionAction({
         }}
       >
         <span>
-          {isPreparing ? "准备分解" : detail.isError ? "重试分解" : "分解"}
+          {isPreparing
+            ? t("准备分解")
+            : detail.isError
+              ? t("重试分解")
+              : t("分解")}
         </span>
       </Button>
       {confirming && detail.data && !detail.isFetching && !detail.isError ? (

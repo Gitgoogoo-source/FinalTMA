@@ -24,15 +24,16 @@ import { useBlockingOperationRecovery } from "../../../workflows/operation-recov
 import type { AlbumChain, AlbumFilter, AlbumNode } from "../types.ts";
 import { AlbumChainCard } from "./AlbumChainCard.tsx";
 import { AlbumNodeDialog } from "./AlbumNodeDialog.tsx";
+import { localized, t, tp } from "../../../platform/i18n/index.ts";
 
-const filters: readonly { id: AlbumFilter; label: string }[] = [
+const filters: readonly { id: AlbumFilter; label: string }[] = localized([
   { id: "all", label: "全部" },
   { id: "normal", label: "普通链" },
   { id: "advanced", label: "高级链" },
   { id: "top", label: "顶级链" },
   { id: "claimable", label: "可领取" },
   { id: "incomplete", label: "未完成" },
-];
+]);
 
 export function AlbumView(): ReactNode {
   const query = useApiQuery("album.get");
@@ -79,7 +80,7 @@ export function AlbumView(): ReactNode {
     if (blocked) return;
     claimObserved.current = false;
     setClaimingChainId(chainId);
-    void run("正在领取图鉴奖励", "album.claim", { chain_id: chainId });
+    void run(t("正在领取图鉴奖励"), "album.claim", { chain_id: chainId });
   };
   return (
     <main className="page fullscreen album-page">
@@ -90,14 +91,14 @@ export function AlbumView(): ReactNode {
           alt=""
           aria-hidden="true"
         />
-        <Button className="icon-only" aria-label="返回" onClick={back}>
+        <Button className="icon-only" aria-label={t("返回")} onClick={back}>
           <ChevronLeft aria-hidden="true" />
         </Button>
         <div>
           <span>ALBUM</span>
-          <h1>进化图鉴</h1>
+          <h1>{t("进化图鉴")}</h1>
         </div>
-        {query.isFetching ? <Badge>正在刷新</Badge> : null}
+        {query.isFetching ? <Badge>{t("正在刷新")}</Badge> : null}
       </header>
       <PageState
         loading={query.isLoading}
@@ -107,29 +108,33 @@ export function AlbumView(): ReactNode {
       >
         {query.data && (
           <>
-            <section className="album-overview" aria-label="图鉴总览">
+            <section className="album-overview" aria-label={t("图鉴总览")}>
               <div>
-                <span>已点亮</span>
+                <span>{t("已点亮")}</span>
                 <strong>
                   <b>{query.data.unlocked_count}</b>
                   <small>/ {query.data.total_count}</small>
                 </strong>
               </div>
               <div>
-                <span>完成链</span>
+                <span>{t("完成链")}</span>
                 <strong>
                   <b>{query.data.completed_chain_count}</b>
                   <small>/ {query.data.total_chain_count}</small>
                 </strong>
               </div>
               <div>
-                <span>可领取</span>
+                <span>{t("可领取")}</span>
                 <strong>
                   <b>{query.data.claimable_count}</b>
                 </strong>
               </div>
             </section>
-            <div className="album-filters" role="group" aria-label="图鉴筛选">
+            <div
+              className="album-filters"
+              role="group"
+              aria-label={t("图鉴筛选")}
+            >
               {filters.map((item) => (
                 <button
                   key={item.id}
@@ -143,7 +148,7 @@ export function AlbumView(): ReactNode {
               ))}
             </div>
             <p className="album-filter-summary" role="status">
-              当前显示 {visibleChains.length} 条链
+              {tp("当前显示 {{0}} 条链", [visibleChains.length])}
             </p>
             {visibleChains.length > 0 ? (
               <div className="album-list">
@@ -164,7 +169,7 @@ export function AlbumView(): ReactNode {
               </div>
             ) : (
               <div className="album-filter-empty" role="status">
-                当前筛选下没有图鉴链
+                {t("当前筛选下没有图鉴链")}
               </div>
             )}
           </>

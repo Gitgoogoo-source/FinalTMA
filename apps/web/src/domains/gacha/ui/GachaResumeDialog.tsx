@@ -9,6 +9,7 @@ import {
 } from "../../../shared/assets/responsiveArt.ts";
 import { AppModal } from "../../../shared/ui/AppModal.tsx";
 import { Button } from "../../../shared/ui/Button.tsx";
+import { t, tp } from "../../../platform/i18n/index.ts";
 
 export function GachaResumeDialog({
   tier,
@@ -41,7 +42,7 @@ export function GachaResumeDialog({
         <button
           type="button"
           className="gacha-resume-close"
-          aria-label="关闭开盒确认"
+          aria-label={t("关闭开盒确认")}
           onClick={onClose}
         >
           <X aria-hidden="true" />
@@ -61,15 +62,17 @@ export function GachaResumeDialog({
           />
         </div>
         <header className="gacha-resume-copy">
-          <h2 id="gacha-resume-dialog-title">开启{displayName}？</h2>
+          <h2 id="gacha-resume-dialog-title">
+            {tp("开启{{0}}？", [displayName])}
+          </h2>
           <p className="gacha-resume-cost">
             <Coins aria-hidden="true" />
             <span>
               {drawCount === 10
-                ? `十连 · 消耗 ${cost} K-coin`
+                ? tp("十连 · 消耗 {{0}} K-coin", [cost])
                 : freeSingle
-                  ? "单抽 · 本次免费"
-                  : `消耗 ${cost} K-coin`}
+                  ? t("单抽 · 本次免费")
+                  : tp("消耗 {{0}} K-coin", [cost])}
             </span>
           </p>
         </header>
@@ -81,7 +84,7 @@ export function GachaResumeDialog({
           onFocus={onPrepare}
           onClick={onConfirm}
         >
-          确认开盒
+          {t("确认开盒")}
         </Button>
       </section>
     </AppModal>

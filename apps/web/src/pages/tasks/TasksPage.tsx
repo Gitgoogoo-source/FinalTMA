@@ -5,6 +5,7 @@ import { TasksView } from "../../domains/tasks/index.ts";
 import { WheelPanel } from "../../domains/wheel/index.ts";
 import "../../shared/styles/game-page.css";
 import "../../shared/styles/tasks-page.css";
+import { t } from "../../platform/i18n/index.ts";
 
 export function TasksPage(): ReactNode {
   return (
@@ -13,11 +14,14 @@ export function TasksPage(): ReactNode {
         id="task-referral"
         className="task-section referral-section"
         tabIndex={-1}
-        aria-label="邀请好友"
+        aria-label={t("邀请好友")}
       >
         <ReferralPanel />
       </section>
-      <section className="task-section mission-section" aria-label="签到与任务">
+      <section
+        className="task-section mission-section"
+        aria-label={t("签到与任务")}
+      >
         <TasksView afterCheckIn={<WheelPanel />} />
       </section>
     </main>

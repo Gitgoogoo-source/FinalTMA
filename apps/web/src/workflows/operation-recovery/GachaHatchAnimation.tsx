@@ -22,6 +22,7 @@ import {
   GachaAstralCanvas,
   type GachaRevealRarity,
 } from "./GachaAstralCanvas.tsx";
+import { t } from "../../platform/i18n/index.ts";
 
 export type { GachaHatchTier } from "./context.ts";
 export type { GachaRevealRarity } from "./GachaAstralCanvas.tsx";
@@ -87,7 +88,7 @@ export function GachaHatchAnimation({
   return (
     <section
       className={`gacha-astral-ritual tier-${tier}${revealing ? " is-revealing" : ""}${rarityClass}`}
-      aria-label="灵契黑洞正在汇聚，抽取结果将在金光绽放后展示"
+      aria-label={t("灵契黑洞正在汇聚，抽取结果将在金光绽放后展示")}
     >
       <GachaAstralBackdrop />
 
@@ -105,12 +106,12 @@ export function GachaHatchAnimation({
       </div>
 
       <header className="gacha-astral-ritual-heading" aria-hidden="true">
-        <small>月下灵契</small>
-        <h2>灵光正在回应</h2>
+        <small>{t("月下灵契")}</small>
+        <h2>{t("灵光正在回应")}</h2>
       </header>
 
       <p className="gacha-astral-ritual-copy" aria-hidden="true">
-        静候灵契显现
+        {t("静候灵契显现")}
       </p>
     </section>
   );
@@ -137,13 +138,13 @@ export function GachaImageUnavailable({
       <GachaAstralBackdrop calm />
 
       <header className="gacha-astral-ritual-heading">
-        <small>月下灵契</small>
-        <h2 id="gacha-image-unavailable-title">灵契尚未显现</h2>
+        <small>{t("月下灵契")}</small>
+        <h2 id="gacha-image-unavailable-title">{t("灵契尚未显现")}</h2>
       </header>
 
       <div className="gacha-astral-image-unavailable-action">
         <Button disabled={busy} onClick={onRetry}>
-          {busy ? "显现中" : "再试一次"}
+          {busy ? t("显现中") : t("再试一次")}
         </Button>
       </div>
     </section>

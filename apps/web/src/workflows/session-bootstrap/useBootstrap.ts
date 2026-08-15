@@ -8,6 +8,11 @@ import {
   resetSessionRecovery,
 } from "../../platform/api/client.ts";
 import { replaceAppLocation } from "../../platform/navigation/index.tsx";
+import {
+  localized,
+  synchronizeAccountLanguage,
+  t,
+} from "../../platform/i18n/index.ts";
 import { prefetchApiQuery } from "../../platform/query/index.ts";
 import {
   clearSensitiveState,
@@ -39,7 +44,7 @@ type BootstrapState = {
   session: Session | null;
   canRetry: boolean;
   failed: boolean;
-  retryLabel: "重新尝试" | "继续确认";
+  retryLabel: string;
   notice: string | null;
 };
 type LoginContext = {
@@ -51,7 +56,7 @@ type LoginContext = {
   notice: string | null;
 };
 
-const initialState: BootstrapState = {
+const initialState: BootstrapState = localized({
   phase: "initializing",
   message: "正在进入游戏",
   session: null,
@@ -59,7 +64,7 @@ const initialState: BootstrapState = {
   failed: false,
   retryLabel: "重新尝试",
   notice: null,
-};
+});
 
 export function useBootstrap(): BootstrapState & { retry(): void } {
   const observedSession = useSession();
@@ -94,7 +99,7 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
             setState({
               ...initialState,
               phase: "reentry_required",
-              message: "请从 Telegram Mini App 打开应用",
+              message: t("请从 Telegram Mini App 打开应用"),
               failed: true,
             });
             return;
@@ -102,14 +107,14 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
           setState({
             ...initialState,
             phase: "validating_telegram",
-            message: "正在校验 Telegram 登录状态",
+            message: t("正在校验 Telegram 登录状态"),
           });
           await nextFrame();
           if (!active()) return;
           setState({
             ...initialState,
             phase: "authenticating",
-            message: "正在登录，请稍候",
+            message: t("正在登录，请稍候"),
           });
           const login = await apiRequest(
             "identity.authenticate",
@@ -136,7 +141,9 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
             entryHandoffState: login.data.entry_handoff_state,
             entryHandoffCode: login.data.entry_handoff_code,
             entryHandoffResult: login.data.entry_handoff_result,
+            preferredLanguage: login.data.preferred_language,
           } satisfies Session;
+          synchronizeAccountLanguage(login.data.preferred_language);
           replaceSession(session);
           clearSensitiveState();
           replaceBrowserPath(
@@ -161,7 +168,7 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
           setState({
             ...initialState,
             phase: "reentry_required",
-            message: "请从 Telegram Mini App 重新打开应用",
+            message: t("请从 Telegram Mini App 重新打开应用"),
             failed: true,
           });
           return;
@@ -176,7 +183,7 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
           setState({
             ...initialState,
             phase: "settling_referral",
-            message: "正在确认邀请关系",
+            message: t("正在确认邀请关系"),
             session: context.session,
           });
           const settlement = await settleReferralCandidate(
@@ -196,7 +203,7 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
               session: context.session,
               canRetry: true,
               failed: true,
-              retryLabel: "继续确认",
+              retryLabel: t("继续确认"),
             });
             return;
           }
@@ -224,7 +231,7 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
         setState({
           ...initialState,
           phase: "loading_initial_state",
-          message: "正在准备冒险",
+          message: t("正在准备冒险"),
           session: getSession(),
           notice: context.notice,
         });
@@ -282,7 +289,7 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
             session,
             canRetry: true,
             failed: true,
-            retryLabel: "继续确认",
+            retryLabel: t("继续确认"),
           });
           return;
         }
@@ -293,7 +300,7 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
           setState({
             ...initialState,
             phase: "initial_state_failed",
-            message: "冒险准备失败，请重试。",
+            message: t("冒险准备失败，请重试。"),
             session,
             canRetry: true,
             failed: true,
@@ -306,11 +313,11 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
           setState({
             ...initialState,
             phase: "settling_referral",
-            message: "邀请绑定结果确认中，请稍后刷新",
+            message: t("邀请绑定结果确认中，请稍后刷新"),
             session,
             canRetry: true,
             failed: true,
-            retryLabel: "继续确认",
+            retryLabel: t("继续确认"),
           });
           return;
         }
@@ -367,7 +374,7 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
         setState({
           ...initialState,
           phase: "reentry_required",
-          message: "邀请交接状态无效，请重新从 Telegram 进入应用",
+          message: t("邀请交接状态无效，请重新从 Telegram 进入应用"),
           failed: true,
         });
         return;
@@ -389,7 +396,7 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
       setState({
         ...initialState,
         phase: "settling_referral",
-        message: "正在确认邀请关系",
+        message: t("正在确认邀请关系"),
         session: pendingSession,
       });
       setVersion((value) => value + 1);
@@ -404,10 +411,10 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
       failed: false,
       message:
         retryTarget.current === "referral"
-          ? "正在确认邀请关系"
+          ? t("正在确认邀请关系")
           : retryTarget.current === "initial_state"
-            ? "正在准备冒险"
-            : "正在登录，请稍候",
+            ? t("正在准备冒险")
+            : t("正在登录，请稍候"),
     }));
     setVersion((value) => value + 1);
   }, []);
@@ -469,12 +476,12 @@ async function settleReferralCandidate(
         kind: "settled",
         notice:
           code && !isSettledReferralError(code)
-            ? "邀请绑定暂未完成，请稍后重试"
+            ? t("邀请绑定暂未完成，请稍后重试")
             : referralNotice(result),
         result,
       };
     }
-    return { kind: "pending", message: "邀请绑定结果确认中，请稍后刷新" };
+    return { kind: "pending", message: t("邀请绑定结果确认中，请稍后刷新") };
   } catch (cause) {
     const failure = toFailure(cause);
     if (failure.code === "OPERATION_NOT_FOUND" && !resubmitted.current) {
@@ -489,7 +496,7 @@ async function settleReferralCandidate(
       );
     }
     if (["NETWORK_ERROR", "OPERATION_NOT_FOUND"].includes(failure.code))
-      return { kind: "pending", message: "邀请绑定结果确认中，请稍后刷新" };
+      return { kind: "pending", message: t("邀请绑定结果确认中，请稍后刷新") };
     throw failure;
   }
 }
@@ -512,14 +519,14 @@ function isSettledReferralError(code: string): code is EntryHandoffResult {
 function referralNotice(result: EntryHandoffResult | null): string | null {
   if (!result || result === "REFERRAL_OLD_USER") return null;
   return result === "REFERRAL_BOUND"
-    ? "邀请关系已绑定，完成首次有效充值后可为邀请人解锁奖励"
+    ? t("邀请关系已绑定，完成首次有效充值后可为邀请人解锁奖励")
     : referralErrorMessages[result];
 }
 
 const referralErrorMessages: Record<
   Exclude<EntryHandoffResult, "REFERRAL_BOUND" | "REFERRAL_OLD_USER">,
   string
-> = {
+> = localized({
   REFERRAL_ALREADY_BOUND: "邀请关系已经绑定",
   REFERRAL_ALREADY_RECHARGED: "已有充值记录的账号不能绑定邀请码",
   REFERRAL_CANDIDATE_EXPIRED: "邀请链接已失效，请重新通过原邀请链接进入",
@@ -527,7 +534,7 @@ const referralErrorMessages: Record<
   REFERRAL_INELIGIBLE: "当前账号暂不符合邀请绑定条件",
   REFERRAL_INVITER_UNAVAILABLE: "当前邀请链接暂不可用",
   REFERRAL_SELF_BIND: "不能使用自己的邀请码",
-};
+});
 
 function isUnknownReferralResult(code: string): boolean {
   return [
@@ -542,7 +549,13 @@ function isUnknownReferralResult(code: string): boolean {
 function toFailure(cause: unknown): ApiFailure {
   return cause instanceof ApiFailure
     ? cause
-    : new ApiFailure(500, "INTERNAL_ERROR", "登录失败，请稍后重试", true, null);
+    : new ApiFailure(
+        500,
+        "INTERNAL_ERROR",
+        t("登录失败，请稍后重试"),
+        true,
+        null,
+      );
 }
 
 function isCurrentPageLoginRetry(code: string): boolean {
@@ -556,15 +569,16 @@ function isCurrentPageLoginRetry(code: string): boolean {
 
 function loginFailureMessage(failure: ApiFailure): string {
   const messages: Record<string, string> = {
-    NETWORK_ERROR: "网络请求失败，请检查网络后重试",
-    INTERNAL_ERROR: "登录失败，请稍后重试",
-    DATABASE_RPC_FAILED: "登录失败，请稍后重试",
-    RESPONSE_INVALID: "登录失败，请稍后重试",
-    TELEGRAM_INIT_DATA_EXPIRED: "登录凭证已过期，请重新进入应用",
-    TELEGRAM_INIT_DATA_TIME_INVALID:
+    NETWORK_ERROR: t("连接失败，请检查网络后重试"),
+    INTERNAL_ERROR: t("登录失败，请稍后重试"),
+    DATABASE_RPC_FAILED: t("登录失败，请稍后重试"),
+    RESPONSE_INVALID: t("登录失败，请稍后重试"),
+    TELEGRAM_INIT_DATA_EXPIRED: t("登录凭证已过期，请重新进入应用"),
+    TELEGRAM_INIT_DATA_TIME_INVALID: t(
       "Telegram 登录凭证时间无效，请重新进入应用",
-    TELEGRAM_INIT_DATA_INVALID: "Telegram 登录校验失败，请重新进入应用",
-    TELEGRAM_START_PARAM_INVALID: "入口参数无效，请重新从 Telegram 进入应用",
+    ),
+    TELEGRAM_INIT_DATA_INVALID: t("Telegram 登录校验失败，请重新进入应用"),
+    TELEGRAM_START_PARAM_INVALID: t("入口参数无效，请重新从 Telegram 进入应用"),
   };
   return messages[failure.code] ?? failure.message;
 }

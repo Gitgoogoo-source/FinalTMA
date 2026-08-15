@@ -1,6 +1,7 @@
 import type { RecoverableRouteId } from "@pokepets/api-contracts/app-client";
+import { localized, t } from "../../platform/i18n/index.ts";
 
-const labels: Partial<Record<RecoverableRouteId, string>> = {
+const labels: Partial<Record<RecoverableRouteId, string>> = localized({
   "album.claim": "正在领取图鉴奖励",
   "expedition.claim": "正在领取远征奖励",
   "expedition.create": "正在创建远征",
@@ -21,8 +22,8 @@ const labels: Partial<Record<RecoverableRouteId, string>> = {
   "vip.cancel_order": "正在取消未付款月卡订单",
   "vip.create_order": "正在创建 VIP Stars 订单",
   "wheel.spin": "正在转动幸运转盘",
-};
+});
 
 export function operationLabel(routeId: RecoverableRouteId): string {
-  return labels[routeId] ?? "正在确认操作";
+  return labels[routeId] ?? t("正在确认操作");
 }

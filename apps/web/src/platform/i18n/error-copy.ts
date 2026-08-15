@@ -1,0 +1,146 @@
+/** Player-facing English copy keyed by the stable API error code. */
+export const englishErrorCopy: Readonly<Record<string, string>> = {
+  ACCOUNT_RESTRICTED: "This account can't perform that action.",
+  ALBUM_CHAIN_INCOMPLETE: "Complete this Codex lineage first.",
+  ALBUM_REWARD_ALREADY_CLAIMED: "This Codex reward has already been claimed.",
+  API_ROUTE_NOT_FOUND: "That feature isn't available.",
+  BATTLE_NOT_YOUR_TURN: "It's not your turn yet.",
+  BATTLE_ACTION_INVALID: "That Battle move isn't available.",
+  BATTLE_ACTION_PHASE_INVALID: "You can't use that move right now.",
+  BATTLE_ALREADY_PARTICIPATING: "You already have an active Battle.",
+  BATTLE_INVITE_INVALID: "This challenge is no longer available.",
+  BATTLE_NOT_PARTICIPANT: "You aren't a participant in this Battle.",
+  BATTLE_ROOM_ALREADY_ACCEPTED:
+    "Another player already accepted this challenge.",
+  BATTLE_ROOM_CANCELLED: "This challenge was canceled.",
+  BATTLE_ROOM_EXPIRED: "This challenge has expired.",
+  BATTLE_ROOM_NOT_FOUND: "This Battle couldn't be found.",
+  BATTLE_RULESET_UNAVAILABLE:
+    "Battle is temporarily unavailable. Try again soon.",
+  BATTLE_SELF_ACCEPT_FORBIDDEN: "You can't accept your own challenge.",
+  BATTLE_SHARE_FAILED:
+    "The challenge card couldn't be created. Your entry fee and collectibles were restored.",
+  BATTLE_SHARE_PREPARING: "Your challenge card is still being prepared.",
+  BATTLE_STATE_CONFLICT:
+    "The Battle has moved forward. Review the latest turn.",
+  BATTLE_SWITCH_TARGET_INVALID: "That teammate can't be switched in.",
+  BATTLE_TEAM_INVALID: "Choose three different available collectibles.",
+  BATTLE_TEAM_TEMPLATE_DUPLICATE:
+    "Your Battle team can't include duplicate collectibles.",
+  BATTLE_TIER_INVALID: "Choose a valid Battle entry tier.",
+  BATTLE_VOIDED:
+    "The Battle was safely voided. Your entry fee and collectibles were restored.",
+  BOX_TIER_INVALID: "Choose a valid Mystery Box.",
+  CATALOG_INVALID: "The Codex couldn't load. Please reload.",
+  CATALOG_UNAVAILABLE: "The Codex is temporarily unavailable.",
+  CHECKIN_ALREADY_CLAIMED: "Today's check-in reward has already been claimed.",
+  CONTENT_TYPE_INVALID: "This request couldn't be completed.",
+  CRON_UNAUTHORIZED: "This action isn't authorized.",
+  DATABASE_RPC_FAILED: "Something went wrong. Please try again.",
+  DRAW_COUNT_INVALID: "Choose a valid number of pulls.",
+  ENTRY_HANDOFF_PENDING:
+    "Your referral is still being confirmed. Check again soon.",
+  EVOLUTION_NOT_AVAILABLE: "This collectible can't evolve.",
+  EXPEDITION_ALREADY_ACTIVE:
+    "One of these collectibles is already on an Expedition.",
+  EXPEDITION_ITEMS_INVALID: "Choose a valid Expedition team.",
+  EXPEDITION_LIMIT_REACHED: "You've reached the active Expedition limit.",
+  EXPEDITION_NOT_FOUND: "This Expedition couldn't be found.",
+  EXPEDITION_NOT_READY: "This Expedition isn't finished yet.",
+  EXPEDITION_TIER_INVALID: "Choose a valid Expedition tier.",
+  FREE_ENTITLEMENT_UNAVAILABLE: "That free Mystery Box isn't available.",
+  IDEMPOTENCY_KEY_INVALID:
+    "This action couldn't be confirmed. Please try again.",
+  IDEMPOTENCY_KEY_NOT_ALLOWED: "This action couldn't be completed.",
+  IDEMPOTENCY_KEY_REQUIRED:
+    "This action couldn't be confirmed. Please try again.",
+  IDEMPOTENCY_KEY_REUSED:
+    "This action was already used for something different. Please try again.",
+  INSUFFICIENT_BALANCE: "You don't have enough currency.",
+  INSUFFICIENT_INVENTORY: "You don't have enough available collectibles.",
+  INTERNAL_ERROR: "PokePets is temporarily unavailable. Please try again.",
+  INVENTORY_ITEM_NOT_FOUND: "This collectible couldn't be found.",
+  INVENTORY_RESERVED: "This collectible is currently in use.",
+  JOB_NOT_FOUND: "That action couldn't be found.",
+  MARKET_ACTIVE_TEMPLATE_LIMIT:
+    "You can list up to 10 collectible types at once. Sell out or delist one first.",
+  MARKET_DAILY_LISTING_LIMIT: "You've reached today's listing limit.",
+  MARKET_LIFETIME_LISTING_LIMIT:
+    "This account has reached its total listing limit.",
+  MARKET_STOCK_INSUFFICIENT:
+    "There aren't enough collectibles available to complete this purchase.",
+  METHOD_NOT_ALLOWED: "That action isn't supported.",
+  MINT_ALREADY_ACTIVE: "This collectible already has a mint in progress.",
+  MINT_IN_PROGRESS: "Finish the active mint before disconnecting your wallet.",
+  MINT_RESULT_INCOMPLETE: "The mint result isn't complete yet.",
+  MINT_NOT_CANCELLABLE: "This mint can no longer be canceled.",
+  MINT_NOT_FOUND: "This mint couldn't be found.",
+  MINT_NOT_SUBMITTABLE: "This mint can't be submitted right now.",
+  NFT_METADATA_NOT_FOUND: "This collectible's NFT details couldn't be found.",
+  OPERATION_FAILED: "That action has already been confirmed as unsuccessful.",
+  OPERATION_NOT_ACKNOWLEDGEABLE: "The result isn't final yet.",
+  OPERATION_NOT_FOUND: "That action couldn't be found.",
+  OPERATION_RESULT_EXPIRED: "This result is no longer available.",
+  OPERATION_RESULT_INVALID: "This result couldn't be displayed.",
+  PAYMENT_ALREADY_PENDING:
+    "You already have a payment waiting to be completed.",
+  PAYMENT_ALREADY_PROCESSING: "Your current payment is still being confirmed.",
+  PAYMENT_CANCELLED: "The unpaid order was canceled.",
+  PAYMENT_EXPIRED: "This payment has expired.",
+  PAYMENT_MISMATCH: "The payment details don't match this order.",
+  PAYMENT_NOT_DELIVERABLE: "This payment can't be completed right now.",
+  PAYMENT_NOT_FOUND: "This payment couldn't be found.",
+  RATE_LIMITED: "You're moving too fast. Please try again in a moment.",
+  REFERRAL_ALREADY_BOUND: "A referral is already linked to this account.",
+  REFERRAL_ALREADY_RECHARGED:
+    "Accounts with a previous top-up can't use a referral code.",
+  REFERRAL_CANDIDATE_EXPIRED:
+    "This referral link has expired. Reopen the original link.",
+  REFERRAL_CODE_INVALID: "This referral link is invalid or expired.",
+  REFERRAL_INELIGIBLE: "This account isn't eligible for that referral.",
+  REFERRAL_INVALID: "This referral code is invalid.",
+  REFERRAL_INVITER_UNAVAILABLE:
+    "This referral link is temporarily unavailable.",
+  REFERRAL_OLD_USER: "Existing players can't link a referral code.",
+  REFERRAL_SELF_BIND: "You can't use your own referral code.",
+  REQUEST_BODY_NOT_ALLOWED: "This action couldn't be completed.",
+  REQUEST_INVALID: "Check your selection and try again.",
+  REQUEST_TOO_LARGE: "That request is too large.",
+  RESPONSE_INVALID: "We couldn't confirm the result yet.",
+  SESSION_EXPIRED: "Your session expired. Reopen PokePets from Telegram.",
+  SESSION_REPLACED:
+    "PokePets was opened on another device. Reopen it here to continue.",
+  SESSION_REQUIRED: "Reopen PokePets from Telegram.",
+  TASK_ALREADY_CLAIMED: "This task reward has already been claimed.",
+  TASK_NOT_COMPLETE: "Finish this task before claiming its reward.",
+  TASK_NOT_FOUND: "This task couldn't be found.",
+  TELEGRAM_API_FAILED: "Telegram is temporarily unavailable. Please try again.",
+  TELEGRAM_INIT_DATA_EXPIRED: "Your Telegram login expired. Reopen PokePets.",
+  TELEGRAM_INIT_DATA_INVALID:
+    "Telegram couldn't verify this login. Reopen PokePets.",
+  TELEGRAM_INIT_DATA_TIME_INVALID:
+    "This Telegram login is no longer valid. Reopen PokePets.",
+  TELEGRAM_START_PARAM_INVALID:
+    "This Telegram link is invalid. Reopen PokePets from the Mini App.",
+  TELEGRAM_REENTRY_REQUIRED: "Reopen PokePets from Telegram.",
+  TELEGRAM_UPDATE_INVALID: "That Telegram update couldn't be processed.",
+  TEMPLATE_NOT_FOUND: "This collectible couldn't be found.",
+  TOPUP_AMOUNT_INVALID: "Choose a valid top-up amount.",
+  TOPUP_NOT_REQUIRED: "Your current balance already covers the difference.",
+  TRANSACTION_ALREADY_USED: "This on-chain transaction has already been used.",
+  VIP_ALREADY_CLAIMED:
+    "This VIP reward has already been claimed for the current period.",
+  VIP_BENEFIT_INVALID: "Choose a valid VIP reward.",
+  VIP_INACTIVE: "VIP isn't active on this account.",
+  VIP_RENEWAL_LIMIT: "You've reached the VIP renewal limit.",
+  WALLET_ADDRESS_IN_USE: "This wallet is linked to another account.",
+  WALLET_CHALLENGE_INVALID:
+    "Wallet verification expired. Reconnect your wallet.",
+  WALLET_NOT_CONNECTED: "Connect your wallet first.",
+  WALLET_NOT_VERIFIED: "Verify your wallet first.",
+  WALLET_PROOF_INVALID:
+    "Wallet signature verification failed. Reconnect your wallet.",
+  WEBHOOK_UNAUTHORIZED: "This action isn't authorized.",
+  WHEEL_COUNT_INVALID: "Choose a valid number of spins.",
+  WHEEL_DAILY_LIMIT: "You've reached today's spin limit.",
+};

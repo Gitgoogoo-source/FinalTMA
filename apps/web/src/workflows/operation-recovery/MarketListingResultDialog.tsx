@@ -2,6 +2,7 @@ import { AlertCircle, CheckCircle2 } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Button } from "../../shared/ui/Button.tsx";
+import { t } from "../../platform/i18n/index.ts";
 
 export function MarketListingSuccessDialog({
   onConfirm,
@@ -14,15 +15,15 @@ export function MarketListingSuccessDialog({
         <CheckCircle2 />
       </div>
       <div className="market-listing-result-copy">
-        <span>交易市场</span>
-        <h2 id="market-listing-success-title">上架成功</h2>
-        <p>藏品已成功上架，可在管理页查看当前出售状态。</p>
+        <span>{t("交易市场")}</span>
+        <h2 id="market-listing-success-title">{t("上架成功")}</h2>
+        <p>{t("藏品已成功上架，可在管理页查看当前出售状态。")}</p>
       </div>
       <Button
         className="result-sheet-confirm market-listing-result-confirm"
         onClick={onConfirm}
       >
-        确定
+        {t("确定")}
       </Button>
     </div>
   );
@@ -41,10 +42,10 @@ export function MarketListingFailureDialog({
         <AlertCircle />
       </div>
       <div className="market-listing-result-copy">
-        <h2 id="market-listing-failure-title">上架未完成</h2>
+        <h2 id="market-listing-failure-title">{t("上架未完成")}</h2>
         <p>{message}</p>
       </div>
-      <Button onClick={onConfirm}>确定</Button>
+      <Button onClick={onConfirm}>{t("确定")}</Button>
     </div>
   );
 }

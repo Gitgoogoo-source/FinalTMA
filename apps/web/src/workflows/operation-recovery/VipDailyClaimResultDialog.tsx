@@ -3,12 +3,13 @@ import type { ReactNode } from "react";
 import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 
 import { Button } from "../../shared/ui/Button.tsx";
+import { localized, t, tp } from "../../platform/i18n/index.ts";
 
 type VipDailyClaimResult =
   | RouteOutput<"vip.claim_fgems">
   | RouteOutput<"vip.claim_free_box">;
 
-const rewardVisuals = {
+const rewardVisuals = localized({
   fgems: {
     image: "/assets/vip/daily-fgems.png",
     label: "Fgems",
@@ -19,7 +20,7 @@ const rewardVisuals = {
     label: "免费稀有盲盒资格",
     detail: "可在盲盒页面使用",
   },
-} as const;
+} as const);
 
 export function VipDailyClaimResultDialog({
   result,
@@ -47,18 +48,18 @@ export function VipDailyClaimResultDialog({
 
       <div className="vip-claim-result-badge">
         <Crown aria-hidden="true" />
-        <span>VIP 专属</span>
+        <span>{t("VIP 专属")}</span>
       </div>
 
       <header className="vip-claim-result-heading">
         <Sparkles aria-hidden="true" />
-        <h2 id="vip-claim-result-title">每日好礼已领取</h2>
+        <h2 id="vip-claim-result-title">{t("每日好礼已领取")}</h2>
         <Sparkles aria-hidden="true" />
       </header>
 
       <section
         className="vip-claim-result-summary"
-        aria-label={`${visual.label}，增加 ${result.amount}`}
+        aria-label={tp("{{0}}，增加 {{1}}", [visual.label, result.amount])}
       >
         <strong>
           {visual.label}
@@ -71,7 +72,7 @@ export function VipDailyClaimResultDialog({
         className="result-sheet-confirm vip-claim-result-confirm"
         onClick={onConfirm}
       >
-        收下奖励
+        {t("收下奖励")}
       </Button>
     </div>
   );

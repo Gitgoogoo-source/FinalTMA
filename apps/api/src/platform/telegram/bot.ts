@@ -86,15 +86,24 @@ export function savePreparedBattleMessage(input: {
   creatorDisplayName: string;
   entryFee: number;
   raritySummary: string;
+  language: "en" | "zh-CN";
   deepLink: string;
   signal?: AbortSignal | undefined;
 }): Promise<{ id: string; expiration_date: number }> {
-  const message = [
-    `⚔️ ${input.creatorDisplayName} 向你发起宠物 Battle`,
-    `入场费：${input.entryFee} K-coins`,
-    `阵容稀有度：${input.raritySummary}`,
-    "挑战卡 30 分钟内有效",
-  ].join("\n");
+  const english = input.language === "en";
+  const message = english
+    ? [
+        `⚔️ ${input.creatorDisplayName} challenged you to a PokePets Battle`,
+        `Entry fee: ${input.entryFee} K-coin`,
+        `Team rarity: ${input.raritySummary}`,
+        "This challenge is valid for 30 minutes.",
+      ].join("\n")
+    : [
+        `⚔️ ${input.creatorDisplayName} 向你发起宠物 Battle`,
+        `入场费：${input.entryFee} K-coin`,
+        `阵容稀有度：${input.raritySummary}`,
+        "挑战卡 30 分钟内有效",
+      ].join("\n");
   return callTelegram(
     "savePreparedInlineMessage",
     {
@@ -102,14 +111,21 @@ export function savePreparedBattleMessage(input: {
       result: {
         type: "article",
         id: input.resultId,
-        title: "PokePets Battle 挑战",
+        title: english ? "PokePets Battle Challenge" : "PokePets Battle 挑战",
         description: `${input.entryFee} K-coins · ${input.raritySummary}`,
         input_message_content: {
           message_text: message,
           link_preview_options: { is_disabled: true },
         },
         reply_markup: {
-          inline_keyboard: [[{ text: "接受挑战", url: input.deepLink }]],
+          inline_keyboard: [
+            [
+              {
+                text: english ? "Accept Challenge" : "接受挑战",
+                url: input.deepLink,
+              },
+            ],
+          ],
         },
       },
       allow_user_chats: true,

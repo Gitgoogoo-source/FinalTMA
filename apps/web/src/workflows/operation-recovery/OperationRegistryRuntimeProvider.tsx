@@ -65,6 +65,7 @@ import {
   preloadOperationPresentation,
   type LoadedOperationPresentation,
 } from "./presentation-loader.ts";
+import { t, tp } from "../../platform/i18n/index.ts";
 
 type RegisteredOperation = {
   id: string;
@@ -807,7 +808,7 @@ export function OperationRegistryRuntimeProvider({
           routeId,
           label,
           phase: "confirming",
-          message: "正在确认本次操作",
+          message: t("正在确认本次操作"),
           result: null,
           errorCode: null,
           persistent: false,
@@ -827,7 +828,7 @@ export function OperationRegistryRuntimeProvider({
       if (!isCurrentNormalSession(sessionGeneration)) return null;
       update(id, {
         phase: "submitting",
-        message: "操作处理中，请勿重复操作",
+        message: t("操作处理中，请勿重复操作"),
       });
       try {
         const response = await apiRequest(routeId, input, {
@@ -860,7 +861,7 @@ export function OperationRegistryRuntimeProvider({
           update(id, {
             phase: pending ? "pending" : "succeeded",
             message: pending
-              ? "结果仍在确认，请勿重复操作"
+              ? t("结果仍在确认，请勿重复操作")
               : confirmedMessage(routeId, response.data),
             result: response.data,
             persistent: true,
@@ -899,7 +900,7 @@ export function OperationRegistryRuntimeProvider({
             : new ApiFailure(
                 0,
                 "INTERNAL_ERROR",
-                "操作结果暂时无法确认",
+                t("操作结果暂时无法确认"),
                 true,
                 id,
               );
@@ -918,8 +919,8 @@ export function OperationRegistryRuntimeProvider({
             phase: unknown ? "unknown" : "failed",
             message: unknown
               ? failure.code === "NETWORK_ERROR"
-                ? "网络中断，结果仍在确认，请勿重复操作"
-                : "结果详情暂时无法确认，请勿重复操作"
+                ? t("网络中断，结果仍在确认，请勿重复操作")
+                : t("结果详情暂时无法确认，请勿重复操作")
               : failure.message,
             errorCode: failure.code,
             persistent: Boolean(failure.operationId),
@@ -1059,7 +1060,10 @@ export function OperationRegistryRuntimeProvider({
       )
         return;
       recoveringIds.current.add(operation.id);
-      update(operation.id, { phase: "pending", message: "正在确认最新结果" });
+      update(operation.id, {
+        phase: "pending",
+        message: t("正在确认最新结果"),
+      });
       try {
         const response = await apiRequest("operations.get", {
           operation_id: operation.id,
@@ -1154,7 +1158,7 @@ export function OperationRegistryRuntimeProvider({
               : null;
           update(operation.id, {
             phase: "failed",
-            message: definition?.message ?? "操作未完成",
+            message: definition?.message ?? t("操作未完成"),
             result: recovered.result,
             errorCode: recovered.error_code,
             persistent: true,
@@ -1167,8 +1171,8 @@ export function OperationRegistryRuntimeProvider({
             phase: recovered.status,
             message:
               recovered.status === "unknown"
-                ? "结果仍在确认，请稍后查看"
-                : "操作仍在处理中，请勿重复操作",
+                ? t("结果仍在确认，请稍后查看")
+                : t("操作仍在处理中，请勿重复操作"),
           });
         }
       } catch (cause) {
@@ -1177,7 +1181,7 @@ export function OperationRegistryRuntimeProvider({
           message:
             cause instanceof ApiFailure
               ? cause.message
-              : "暂时无法确认最新结果",
+              : t("暂时无法确认最新结果"),
         });
       } finally {
         recoveringIds.current.delete(operation.id);
@@ -1270,7 +1274,7 @@ export function OperationRegistryRuntimeProvider({
       if (!parsedResult.success) {
         setGachaActionError({
           operationId: operation.id,
-          message: "开盒结果详情暂时无法读取",
+          message: t("开盒结果详情暂时无法读取"),
         });
         return;
       }
@@ -1292,7 +1296,7 @@ export function OperationRegistryRuntimeProvider({
         if (!bootstrap.data.rules_complete || !box) {
           setGachaActionError({
             operationId: operation.id,
-            message: "开盒规则加载失败，请重试",
+            message: t("开盒规则加载失败，请重试"),
           });
           return;
         }
@@ -1313,7 +1317,7 @@ export function OperationRegistryRuntimeProvider({
           requestTopup({ kind: "gacha", tier, draw_count }, estimatedGap);
         else
           await run(
-            draw_count === 10 ? "正在准备十连开盒" : "正在开启盲盒",
+            draw_count === 10 ? t("正在准备十连开盒") : t("正在开启盲盒"),
             "gacha.open",
             { tier, draw_count },
           );
@@ -1321,7 +1325,7 @@ export function OperationRegistryRuntimeProvider({
         if (!isCurrentNormalSession(generation)) return;
         setGachaActionError({
           operationId: operation.id,
-          message: "最新开盒状态加载失败，请重试",
+          message: t("最新开盒状态加载失败，请重试"),
         });
       } finally {
         setGachaActionId((current) =>
@@ -1349,7 +1353,7 @@ export function OperationRegistryRuntimeProvider({
       ) {
         setAcknowledgementError({
           operationId: operation.id,
-          message: "进化结果详情暂时无法确认，请查看最新结果",
+          message: t("进化结果详情暂时无法确认，请查看最新结果"),
         });
         return;
       }
@@ -1396,8 +1400,8 @@ export function OperationRegistryRuntimeProvider({
         setAcknowledgementError({
           operationId: operation.id,
           message: confirmationComplete
-            ? "藏品状态更新失败，请重试"
-            : "结果确认状态保存失败，请重试",
+            ? t("藏品状态更新失败，请重试")
+            : t("结果确认状态保存失败，请重试"),
         });
       } finally {
         setAcknowledgingId((current) =>
@@ -1413,17 +1417,17 @@ export function OperationRegistryRuntimeProvider({
     if (invalidGachaSuccess)
       update(active.id, {
         phase: "unknown",
-        message: "开盒结果详情暂时无法确认，请查看最新结果",
+        message: t("开盒结果详情暂时无法确认，请查看最新结果"),
       });
     if (invalidWheelSuccess)
       update(active.id, {
         phase: "unknown",
-        message: "转盘结果详情暂时无法确认，请查看最新结果",
+        message: t("转盘结果详情暂时无法确认，请查看最新结果"),
       });
     if (invalidAlbumClaimSuccess)
       update(active.id, {
         phase: "unknown",
-        message: "图鉴奖励详情暂时无法确认，请查看最新结果",
+        message: t("图鉴奖励详情暂时无法确认，请查看最新结果"),
       });
     setActiveId(null);
   }, [
@@ -1561,7 +1565,7 @@ export function OperationRegistryRuntimeProvider({
             className="operation-resume"
             onClick={() => setActiveId(resumableUnresolved[0]?.id ?? null)}
           >
-            {resumableUnresolved.length} 个操作待确认
+            {tp("{{0}} 个操作待确认", [resumableUnresolved.length])}
           </button>
         )}
       {active?.routeId === "gacha.open" &&
@@ -1600,7 +1604,7 @@ export function OperationRegistryRuntimeProvider({
           }`}
           role="dialog"
           aria-modal="true"
-          aria-label={showGachaAnimation ? "灵契黑洞汇聚" : undefined}
+          aria-label={showGachaAnimation ? t("灵契黑洞汇聚") : undefined}
           aria-labelledby={
             showGachaAnimation
               ? undefined
@@ -1667,7 +1671,7 @@ export function OperationRegistryRuntimeProvider({
               />
             ) : marketPresentation ? (
               <marketPresentation.MarketPurchaseFailureDialog
-                message="购买状态已更新，请查看最新藏品和余额。"
+                message={t("购买状态已更新，请查看最新藏品和余额。")}
                 onConfirm={dismiss}
               />
             ) : (
@@ -1814,11 +1818,11 @@ export function OperationRegistryRuntimeProvider({
               </h2>
               <p>
                 {invalidGachaSuccess
-                  ? "开盒结果详情暂时无法确认，请查看最新结果"
+                  ? t("开盒结果详情暂时无法确认，请查看最新结果")
                   : invalidWheelSuccess
-                    ? "转盘结果详情暂时无法确认，请查看最新结果"
+                    ? t("转盘结果详情暂时无法确认，请查看最新结果")
                     : invalidAlbumClaimSuccess
-                      ? "图鉴奖励详情暂时无法确认，请查看最新结果"
+                      ? t("图鉴奖励详情暂时无法确认，请查看最新结果")
                       : active.message}
               </p>
               {serverAcknowledgementRouteIds.has(active.routeId) &&
@@ -1831,14 +1835,14 @@ export function OperationRegistryRuntimeProvider({
                 active.phase === "unknown" ||
                 invalidDedicatedSuccess) && (
                 <Button onClick={() => void recover(active)}>
-                  查看最新结果
+                  {t("查看最新结果")}
                 </Button>
               )}
               {(active.phase === "pending" ||
                 active.phase === "unknown" ||
                 invalidDedicatedSuccess) && (
                 <Button className="secondary" onClick={defer}>
-                  稍后处理
+                  {t("稍后处理")}
                 </Button>
               )}
               {!invalidDedicatedSuccess &&
@@ -1847,17 +1851,17 @@ export function OperationRegistryRuntimeProvider({
                 active.routeId !== "wheel.spin" &&
                 (active.phase === "succeeded" || active.phase === "failed") && (
                   <Button className="secondary" onClick={dismiss}>
-                    完成
+                    {t("完成")}
                   </Button>
                 )}
               {active.routeId === "gacha.open" && active.phase === "failed" ? (
                 <Button className="secondary" onClick={dismiss}>
-                  确定
+                  {t("确定")}
                 </Button>
               ) : null}
               {active.routeId === "wheel.spin" && active.phase === "failed" ? (
                 <Button className="secondary" onClick={() => remove(active.id)}>
-                  确定
+                  {t("确定")}
                 </Button>
               ) : null}
             </div>
@@ -1872,8 +1876,8 @@ function OperationProcessingLayer(): ReactNode {
   return (
     <div className="modal operation-presentation-loading" role="status">
       <div className="operation-mark pending">…</div>
-      <h2>正在处理</h2>
-      <p>请稍候，结果准备好后会立即显示。</p>
+      <h2>{t("正在处理")}</h2>
+      <p>{t("请稍候，结果准备好后会立即显示。")}</p>
     </div>
   );
 }
@@ -1882,9 +1886,9 @@ function PresentationLoadFailure({ retry }: { retry(): void }): ReactNode {
   return (
     <div className="modal operation-presentation-loading" role="alert">
       <div className="operation-mark failed">!</div>
-      <h2>画面暂时无法显示</h2>
-      <p>操作状态已保留，重新加载画面不会重复执行操作。</p>
-      <Button onClick={retry}>重新加载画面</Button>
+      <h2>{t("画面暂时无法显示")}</h2>
+      <p>{t("操作状态已保留，重新加载画面不会重复执行操作。")}</p>
+      <Button onClick={retry}>{t("重新加载画面")}</Button>
     </div>
   );
 }
@@ -2079,19 +2083,19 @@ function recoveredMessage(operation: RecoverableOperationSummary): string {
   if (operation.status === "failed")
     return operation.error_code && isErrorCode(operation.error_code)
       ? errorDefinition(operation.error_code).message
-      : "操作未完成";
+      : t("操作未完成");
   return operation.status === "unknown"
-    ? "结果仍在确认，请勿重复操作"
-    : "操作仍在处理中，请勿重复操作";
+    ? t("结果仍在确认，请勿重复操作")
+    : t("操作仍在处理中，请勿重复操作");
 }
 
 function operationDialogTitle(operation: RegisteredOperation): string {
   if (operation.phase === "succeeded") {
     if (operation.routeId === "market.cancel_template_listings")
-      return "已下架";
+      return t("已下架");
   }
   return operation.routeId === "gacha.open" && operation.phase === "failed"
-    ? "开盒失败"
+    ? t("开盒失败")
     : operation.label;
 }
 
@@ -2099,9 +2103,9 @@ function confirmedMessage(
   routeId: RecoverableRouteId,
   result: unknown,
 ): string {
-  if (routeId === "market.create_listing") return "藏品已成功上架";
-  if (routeId === "market.purchase") return "购买成功";
-  if (routeId !== "market.cancel_template_listings") return "操作已完成";
+  if (routeId === "market.create_listing") return t("藏品已成功上架");
+  if (routeId === "market.purchase") return t("购买成功");
+  if (routeId !== "market.cancel_template_listings") return t("操作已完成");
   const releasedQuantity =
     result &&
     typeof result === "object" &&
@@ -2109,10 +2113,10 @@ function confirmedMessage(
     typeof result.released_quantity === "number"
       ? result.released_quantity
       : null;
-  if (releasedQuantity === null) return "已下架，真实状态已刷新";
+  if (releasedQuantity === null) return t("已下架，最新状态已刷新");
   return releasedQuantity > 0
-    ? `已下架，已释放 ${releasedQuantity} 个未成交藏品`
-    : "已下架，当前没有有效挂单";
+    ? tp("已下架，已释放 {{0}} 个未成交藏品", [releasedQuantity])
+    : t("已下架，当前没有有效挂单");
 }
 
 function marketListingFailureMessage(errorCode: string | null): string {
@@ -2122,7 +2126,7 @@ function marketListingFailureMessage(errorCode: string | null): string {
     isErrorCode(errorCode)
   )
     return errorDefinition(errorCode).message;
-  return "藏品没有上架，请根据最新的可出售状态重试。";
+  return t("藏品没有上架，请根据最新的可出售状态重试。");
 }
 
 function marketPurchaseFailureMessage(errorCode: string | null): string {
@@ -2132,17 +2136,17 @@ function marketPurchaseFailureMessage(errorCode: string | null): string {
     isErrorCode(errorCode)
   )
     return errorDefinition(errorCode).message;
-  return "本次购买没有完成，请根据最新库存和余额重试。";
+  return t("本次购买没有完成，请根据最新库存和余额重试。");
 }
 
 function refreshingAuthorityMessage(routeId: RecoverableRouteId): string {
   return routeId === "market.purchase"
-    ? "购买已完成，正在更新藏品和余额"
-    : "上架已确认，正在更新出售状态";
+    ? t("购买已完成，正在更新藏品和余额")
+    : t("上架已确认，正在更新出售状态");
 }
 
 function syncingAuthorityMessage(routeId: RecoverableRouteId): string {
   return routeId === "market.purchase"
-    ? "购买状态正在同步"
-    : "上架状态正在同步";
+    ? t("购买状态正在同步")
+    : t("上架状态正在同步");
 }

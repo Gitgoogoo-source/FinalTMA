@@ -16,6 +16,7 @@ import {
 } from "../../shared/navigation/firstScreenReadiness.ts";
 import { AppShell } from "../shell/AppShell.tsx";
 import { getMainPagePath, loadAlbumPage } from "./pageRoutes.ts";
+import { t } from "../../platform/i18n/index.ts";
 
 const AlbumPage = lazy(loadAlbumPage);
 
@@ -63,7 +64,9 @@ function InvalidRouteRedirect(): null {
 
 function withPageLoading(page: ReactNode): ReactNode {
   return (
-    <Suspense fallback={<main className="page-state">正在加载页面</main>}>
+    <Suspense
+      fallback={<main className="page-state">{t("正在加载页面")}</main>}
+    >
       {page}
     </Suspense>
   );

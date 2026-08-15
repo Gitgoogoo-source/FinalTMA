@@ -11,19 +11,23 @@ export const telegramWebhookHandlers = {
       | Record<string, unknown>
       | undefined;
     if (checkout) {
-      const validation = await rpc<{ valid: boolean }>(
-        "payment_begin_checkout",
-        {
-          p_pre_checkout_query_id: checkout.id,
-          p_invoice_payload: checkout.invoice_payload,
-          p_stars: checkout.total_amount,
-          p_payer_telegram_id: (checkout.from as Record<string, unknown>).id,
-        },
-      );
+      const validation = await rpc<{
+        valid: boolean;
+        preferred_language: "en" | "zh-CN";
+      }>("payment_begin_checkout", {
+        p_pre_checkout_query_id: checkout.id,
+        p_invoice_payload: checkout.invoice_payload,
+        p_stars: checkout.total_amount,
+        p_payer_telegram_id: (checkout.from as Record<string, unknown>).id,
+      });
       await answerPreCheckout(
         String(checkout.id),
         validation.valid,
-        validation.valid ? undefined : "订单已失效，请重新发起支付",
+        validation.valid
+          ? undefined
+          : validation.preferred_language === "zh-CN"
+            ? "订单已失效，请重新发起支付"
+            : "This order has expired. Please start a new payment.",
       );
       return { data: { ok: true } };
     }

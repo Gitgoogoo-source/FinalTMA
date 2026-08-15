@@ -22,6 +22,7 @@ import {
 } from "../../platform/query/index.ts";
 import { getSession } from "../../platform/session/store.ts";
 import { isBattleAssetTerminal } from "./useBattleTerminalRefresh.ts";
+import { t } from "../../platform/i18n/index.ts";
 
 type BattleCommandRouteId =
   | "battle.create"
@@ -279,7 +280,7 @@ async function recoverSameOperation<Id extends BattleCommandRouteId>(
             failure: new ApiFailure(
               502,
               "OPERATION_RESULT_INVALID",
-              "原操作结果无法确认，请刷新战斗状态",
+              t("原操作结果无法确认，请刷新战斗状态"),
               true,
               operationId,
             ),
@@ -356,7 +357,7 @@ function toFailure(cause: unknown, operationId: string): ApiFailure {
     : new ApiFailure(
         0,
         "INTERNAL_ERROR",
-        "操作结果暂时无法确认",
+        t("操作结果暂时无法确认"),
         true,
         operationId,
       );
@@ -379,7 +380,7 @@ function operationFailure(
   return new ApiFailure(
     500,
     "OPERATION_RESULT_INVALID",
-    "原操作失败详情暂时无法确认",
+    t("原操作失败详情暂时无法确认"),
     true,
     operationId,
   );

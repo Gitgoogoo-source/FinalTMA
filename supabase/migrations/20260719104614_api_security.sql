@@ -93,6 +93,7 @@ declare
     'identity_authenticate',
     'identity_consume_login_source_rate_limit',
     'identity_initial',
+    'identity_set_preferred_language',
     'identity_summary',
     'inventory_decompose',
     'inventory_detail',

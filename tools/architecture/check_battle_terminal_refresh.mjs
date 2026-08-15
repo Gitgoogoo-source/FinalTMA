@@ -1344,11 +1344,9 @@ function checkResultContract(
   const resultScreen = topLevelFunction(screens, "BattleResult");
   const preparingScreen = topLevelFunction(screens, "BattlePreparingShare");
   const teamSelectScreen = topLevelFunction(screens, "BattleTeamSelect");
-  let hasExactReturnLabel = false;
-  walk(resultScreen, (node) => {
-    if (ts.isJsxText(node) && node.getText().trim() === "返回 Battle 首页")
-      hasExactReturnLabel = true;
-  });
+  const hasExactReturnLabel = calls(resultScreen, "t").some(
+    (call) => stringArgument(call, 0) === "返回 Battle 首页",
+  );
   must(
     identifiers(resultScreen).includes("onReturnHome") &&
       hasExactReturnLabel &&
@@ -2581,16 +2579,14 @@ function runSelfTests() {
       "preparing page restores server-facing wording",
       (source, text) => {
         const preparing = topLevelFunction(source, "BattlePreparingShare");
-        let copy = null;
-        walk(preparing, (node) => {
-          if (
-            !copy &&
-            ts.isJsxText(node) &&
-            node.getText().includes("挑战卡生成后会自动进入等待页面")
-          )
-            copy = node;
-        });
-        return replaceNode(text, copy, "正在读取服务器状态");
+        const copyCall = calls(preparing, "t").find((call) =>
+          stringArgument(call, 0).includes("挑战卡生成后会自动进入等待页面"),
+        );
+        return replaceNode(
+          text,
+          copyCall?.arguments[0],
+          JSON.stringify("正在读取服务器状态"),
+        );
       },
     ),
     fixture(
@@ -2598,16 +2594,14 @@ function runSelfTests() {
       "result button restores confirmation wording",
       (source, text) => {
         const resultScreen = topLevelFunction(source, "BattleResult");
-        let label = null;
-        walk(resultScreen, (node) => {
-          if (
-            !label &&
-            ts.isJsxText(node) &&
-            node.getText().trim() === "返回 Battle 首页"
-          )
-            label = node;
-        });
-        return replaceNode(text, label, "确认并返回 Battle 首页");
+        const labelCall = calls(resultScreen, "t").find(
+          (call) => stringArgument(call, 0) === "返回 Battle 首页",
+        );
+        return replaceNode(
+          text,
+          labelCall?.arguments[0],
+          JSON.stringify("确认并返回 Battle 首页"),
+        );
       },
     ),
     fixture(
@@ -2744,7 +2738,15 @@ function runSelfTests() {
   for (const { fileName, label, mutate, expectedMessage } of fixtures) {
     const original = fs.readFileSync(fileName, "utf8");
     const source = parseText(fileName, original);
-    const mutated = mutate(source, original);
+    let mutated;
+    try {
+      mutated = mutate(source, original);
+    } catch (cause) {
+      throw new Error(
+        `Architecture negative fixture could not mutate ${label}: ${cause instanceof Error ? cause.message : String(cause)}`,
+        { cause },
+      );
+    }
     must(
       mutated !== original,
       `Architecture negative fixture did not mutate its target: ${label}`,
@@ -2865,7 +2867,15 @@ function runSelfTests() {
   for (const { fileName, label, mutate } of positiveFixtures) {
     const original = fs.readFileSync(fileName, "utf8");
     const source = parseText(fileName, original);
-    const mutated = mutate(source, original);
+    let mutated;
+    try {
+      mutated = mutate(source, original);
+    } catch (cause) {
+      throw new Error(
+        `Architecture positive fixture could not mutate ${label}: ${cause instanceof Error ? cause.message : String(cause)}`,
+        { cause },
+      );
+    }
     must(
       mutated !== original,
       `Architecture positive fixture did not mutate its target: ${label}`,

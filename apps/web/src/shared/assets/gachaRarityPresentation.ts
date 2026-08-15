@@ -3,6 +3,7 @@ import epicImage from "./gacha-rarity/epic-v2.webp";
 import legendaryImage from "./gacha-rarity/legendary-v2.webp";
 import mythicImage from "./gacha-rarity/mythic-v2.webp";
 import rareImage from "./gacha-rarity/rare-v2.webp";
+import { localized } from "../../platform/i18n/index.ts";
 
 export type GachaRarity = "common" | "rare" | "epic" | "legendary" | "mythic";
 export type GachaTier = "normal" | "rare" | "legendary";
@@ -17,7 +18,7 @@ export const gachaRarityOrder = [
   "mythic",
 ] as const satisfies readonly GachaRarity[];
 
-export const gachaRarityPresentation = {
+export const gachaRarityPresentation = localized({
   common: {
     label: "普通",
     imageSrc: commonImage,
@@ -46,7 +47,7 @@ export const gachaRarityPresentation = {
 } as const satisfies Record<
   GachaRarity,
   { label: string; imageSrc: string; imageAlt: string }
->;
+>);
 
 /**
  * Player-facing probability copy frozen from the current three blind-box rules.

@@ -13,6 +13,7 @@ import { Badge } from "../../shared/ui/Badge.tsx";
 import { Button } from "../../shared/ui/Button.tsx";
 import { CatalogImage } from "../../shared/ui/CatalogImage.tsx";
 import type { OperationPhase } from "./context.ts";
+import { localized, t, tp } from "../../platform/i18n/index.ts";
 
 type EvolutionResult = RouteOutput<"inventory.evolve">;
 type Rarity = EvolutionResult["target"]["rarity"];
@@ -29,19 +30,19 @@ const STAGE_BACKGROUND = "/assets/evolution/eclipse-stage.webp";
 const CONFETTI = "/assets/evolution/confetti.webp";
 const FAILURE_MOTES = "/assets/evolution/failure-motes.webp";
 
-const rarityLabels: Record<Rarity, string> = {
+const rarityLabels: Record<Rarity, string> = localized({
   common: "普通",
   rare: "稀有",
   epic: "史诗",
   legendary: "传说",
   mythic: "神话",
-};
-const rejectedMessages: Record<string, string> = {
+});
+const rejectedMessages: Record<string, string> = localized({
   EVOLUTION_NOT_AVAILABLE: "藏品状态已经变化，请重新选择",
   INSUFFICIENT_INVENTORY: "可用数量已经变化，请重新选择",
   INSUFFICIENT_BALANCE: "Fgems 不足，无法进化",
   RATE_LIMITED: "操作过于频繁，请稍后再试",
-};
+});
 
 export function EvolutionOperationDialog({
   operationId,
@@ -144,16 +145,17 @@ export function EvolutionOperationDialog({
         />
         <section className="evolution-result-panel evolution-result-panel--dismissible">
           <EvolutionResultClose disabled={busy} onClick={onAcknowledge} />
-          <p className="evolution-result-kicker">本次没有产生结算</p>
-          <h2 id="evolution-result-title">进化未执行</h2>
+          <p className="evolution-result-kicker">{t("本次没有产生结算")}</p>
+          <h2 id="evolution-result-title">{t("进化未执行")}</h2>
           <p>
-            {rejectedMessages[code ?? ""] ?? "进化仪式暂时无法开始，请稍后重试"}
+            {rejectedMessages[code ?? ""] ??
+              t("进化仪式暂时无法开始，请稍后重试")}
           </p>
           {actionError ? (
             <p className="operation-ack-error">{actionError}</p>
           ) : null}
           <Button disabled={busy} onClick={onAcknowledge}>
-            {busy ? "正在返回" : "返回藏品页"}
+            {busy ? t("正在返回") : t("返回藏品页")}
           </Button>
         </section>
       </EvolutionStage>
@@ -168,10 +170,10 @@ export function EvolutionOperationDialog({
         className="evolution-stage-pet--restored"
       />
       <section className="evolution-result-panel">
-        <p className="evolution-result-kicker">藏品保持原形态</p>
-        <h2 id="evolution-result-title">进化中断</h2>
-        <p>进化仪式被打断，请重新确认结果</p>
-        <Button onClick={onRecover}>重新确认</Button>
+        <p className="evolution-result-kicker">{t("藏品保持原形态")}</p>
+        <h2 id="evolution-result-title">{t("进化中断")}</h2>
+        <p>{t("进化仪式被打断，请重新确认结果")}</p>
+        <Button onClick={onRecover}>{t("重新确认")}</Button>
       </section>
     </EvolutionStage>
   );
@@ -185,10 +187,10 @@ function EvolutionCeremony({
   return (
     <EvolutionStage className="evolution-ceremony-stage">
       <h2 id="evolution-result-title" className="evolution-ceremony-sr-title">
-        进化仪式
+        {t("进化仪式")}
       </h2>
       <p className="evolution-ceremony-copy" aria-hidden="true">
-        进化
+        {t("进化")}
       </p>
       <EvolutionPet
         url={presentation.targetImageUrl}
@@ -220,11 +222,11 @@ function EvolutionSuccess({
     <EvolutionStage className="evolution-stage--success" celebration>
       <EvolutionPet
         url={result.target.image_detail_url}
-        alt={result.target.name}
+        alt={t(result.target.name)}
         className="evolution-stage-pet--revealed"
       />
       <h2 id="evolution-result-title" className="evolution-stage-callout">
-        进化成功
+        {t("进化成功")}
       </h2>
       <section className="evolution-result-panel evolution-result-panel--dismissible evolution-success-panel">
         <EvolutionResultClose
@@ -232,16 +234,19 @@ function EvolutionSuccess({
           onClick={() => onSuccess("inventory")}
         />
         <header>
-          <p className="evolution-result-kicker">进化成功</p>
-          <h3>{result.target.name}</h3>
+          <p className="evolution-result-kicker">{t("进化成功")}</p>
+          <h3>{t(result.target.name)}</h3>
           <Badge>
-            {rarityLabels[result.target.rarity]} · 第 {result.target.stage} 阶
+            {tp("{{0}} · 第 {{1}} 阶", [
+              rarityLabels[result.target.rarity],
+              result.target.stage,
+            ])}
           </Badge>
         </header>
         <div className="evolution-result-award">
           <b className="new-indicator">NEW</b>
-          <strong>获得 ×{result.target_awarded}</strong>
-          <span>{result.new_album ? "首次点亮图鉴" : "图鉴已点亮"}</span>
+          <strong>{tp("获得 ×{{0}}", [result.target_awarded])}</strong>
+          <span>{result.new_album ? t("首次点亮图鉴") : t("图鉴已点亮")}</span>
         </div>
         <SettlementDetails result={result} success />
         {actionError ? (
@@ -249,14 +254,14 @@ function EvolutionSuccess({
         ) : null}
         <div className="button-row">
           <Button disabled={busy} onClick={() => onSuccess("inventory")}>
-            {busy ? "正在整理奖励" : "查看藏品"}
+            {busy ? t("正在整理奖励") : t("查看藏品")}
           </Button>
           <Button
             className="secondary"
             disabled={busy}
             onClick={() => onSuccess("album")}
           >
-            查看图鉴
+            {t("查看图鉴")}
           </Button>
         </div>
       </section>
@@ -279,23 +284,25 @@ function EvolutionFailure({
     <EvolutionStage className="evolution-stage--failure" failure>
       <EvolutionPet
         url={result.source.image_detail_url}
-        alt={`${result.source.name}的黑影`}
+        alt={tp("{{0}}的黑影", [t(result.source.name)])}
         className="evolution-stage-pet--failure-silhouette"
       />
       <section className="evolution-result-panel evolution-result-panel--dismissible evolution-failure-panel">
         <EvolutionResultClose disabled={busy} onClick={onAcknowledge} />
-        <p className="evolution-result-kicker">藏品保持原形态</p>
-        <h2 id="evolution-result-title">进化失败</h2>
+        <p className="evolution-result-kicker">{t("藏品保持原形态")}</p>
+        <h2 id="evolution-result-title">{t("进化失败")}</h2>
         <p>
-          只留下 {result.source.name} 的黑色轮廓，本次没有获得{" "}
-          {result.target.name}。
+          {tp("只留下 {{0}} 的黑色轮廓，本次没有获得 {{1}}。", [
+            t(result.source.name),
+            t(result.target.name),
+          ])}
         </p>
         <SettlementDetails result={result} />
         {actionError ? (
           <p className="operation-ack-error">{actionError}</p>
         ) : null}
         <Button disabled={busy} onClick={onAcknowledge}>
-          {busy ? "正在整理结果" : "知道了"}
+          {busy ? t("正在整理结果") : t("知道了")}
         </Button>
       </section>
     </EvolutionStage>
@@ -313,7 +320,7 @@ function EvolutionResultClose({
     <button
       type="button"
       className="evolution-result-close"
-      aria-label="关闭进化结果并返回藏品页"
+      aria-label={t("关闭进化结果并返回藏品页")}
       disabled={disabled}
       onClick={onClick}
     >
@@ -403,37 +410,40 @@ function SettlementDetails({
 }): ReactNode {
   return (
     <details className="evolution-settlement-details">
-      <summary>查看结算详情</summary>
+      <summary>{t("查看结算详情")}</summary>
       <dl className="result-summary">
         <div>
-          <dt>结算结果</dt>
+          <dt>{t("结算结果")}</dt>
           <dd>
-            {result.attempt_count} 次 · 成功 {result.success_count} · 失败{" "}
-            {result.failure_count}
+            {tp("{{0}} 次 · 成功 {{1}} · 失败 {{2}}", [
+              result.attempt_count,
+              result.success_count,
+              result.failure_count,
+            ])}
           </dd>
         </div>
         <div>
-          <dt>实际扣除材料</dt>
+          <dt>{t("实际扣除材料")}</dt>
           <dd>
-            {result.source.name} ×{result.materials.consumed}
+            {t(result.source.name)} ×{result.materials.consumed}
           </dd>
         </div>
         <div>
-          <dt>失败保留材料</dt>
+          <dt>{t("失败保留材料")}</dt>
           <dd>×{result.materials.retained}</dd>
         </div>
         <div>
-          <dt>实际扣除 Fgems</dt>
+          <dt>{t("实际扣除 Fgems")}</dt>
           <dd>{result.fgems_spent}</dd>
         </div>
         {success ? (
           <div>
-            <dt>本批保底成功</dt>
-            <dd>{result.pity.guaranteed_attempts} 次</dd>
+            <dt>{t("本批保底成功")}</dt>
+            <dd>{tp("{{0}} 次", [result.pity.guaranteed_attempts])}</dd>
           </div>
         ) : null}
         <div>
-          <dt>路线保底</dt>
+          <dt>{t("路线保底")}</dt>
           <dd>{resultPityDistance(result)}</dd>
         </div>
       </dl>
@@ -462,7 +472,7 @@ function evolutionPresentation(
     (template) => template.id === route?.target.template_id,
   );
   return {
-    sourceName: result?.source.name ?? source?.name ?? "原藏品",
+    sourceName: t(result?.source.name ?? source?.name ?? "原藏品"),
     sourceImageUrl:
       result?.source.image_detail_url ?? source?.image_detail_url ?? null,
     targetImageUrl:
@@ -473,6 +483,6 @@ function evolutionPresentation(
 function resultPityDistance(result: EvolutionResult): string {
   const remaining = result.pity.failures_until_guaranteed;
   return remaining === 0
-    ? "下次进化必定成功"
-    : `再失败 ${remaining} 次后，下次进化必定成功`;
+    ? t("下次进化必定成功")
+    : tp("再失败 {{0}} 次后，下次进化必定成功", [remaining]);
 }

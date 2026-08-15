@@ -36,6 +36,8 @@ create table identity.users (
   first_name text not null,
   last_name text,
   language_code text,
+  preferred_language text not null default 'en'
+    check (preferred_language in ('en', 'zh-CN')),
   status text not null default 'normal' check (status in ('normal', 'banned')),
   referral_code text not null unique,
   invited_by uuid references identity.users(id),
@@ -382,6 +384,7 @@ begin
       'session_id', v_login.session_id,
       'user_id', v_login.user_id,
       'account_status', 'normal',
+      'preferred_language', v_user.preferred_language,
       'entry_kind', v_login.entry_kind,
       'expires_at', v_login.expires_at
     ) || identity.session_entry_handoff(v_login.session_id);
@@ -459,9 +462,42 @@ begin
     'session_id', v_session_id,
     'user_id', v_user.id,
     'account_status', v_user.status,
+    'preferred_language', v_user.preferred_language,
     'entry_kind', p_entry_kind,
     'expires_at', v_expires_at
   ) || identity.session_entry_handoff(v_session_id);
+end;
+$$;
+
+create or replace function api.identity_set_preferred_language(
+  p_session_id uuid,
+  p_preferred_language text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := api.session_user(p_session_id);
+  v_preferred_language text;
+begin
+  if p_preferred_language not in ('en', 'zh-CN') then
+    perform api.raise_business_error('REQUEST_INVALID', 'Unsupported language');
+  end if;
+  update identity.users
+  set preferred_language = p_preferred_language,
+      updated_at = case
+        when preferred_language is distinct from p_preferred_language then now()
+        else updated_at
+      end
+  where id = v_user_id
+    and status = 'normal'
+  returning preferred_language into v_preferred_language;
+  if v_preferred_language is null then
+    perform api.raise_business_error('ACCOUNT_RESTRICTED', 'Account unavailable');
+  end if;
+  return jsonb_build_object('preferred_language', v_preferred_language);
 end;
 $$;
 
@@ -483,6 +519,7 @@ begin
       'first_name', u.first_name,
       'last_name', u.last_name,
       'status', u.status,
+      'preferred_language', u.preferred_language,
       'referral_code', u.referral_code
     ),
     'assets', economy.assets(v_user_id)
@@ -511,6 +548,7 @@ begin
         'first_name', u.first_name,
         'last_name', u.last_name,
         'status', u.status,
+        'preferred_language', u.preferred_language,
         'referral_code', u.referral_code
       ),
       'assets', economy.assets(v_user_id)
@@ -8314,6 +8352,7 @@ returns table (
   create_operation_id uuid,
   creator_telegram_id bigint,
   creator_display_name text,
+  preferred_language text,
   rarity_summary jsonb,
   entry_fee bigint,
   invite_token_hash text,
@@ -8356,6 +8395,7 @@ begin
   select
     r.id, r.create_operation_id, u.telegram_id,
     btrim(u.first_name || ' ' || coalesce(u.last_name, '')),
+    u.preferred_language,
     battle.rarity_summary(r.id), tier.entry_fee, r.invite_token_hash,
     leased.attempt_count, r.prepare_deadline
   from leased
@@ -11956,8 +11996,16 @@ language sql
 security definer
 set search_path = ''
 as $$
-  select jsonb_build_object('id', id, 'invoice_payload', invoice_payload, 'stars_amount', stars_amount, 'kind', kind)
-  from payments.orders where id = p_order_id and status = 'pending'
+  select jsonb_build_object(
+    'id', o.id,
+    'invoice_payload', o.invoice_payload,
+    'stars_amount', o.stars_amount,
+    'kind', o.kind,
+    'preferred_language', u.preferred_language
+  )
+  from payments.orders o
+  join identity.users u on u.id = o.user_id
+  where o.id = p_order_id and o.status = 'pending'
 $$;
 
 create or replace function api.payment_begin_checkout(
@@ -11974,7 +12022,13 @@ as $$
 declare
   v_order payments.orders%rowtype;
   v_user identity.users%rowtype;
+  v_preferred_language text := 'en';
 begin
+  select u.preferred_language
+  into v_preferred_language
+  from identity.users u
+  where u.telegram_id = p_payer_telegram_id;
+  v_preferred_language := coalesce(v_preferred_language, 'en');
   if p_pre_checkout_query_id is null
      or btrim(p_pre_checkout_query_id) = ''
      or p_invoice_payload is null
@@ -11982,34 +12036,35 @@ begin
      or p_stars is null
      or p_stars <= 0
   then
-    return jsonb_build_object('valid', false, 'payment_id', null);
+    return jsonb_build_object('valid', false, 'payment_id', null, 'preferred_language', v_preferred_language);
   end if;
   select * into v_order from payments.orders where invoice_payload = p_invoice_payload for update;
   if v_order.id is null or v_order.stars_amount <> p_stars then
-    return jsonb_build_object('valid', false, 'payment_id', null);
+    return jsonb_build_object('valid', false, 'payment_id', null, 'preferred_language', v_preferred_language);
   end if;
   select * into v_user from identity.users where id = v_order.user_id for update;
+  v_preferred_language := v_user.preferred_language;
   if p_payer_telegram_id is null
      or p_payer_telegram_id <= 0
      or v_user.telegram_id <> p_payer_telegram_id
   then
-    return jsonb_build_object('valid', false, 'payment_id', v_order.id);
+    return jsonb_build_object('valid', false, 'payment_id', v_order.id, 'preferred_language', v_preferred_language);
   end if;
   if v_order.status = 'processing'
      and v_order.pre_checkout_query_id = p_pre_checkout_query_id
      and v_order.verified_payer_telegram_id = p_payer_telegram_id
   then
-    return jsonb_build_object('valid', true, 'payment_id', v_order.id);
+    return jsonb_build_object('valid', true, 'payment_id', v_order.id, 'preferred_language', v_preferred_language);
   end if;
   if v_order.status <> 'pending' or v_order.pre_checkout_query_id is not null or v_order.expires_at <= now() or v_user.status <> 'normal' then
-    return jsonb_build_object('valid', false, 'payment_id', v_order.id);
+    return jsonb_build_object('valid', false, 'payment_id', v_order.id, 'preferred_language', v_preferred_language);
   end if;
   update payments.orders
   set status = 'processing', pre_checkout_query_id = p_pre_checkout_query_id,
       verified_payer_telegram_id = p_payer_telegram_id,
       checkout_started_at = now(), updated_at = now()
   where id = v_order.id;
-  return jsonb_build_object('valid', true, 'payment_id', v_order.id);
+  return jsonb_build_object('valid', true, 'payment_id', v_order.id, 'preferred_language', v_preferred_language);
 end;
 $$;
 

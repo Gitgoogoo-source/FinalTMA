@@ -84,6 +84,7 @@ export const identityHandlers = {
     if (
       result.session_id !== issued.sessionId ||
       !result.user_id ||
+      !result.preferred_language ||
       !result.expires_at ||
       !result.entry_handoff_state ||
       !result.entry_kind
@@ -105,6 +106,7 @@ export const identityHandlers = {
         account_status: "normal" as const,
         access_token: issued.token,
         user_id: result.user_id,
+        preferred_language: result.preferred_language,
         expires_at: result.expires_at,
         entry_kind: result.entry_kind,
         entry_handoff_state: result.entry_handoff_state,
@@ -122,6 +124,12 @@ export const identityHandlers = {
   "identity.summary": async (context) => ({
     data: await rpc("identity_summary", {
       p_session_id: requireSession(context).session_id,
+    }),
+  }),
+  "identity.language.update": async (context) => ({
+    data: await rpc("identity_set_preferred_language", {
+      p_session_id: requireSession(context).session_id,
+      p_preferred_language: context.input.preferred_language,
     }),
   }),
 } satisfies HandlerMap;
@@ -168,6 +176,7 @@ type IdentityAuthenticationResult =
       account_status: "normal";
       session_id: string;
       user_id: string;
+      preferred_language: "en" | "zh-CN";
       expires_at: string;
       entry_kind: "direct" | "referral" | "battle";
       entry_handoff_state: "pending" | "complete";

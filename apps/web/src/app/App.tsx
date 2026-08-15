@@ -1,6 +1,13 @@
 import { useEffect, useState, type ReactNode } from "react";
 
 import { retryRecoveredInitialState } from "../platform/api/client.ts";
+import {
+  loadEnglishCatalog,
+  t,
+  tr,
+  useAppLanguage,
+  useEnglishCatalogState,
+} from "../platform/i18n/index.ts";
 import { useSession } from "../platform/session/store.ts";
 import { useBootstrap } from "../workflows/session-bootstrap/index.ts";
 import { AccountGate } from "./guards/AccountGate.tsx";
@@ -9,6 +16,39 @@ import { AppRouter } from "./router/AppRouter.tsx";
 import { StartupScreen } from "./StartupScreen.tsx";
 
 export function App(): ReactNode {
+  useAppLanguage();
+  const catalogState = useEnglishCatalogState();
+  if (catalogState !== "ready")
+    return (
+      <StartupScreen
+        failed={catalogState === "failed"}
+        title={
+          catalogState === "failed"
+            ? tr("Adventure Setup Failed", "冒险准备失败")
+            : tr("Getting Your Adventure Ready", "正在准备冒险")
+        }
+        message={
+          catalogState === "failed"
+            ? tr(
+                "We couldn't load your adventure. Try again.",
+                "冒险内容加载失败，请重新尝试。",
+              )
+            : tr("Your companions are gathering.", "请稍候，伙伴们正在集合。")
+        }
+        retryLabel={
+          catalogState === "failed" ? tr("Try Again", "重新尝试") : undefined
+        }
+        onRetry={
+          catalogState === "failed"
+            ? () => void loadEnglishCatalog().catch(() => undefined)
+            : undefined
+        }
+      />
+    );
+  return <LocalizedApp />;
+}
+
+function LocalizedApp(): ReactNode {
   const bootstrap = useBootstrap();
   const session = useSession();
   if (bootstrap.phase === "banned" || session?.accountStatus === "banned")
@@ -16,15 +56,15 @@ export function App(): ReactNode {
   if (session?.recovering)
     return (
       <StartupScreen
-        title="正在找回冒险"
-        message="请稍候，伙伴们正在重新集合"
+        title={t("正在找回冒险")}
+        message={t("请稍候，伙伴们正在重新集合")}
       />
     );
   if (session?.entryHandoffState === "pending" && bootstrap.phase === "ready")
     return (
       <StartupScreen
-        title="正在确认同行关系"
-        message="请稍候，冒险伙伴即将会合"
+        title={t("正在确认同行关系")}
+        message={t("请稍候，冒险伙伴即将会合")}
       />
     );
   if (session?.initialStateFailed) return <RecoveredInitialStateFailure />;
@@ -33,12 +73,12 @@ export function App(): ReactNode {
       <StartupScreen
         title={
           bootstrap.phase === "settling_referral"
-            ? "正在确认同行关系"
+            ? t("正在确认同行关系")
             : bootstrap.phase === "loading_initial_state"
-              ? "正在准备冒险"
-              : "正在进入游戏"
+              ? t("正在准备冒险")
+              : t("正在进入游戏")
         }
-        message="请稍候，冒险正在苏醒"
+        message={t("请稍候，冒险正在苏醒")}
       />
     );
   if (bootstrap.failed)
@@ -47,10 +87,10 @@ export function App(): ReactNode {
         failed
         title={
           bootstrap.phase === "initial_state_failed"
-            ? "冒险准备失败"
+            ? t("冒险准备失败")
             : bootstrap.phase === "settling_referral"
-              ? "同行关系尚未确认"
-              : "暂时无法进入游戏"
+              ? t("同行关系尚未确认")
+              : t("暂时无法进入游戏")
         }
         message={bootstrap.message}
         retryLabel={bootstrap.canRetry ? bootstrap.retryLabel : undefined}
@@ -61,8 +101,8 @@ export function App(): ReactNode {
     return (
       <StartupScreen
         failed
-        title="登录状态已失效"
-        message="请重新从 Telegram 打开游戏"
+        title={t("登录状态已失效")}
+        message={t("请重新从 Telegram 打开游戏")}
       />
     );
   return (
@@ -91,9 +131,9 @@ function RecoveredInitialStateFailure(): ReactNode {
   return (
     <StartupScreen
       failed
-      title="冒险准备失败"
-      message="暂时没能准备好，请重新尝试。"
-      retryLabel="重新尝试"
+      title={t("冒险准备失败")}
+      message={t("暂时没能准备好，请重新尝试。")}
+      retryLabel={t("重新尝试")}
       retryDisabled={submitting}
       onRetry={() => {
         setSubmitting(true);

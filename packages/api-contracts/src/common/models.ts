@@ -30,6 +30,7 @@ export const userSchema = z
     first_name: z.string(),
     last_name: z.string().nullable(),
     status: accountStatusSchema,
+    preferred_language: z.enum(["en", "zh-CN"]),
     referral_code: z.string(),
   })
   .strict();

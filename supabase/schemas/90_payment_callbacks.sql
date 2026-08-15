@@ -85,8 +85,16 @@ language sql
 security definer
 set search_path = ''
 as $$
-  select jsonb_build_object('id', id, 'invoice_payload', invoice_payload, 'stars_amount', stars_amount, 'kind', kind)
-  from payments.orders where id = p_order_id and status = 'pending'
+  select jsonb_build_object(
+    'id', o.id,
+    'invoice_payload', o.invoice_payload,
+    'stars_amount', o.stars_amount,
+    'kind', o.kind,
+    'preferred_language', u.preferred_language
+  )
+  from payments.orders o
+  join identity.users u on u.id = o.user_id
+  where o.id = p_order_id and o.status = 'pending'
 $$;
 
 create or replace function api.payment_begin_checkout(
@@ -103,7 +111,13 @@ as $$
 declare
   v_order payments.orders%rowtype;
   v_user identity.users%rowtype;
+  v_preferred_language text := 'en';
 begin
+  select u.preferred_language
+  into v_preferred_language
+  from identity.users u
+  where u.telegram_id = p_payer_telegram_id;
+  v_preferred_language := coalesce(v_preferred_language, 'en');
   if p_pre_checkout_query_id is null
      or btrim(p_pre_checkout_query_id) = ''
      or p_invoice_payload is null
@@ -111,34 +125,35 @@ begin
      or p_stars is null
      or p_stars <= 0
   then
-    return jsonb_build_object('valid', false, 'payment_id', null);
+    return jsonb_build_object('valid', false, 'payment_id', null, 'preferred_language', v_preferred_language);
   end if;
   select * into v_order from payments.orders where invoice_payload = p_invoice_payload for update;
   if v_order.id is null or v_order.stars_amount <> p_stars then
-    return jsonb_build_object('valid', false, 'payment_id', null);
+    return jsonb_build_object('valid', false, 'payment_id', null, 'preferred_language', v_preferred_language);
   end if;
   select * into v_user from identity.users where id = v_order.user_id for update;
+  v_preferred_language := v_user.preferred_language;
   if p_payer_telegram_id is null
      or p_payer_telegram_id <= 0
      or v_user.telegram_id <> p_payer_telegram_id
   then
-    return jsonb_build_object('valid', false, 'payment_id', v_order.id);
+    return jsonb_build_object('valid', false, 'payment_id', v_order.id, 'preferred_language', v_preferred_language);
   end if;
   if v_order.status = 'processing'
      and v_order.pre_checkout_query_id = p_pre_checkout_query_id
      and v_order.verified_payer_telegram_id = p_payer_telegram_id
   then
-    return jsonb_build_object('valid', true, 'payment_id', v_order.id);
+    return jsonb_build_object('valid', true, 'payment_id', v_order.id, 'preferred_language', v_preferred_language);
   end if;
   if v_order.status <> 'pending' or v_order.pre_checkout_query_id is not null or v_order.expires_at <= now() or v_user.status <> 'normal' then
-    return jsonb_build_object('valid', false, 'payment_id', v_order.id);
+    return jsonb_build_object('valid', false, 'payment_id', v_order.id, 'preferred_language', v_preferred_language);
   end if;
   update payments.orders
   set status = 'processing', pre_checkout_query_id = p_pre_checkout_query_id,
       verified_payer_telegram_id = p_payer_telegram_id,
       checkout_started_at = now(), updated_at = now()
   where id = v_order.id;
-  return jsonb_build_object('valid', true, 'payment_id', v_order.id);
+  return jsonb_build_object('valid', true, 'payment_id', v_order.id, 'preferred_language', v_preferred_language);
 end;
 $$;
 

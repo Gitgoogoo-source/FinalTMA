@@ -3,16 +3,17 @@ import type {
   BattleRoomStatus,
   BattleTerminalResultDto,
 } from "@pokepets/api-contracts/app-client";
+import { localized } from "../../platform/i18n/index.ts";
 
-export const battleRarityLabels = {
+export const battleRarityLabels = localized({
   common: "普通",
   rare: "稀有",
   epic: "史诗",
   legendary: "传说",
   mythic: "神话",
-} as const;
+} as const);
 
-export const battleArenaTierLabels = {
+export const battleArenaTierLabels = localized({
   "tier-20": {
     name: "新手峡谷",
     rarity: "普通",
@@ -35,17 +36,17 @@ export const battleArenaTierLabels = {
     rarity: string;
     rarityGems: number;
   }
->;
+>);
 
-export const battleElementLabels = {
+export const battleElementLabels = localized({
   fire: "火焰",
   grass: "草系",
   earth: "土系",
   lightning: "雷电",
   water: "水系",
-} as const;
+} as const);
 
-export const battleStatusLabels: Record<BattleRoomStatus, string> = {
+export const battleStatusLabels: Record<BattleRoomStatus, string> = localized({
   preparing_share: "正在准备挑战卡",
   waiting: "等待对手接受",
   lobby_waiting: "等待双方进入房间",
@@ -56,17 +57,17 @@ export const battleStatusLabels: Record<BattleRoomStatus, string> = {
   cancelled: "挑战已取消",
   expired: "挑战已过期",
   voided: "战斗已安全作废",
-};
+});
 
 export const battleResultLabels: Record<
   BattleTerminalResultDto["result"],
   string
-> = {
+> = localized({
   win: "胜利",
   loss: "失败",
   draw: "平局",
   void: "安全作废",
-};
+});
 
 export function tierTitle(tier: BattleEntryTier): string {
   return `${tier.entry_fee} K-coin`;

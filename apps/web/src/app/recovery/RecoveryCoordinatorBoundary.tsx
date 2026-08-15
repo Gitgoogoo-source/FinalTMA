@@ -5,6 +5,7 @@ import {
   loadRecoveryCoordinator,
   type RecoveryCoordinatorModule,
 } from "./coordinator-loader.ts";
+import { t } from "../../platform/i18n/index.ts";
 
 export function RecoveryCoordinatorBoundary({
   openDialog,
@@ -37,7 +38,7 @@ export function RecoveryCoordinatorBoundary({
   }
   return failed ? (
     <button className="operation-resume" type="button" onClick={load}>
-      恢复未完成操作
+      {t("恢复未完成操作")}
     </button>
   ) : null;
 }

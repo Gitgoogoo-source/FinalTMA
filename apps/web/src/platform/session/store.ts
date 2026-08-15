@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from "react";
 import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 
+import { synchronizeAccountLanguage } from "../i18n/index.ts";
+
 type IdentityInitialState = RouteOutput<"identity.initial">;
 type IdentityRecovery = IdentityInitialState["recovery"];
 
@@ -25,6 +27,7 @@ export type Session = {
   entryHandoffState: "pending" | "complete";
   entryHandoffCode: string | null;
   entryHandoffResult: EntryHandoffResult | null;
+  preferredLanguage: "en" | "zh-CN";
   recovering?: boolean;
   initialStateFailed?: boolean;
 };
@@ -79,6 +82,7 @@ export function seedSessionInitialState(
   )
     throw new DOMException("Stale session generation", "AbortError");
   identitySummaryCacheSeeder(generation, data.summary);
+  synchronizeAccountLanguage(data.summary.user.preferred_language);
   recoverySnapshot = { generation, data: data.recovery };
   recoveryListeners.forEach((listener) => listener());
 }

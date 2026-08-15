@@ -1,6 +1,7 @@
 import { useState, type ReactNode, type Ref } from "react";
 
 import { CatalogImage, type CatalogImageStatus } from "./CatalogImage.tsx";
+import { formatNumber, localized, t, tp } from "../../platform/i18n/index.ts";
 
 export type CollectionDetailItem = {
   template_id: string;
@@ -25,13 +26,13 @@ type CollectionDetailSkill = {
 
 const MAX_COLLECTION_SKILLS = 4;
 
-const rarityLabels: Record<CollectionDetailItem["rarity"], string> = {
+const rarityLabels: Record<CollectionDetailItem["rarity"], string> = localized({
   common: "普通",
   rare: "稀有",
   epic: "史诗",
   legendary: "传说",
   mythic: "神话",
-};
+});
 
 export function CollectionDetailShowcase({
   item,
@@ -65,12 +66,14 @@ export function CollectionDetailShowcase({
         tabIndex={titleTabIndex}
       >
         <div className="inventory-title-copy">
-          <h2 id={headingId}>{item.name}</h2>
+          <h2 id={headingId}>{t(item.name)}</h2>
           <strong className={`inventory-title-rarity ${item.rarity}`}>
             {rarityLabels[item.rarity]}
           </strong>
           {newAcquisition ? (
-            <strong className="detail-new-acquisition">本次新获得</strong>
+            <strong className="detail-new-acquisition">
+              {t("本次新获得")}
+            </strong>
           ) : null}
         </div>
       </div>
@@ -91,13 +94,13 @@ export function CollectionDetailShowcase({
 
       <div className="inventory-metric-grid">
         <InventoryMetric
-          label="进化阶段"
-          value={`${item.stage} 阶`}
+          label={t("进化阶段")}
+          value={tp("{{0}} 阶", [item.stage])}
           tone="stage"
         />
         <InventoryMetric
-          label="战斗力"
-          value={item.combat_power.toLocaleString("zh-CN")}
+          label={t("战斗力")}
+          value={formatNumber(item.combat_power)}
           tone="power"
         />
       </div>
@@ -123,7 +126,7 @@ function CollectionHeroImage({
     <div
       className="inventory-hero-image-stack"
       role="img"
-      aria-label={item.name}
+      aria-label={t(item.name)}
     >
       <div
         className="inventory-hero-image-layer inventory-hero-image-preview"
@@ -173,12 +176,12 @@ function CollectionSkillRail({
   }
 
   return (
-    <div className="inventory-skill-rail" aria-label="宠物技能">
+    <div className="inventory-skill-rail" aria-label={t("宠物技能")}>
       <div className="inventory-skill-summary" aria-live="polite">
-        <span className="inventory-skill-name">{selectedSkill.name}</span>
+        <span className="inventory-skill-name">{t(selectedSkill.name)}</span>
         <span className="inventory-skill-divider" aria-hidden="true" />
         <span className="inventory-skill-damage">
-          伤害 <strong>{selectedSkill.damage}</strong>
+          {t("伤害")} <strong>{selectedSkill.damage}</strong>
         </span>
       </div>
 
@@ -190,7 +193,10 @@ function CollectionSkillRail({
               key={`${skill.name}-${index}`}
               type="button"
               className={`inventory-skill-tab skill-${index + 1}${selected ? " selected" : ""}`}
-              aria-label={`${skill.name}，伤害 ${skill.damage}`}
+              aria-label={tp("{{0}}，伤害 {{1}}", [
+                t(skill.name),
+                skill.damage,
+              ])}
               aria-pressed={selected}
               onClick={() => setSelectedIndex(index)}
             >
@@ -213,16 +219,16 @@ function InventoryQuantitySummary({
   item: CollectionDetailItem;
 }): ReactNode {
   const quantities = [
-    ["可用", item.available],
-    ["出售中", item.listed],
-    ["交易中", item.trading],
-    ["远征中", item.expedition],
-    ["Battle 中", item.battling],
+    [t("可用"), item.available],
+    [t("出售中"), item.listed],
+    [t("交易中"), item.trading],
+    [t("远征中"), item.expedition],
+    [t("Battle 中"), item.battling],
   ] as const;
   return (
-    <div className="inventory-quantity-summary" aria-label="藏品状态数量">
+    <div className="inventory-quantity-summary" aria-label={t("藏品状态数量")}>
       {quantities
-        .filter(([label, quantity]) => label === "可用" || quantity > 0)
+        .filter(([label, quantity]) => label === t("可用") || quantity > 0)
         .map(([label, quantity]) => (
           <span key={label}>
             {label} <strong>×{quantity}</strong>

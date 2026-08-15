@@ -16,6 +16,7 @@ import { focusTaskTarget } from "../../shared/navigation/focusTaskTarget.ts";
 import { usePageModulePreparation } from "../../shared/navigation/pageModulePreparation.ts";
 import { Button } from "../../shared/ui/Button.tsx";
 import { Card } from "../../shared/ui/Card.tsx";
+import { t, tp } from "../../platform/i18n/index.ts";
 
 type Task = RouteOutput<"tasks.get">["tasks"][number];
 type Highlight = {
@@ -102,7 +103,7 @@ export function TaskHighlightBanner(): ReactNode {
         <Icon aria-hidden="true" />
       </span>
       <div>
-        <small>今日重点</small>
+        <small>{t("今日重点")}</small>
         <strong>{highlight.title}</strong>
         <p>{highlight.description}</p>
       </div>
@@ -130,46 +131,46 @@ function selectHighlight(
   if (!data.checkin.claimed_today)
     return {
       kind: "checkin",
-      title: "今日签到可领取",
-      description: `领取本轮第 ${data.checkin.next_day} 天签到奖励`,
-      action: "去签到",
+      title: t("今日签到可领取"),
+      description: tp("领取本轮第 {{0}} 天签到奖励", [data.checkin.next_day]),
+      action: t("去签到"),
     };
   if (claimable)
     return {
       kind: "claim",
-      title: "任务奖励待领取",
-      description: claimable.title,
-      action: "去领取",
+      title: t("任务奖励待领取"),
+      description: t(claimable.title),
+      action: t("去领取"),
       task: claimable,
     };
   if (unfinished)
     return {
       kind: "task",
-      title: "继续今日任务",
-      description: unfinished.title,
-      action: "去完成",
+      title: t("继续今日任务"),
+      description: t(unfinished.title),
+      action: t("去完成"),
       task: unfinished,
     };
   if (referralAvailable)
     return {
       kind: "referral",
-      title: "邀请好友一起开盲盒",
-      description: "复制邀请链接或打开 Telegram 分享",
-      action: "去邀请",
+      title: t("邀请好友一起开盲盒"),
+      description: t("复制邀请链接或打开 Telegram 分享"),
+      action: t("去邀请"),
     };
   if (wheelAvailable)
     return {
       kind: "wheel",
-      title: "幸运转盘",
-      description: "在任务页查看今日转盘状态",
-      action: "去转盘",
+      title: t("幸运转盘"),
+      description: t("在任务页查看今日转盘状态"),
+      action: t("去转盘"),
     };
   if (albumAvailable)
     return {
       kind: "album",
-      title: "进化图鉴",
-      description: "查看永久点亮与图鉴链进度",
-      action: "去图鉴",
+      title: t("进化图鉴"),
+      description: t("查看永久点亮与图鉴链进度"),
+      action: t("去图鉴"),
     };
   return null;
 }

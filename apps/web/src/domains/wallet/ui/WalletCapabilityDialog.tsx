@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ReactNode } from "react";
 
 import { AppModal } from "../../../shared/ui/AppModal.tsx";
+import { t } from "../../../platform/i18n/index.ts";
 
 const TonProvider = lazy(() => import("../../../platform/ton/TonProvider.tsx"));
 
@@ -18,8 +19,8 @@ export function WalletCapabilityDialog({
   return (
     <Suspense
       fallback={
-        <AppModal label="正在加载钱包能力">
-          <div className="modal">正在加载钱包能力</div>
+        <AppModal label={t("正在加载钱包能力")}>
+          <div className="modal">{t("正在加载钱包能力")}</div>
         </AppModal>
       }
     >

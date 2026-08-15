@@ -5,6 +5,8 @@ create table identity.users (
   first_name text not null,
   last_name text,
   language_code text,
+  preferred_language text not null default 'en'
+    check (preferred_language in ('en', 'zh-CN')),
   status text not null default 'normal' check (status in ('normal', 'banned')),
   referral_code text not null unique,
   invited_by uuid references identity.users(id),
@@ -351,6 +353,7 @@ begin
       'session_id', v_login.session_id,
       'user_id', v_login.user_id,
       'account_status', 'normal',
+      'preferred_language', v_user.preferred_language,
       'entry_kind', v_login.entry_kind,
       'expires_at', v_login.expires_at
     ) || identity.session_entry_handoff(v_login.session_id);
@@ -428,9 +431,42 @@ begin
     'session_id', v_session_id,
     'user_id', v_user.id,
     'account_status', v_user.status,
+    'preferred_language', v_user.preferred_language,
     'entry_kind', p_entry_kind,
     'expires_at', v_expires_at
   ) || identity.session_entry_handoff(v_session_id);
+end;
+$$;
+
+create or replace function api.identity_set_preferred_language(
+  p_session_id uuid,
+  p_preferred_language text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := api.session_user(p_session_id);
+  v_preferred_language text;
+begin
+  if p_preferred_language not in ('en', 'zh-CN') then
+    perform api.raise_business_error('REQUEST_INVALID', 'Unsupported language');
+  end if;
+  update identity.users
+  set preferred_language = p_preferred_language,
+      updated_at = case
+        when preferred_language is distinct from p_preferred_language then now()
+        else updated_at
+      end
+  where id = v_user_id
+    and status = 'normal'
+  returning preferred_language into v_preferred_language;
+  if v_preferred_language is null then
+    perform api.raise_business_error('ACCOUNT_RESTRICTED', 'Account unavailable');
+  end if;
+  return jsonb_build_object('preferred_language', v_preferred_language);
 end;
 $$;
 
@@ -452,6 +488,7 @@ begin
       'first_name', u.first_name,
       'last_name', u.last_name,
       'status', u.status,
+      'preferred_language', u.preferred_language,
       'referral_code', u.referral_code
     ),
     'assets', economy.assets(v_user_id)
@@ -480,6 +517,7 @@ begin
         'first_name', u.first_name,
         'last_name', u.last_name,
         'status', u.status,
+        'preferred_language', u.preferred_language,
         'referral_code', u.referral_code
       ),
       'assets', economy.assets(v_user_id)

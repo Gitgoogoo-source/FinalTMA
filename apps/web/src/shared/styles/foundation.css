@@ -114,6 +114,19 @@ html[data-theme="light"] .hero {
   min-width: 0;
   gap: 8px;
 }
+.account-menu-trigger {
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.account-menu-trigger:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: 3px;
+  border-radius: 14px;
+}
 .identity > div {
   display: grid;
   min-width: 0;
@@ -140,6 +153,94 @@ html[data-theme="light"] .hero {
   background: linear-gradient(145deg, #9b8aff, #5a3ee5);
   box-shadow: 0 8px 22px rgba(124, 92, 255, 0.28);
   overflow: hidden;
+}
+.account-language-backdrop {
+  place-items: end center;
+  padding: max(var(--safe-top), 12px) 12px calc(var(--safe-bottom) + 12px);
+  background: rgba(14, 17, 20, 0.52);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.account-language-menu {
+  position: relative;
+  width: min(100%, 420px);
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+  border-radius: 28px;
+  color: #2f342f;
+  background: #fffdfa;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.28);
+}
+.account-language-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: #6f7771;
+  background: #f1f3ef;
+}
+.account-language-close svg {
+  width: 20px;
+}
+.account-language-icon {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  color: #fff;
+  background: linear-gradient(145deg, #8d7cff, #5b42e8);
+  box-shadow: 0 12px 28px rgba(91, 66, 232, 0.24);
+}
+.account-language-icon svg {
+  width: 28px;
+}
+.account-language-heading h2 {
+  margin: 0 0 5px;
+  font-size: 24px;
+}
+.account-language-heading p {
+  margin: 0;
+  color: #747c76;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.account-language-options {
+  display: grid;
+  gap: 9px;
+}
+.account-language-options button {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  border: 1px solid #e2e5e0;
+  border-radius: 16px;
+  color: #3f4540;
+  background: #f8f9f6;
+  font-size: 15px;
+  font-weight: 850;
+}
+.account-language-options button.selected {
+  border-color: #7965f5;
+  color: #553fda;
+  background: #f0edff;
+}
+.account-language-options button svg {
+  width: 20px;
+}
+.account-language-error {
+  margin: 0;
+  color: #b83c50;
+  font-size: 12px;
+  line-height: 1.5;
 }
 .asset-actions {
   display: flex;

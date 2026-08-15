@@ -27,6 +27,7 @@ import {
 } from "../../../workflows/payment-recovery/context.ts";
 import "../../../shared/styles/shell-dialogs.css";
 import type { PaymentOrder } from "../index.ts";
+import { t, tp } from "../../../platform/i18n/index.ts";
 
 const FINAL_STATUSES = new Set<PaymentOrder["status"]>([
   "delivered",
@@ -90,7 +91,7 @@ export function TopupDialog({
   const cancelOrder = useCallback(
     async (orderId: string) => {
       const result = await run(
-        "正在取消未付款订单",
+        t("正在取消未付款订单"),
         "topup.cancel_order",
         { order_id: orderId },
         { background: true },
@@ -127,7 +128,7 @@ export function TopupDialog({
   const failOrder = useCallback(
     async (orderId: string) => {
       const result = await run(
-        "正在确认充值失败结果",
+        t("正在确认充值失败结果"),
         "topup.fail_order",
         { order_id: orderId },
         { background: true },
@@ -229,7 +230,7 @@ export function TopupDialog({
       setCreateError(
         cause instanceof ApiFailure
           ? cause.message
-          : "暂时无法创建支付订单，请立即重试",
+          : t("暂时无法创建支付订单，请立即重试"),
       );
       const refreshed = await status.refetch();
       if (closing.current) return;
@@ -305,16 +306,17 @@ export function TopupDialog({
           <span className="topup-shortage-mark" aria-hidden="true">
             <Coins />
           </span>
-          <h2 id="topup-shortage-title">K-coin 余额不足</h2>
+          <h2 id="topup-shortage-title">{t("K-coin 余额不足")}</h2>
           <p>
-            本次操作还差 {request.estimatedGap}{" "}
-            K-coin，请返回重新选择或前往获取。
+            {tp("本次操作还差 {{0}} K-coin，请返回重新选择或前往获取。", [
+              request.estimatedGap,
+            ])}
           </p>
           <div className="button-row">
             <Button className="secondary" onClick={closeDialog}>
-              返回
+              {t("返回")}
             </Button>
-            <Button onClick={() => setShowOptions(true)}>去获取</Button>
+            <Button onClick={() => setShowOptions(true)}>{t("去获取")}</Button>
           </div>
         </div>
       </AppModal>
@@ -337,40 +339,43 @@ export function TopupDialog({
         <Minus className="topup-sheet-handle" aria-hidden="true" />
         <header className="topup-sheet-heading">
           <Sparkles aria-hidden="true" />
-          <h2 id="topup-dialog-title">K-coin 充值</h2>
+          <h2 id="topup-dialog-title">{t("K-coin 充值")}</h2>
           <Sparkles aria-hidden="true" />
         </header>
         <p className="topup-sheet-description">
           {request
-            ? `原操作预计还差 ${request.estimatedGap} K-coin；最新差额与可用档位将重新确认。`
-            : "选择充值档位。Stars 金额和 K-coin 到账值以支付结果为准。"}
+            ? tp(
+                "原操作预计还差 {{0}} K-coin；最新差额与可用档位将重新确认。",
+                [request.estimatedGap],
+              )
+            : t("选择充值档位。Stars 金额和 K-coin 到账值以支付结果为准。")}
         </p>
         {locked ? (
           <div className="payment-recovery">
-            <strong>支付已提交</strong>
+            <strong>{t("支付已提交")}</strong>
             <small>
-              {pollFailed ? "网络异常，正在重新确认" : "正在确认充值结果"}
+              {pollFailed ? t("网络异常，正在重新确认") : t("正在确认充值结果")}
             </small>
           </div>
         ) : succeeded ? (
           <div className="payment-recovery">
-            <strong>K-coin 已到账</strong>
+            <strong>{t("K-coin 已到账")}</strong>
             <small>{order?.kcoin_amount} K-coin</small>
           </div>
         ) : identityConflict ? (
           <div className="payment-recovery">
-            <strong>支付身份校验异常</strong>
-            <small>本次未到账，请前往支付助手发送 /paysupport</small>
+            <strong>{t("支付身份校验异常")}</strong>
+            <small>{t("本次未到账，请前往支付助手发送 /paysupport")}</small>
           </div>
         ) : failed ? (
           <div className="payment-recovery">
-            <strong>充值失败</strong>
-            <small>本次订单未增加 K-coin</small>
+            <strong>{t("充值失败")}</strong>
+            <small>{t("本次订单未增加 K-coin")}</small>
           </div>
         ) : status.isLoading ? (
-          <p>正在读取充值档位</p>
+          <p>{t("正在加载充值选项")}</p>
         ) : status.error ? (
-          <Button onClick={() => void status.refetch()}>重新加载</Button>
+          <Button onClick={() => void status.refetch()}>{t("重新加载")}</Button>
         ) : (
           <div className="amount-grid">
             {request && !exactGapMatchesFixed && (
@@ -403,23 +408,23 @@ export function TopupDialog({
         ) : null}
         <div className="button-row">
           <Button className="secondary" disabled={locked} onClick={closeDialog}>
-            返回
+            {t("返回")}
           </Button>
           {locked && order ? (
             <Button onClick={() => void pollOrder(order.id)}>
               <RefreshCw />
-              立即重新查询
+              {t("立即重新查询")}
             </Button>
           ) : succeeded ? (
-            <Button onClick={closeDialog}>完成</Button>
+            <Button onClick={closeDialog}>{t("完成")}</Button>
           ) : identityConflict ? (
-            <Button onClick={closeDialog}>知道了</Button>
+            <Button onClick={closeDialog}>{t("知道了")}</Button>
           ) : failed ? (
-            <Button onClick={resetOrder}>重新充值</Button>
+            <Button onClick={resetOrder}>{t("重新充值")}</Button>
           ) : order?.status === "pending" && order.invoice_url ? (
             <Button onClick={() => openInvoice(order)}>
               <ExternalLink />
-              打开 Stars 支付
+              {t("打开 Stars 支付")}
             </Button>
           ) : (
             <Button
@@ -430,7 +435,7 @@ export function TopupDialog({
               onClick={() => void create()}
             >
               <ExternalLink />
-              {creating ? "正在创建充值订单" : "打开 Stars 支付"}
+              {creating ? t("正在创建充值订单") : t("打开 Stars 支付")}
             </Button>
           )}
         </div>

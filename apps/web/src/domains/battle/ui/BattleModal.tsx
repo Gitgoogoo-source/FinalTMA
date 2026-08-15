@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import { useLayoutEffect, useRef, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
+import { t } from "../../../platform/i18n/index.ts";
 
 type InertState = { count: number; initial: boolean };
 
@@ -133,7 +134,7 @@ export function BattleModal({
           <button
             type="button"
             className="battle-sheet-close"
-            aria-label={closeLabel ?? "关闭弹层"}
+            aria-label={closeLabel ?? t("关闭弹层")}
             onClick={close}
           >
             <X aria-hidden="true" />

@@ -29,6 +29,10 @@
       "types": "./src/jobs.ts",
       "default": "./dist/jobs.js"
     },
+    "./localization": {
+      "types": "./src/localization.ts",
+      "default": "./dist/localization.js"
+    },
     "./dormant-app": {
       "types": "./src/dormant-app.ts",
       "default": "./dist/dormant-app.js"

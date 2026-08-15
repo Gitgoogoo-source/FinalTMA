@@ -49,6 +49,7 @@ const normalAuthOutput = z
     account_status: z.literal("normal"),
     access_token: z.string().min(32),
     user_id: uuidSchema,
+    preferred_language: z.enum(["en", "zh-CN"]),
     expires_at: timestampSchema,
     entry_handoff_state: z.enum(["pending", "complete"]),
     entry_kind: z.enum(["direct", "referral", "battle"]),
@@ -149,11 +150,33 @@ const summaryRoute = defineRoute({
     "INTERNAL_ERROR",
   ],
 });
+const updateLanguageRoute = defineRoute({
+  id: "identity.language.update",
+  method: "POST",
+  path: "/api/me/language",
+  gateway: "app",
+  auth: true,
+  idempotent: false,
+  forbidIdempotencyKey: true,
+  refreshScopes: ["all"],
+  input: z.object({ preferred_language: z.enum(["en", "zh-CN"]) }).strict(),
+  output: z.object({ preferred_language: z.enum(["en", "zh-CN"]) }).strict(),
+  errors: [
+    "SESSION_REQUIRED",
+    "SESSION_EXPIRED",
+    "SESSION_REPLACED",
+    "ENTRY_HANDOFF_PENDING",
+    "ACCOUNT_RESTRICTED",
+    "REQUEST_INVALID",
+    "INTERNAL_ERROR",
+  ],
+});
 
 export const identityFirstScreenRoutes = [
   authenticateRoute,
   initialRoute,
   summaryRoute,
+  updateLanguageRoute,
 ] as const;
 
 export const identityRoutes = [
