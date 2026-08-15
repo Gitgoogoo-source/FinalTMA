@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useEffectEvent, useRef, type ReactNode } from "react";
 
 import {
   claimGachaAstralField,
@@ -22,16 +22,21 @@ const rarityColors: Record<GachaRevealRarity, AstralFieldColor> = {
 
 const neutralGold: AstralFieldColor = [1, 0.72, 0.28];
 const GACHA_BUILD_DURATION_MS = 4_000;
+const GACHA_SETTLE_FRAME_LIMIT = 6;
+const GACHA_SETTLE_HEALTHY_FRAME_MS = 50;
 
 export function GachaAstralCanvas({
+  onReady,
   revealing,
   rarity,
 }: {
+  onReady(): void;
   revealing: boolean;
   rarity: GachaRevealRarity | null;
 }): ReactNode {
   const hostRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<AstralTimeline | null>(null);
+  const notifyReady = useEffectEvent(onReady);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -105,10 +110,43 @@ export function GachaAstralCanvas({
     renderer.resize();
     draw(buildStartedAt + (reducedMotion ? GACHA_BUILD_DURATION_MS : 0));
     renderer.finishWarmup();
-    buildStartedAt = performance.now();
-    canvas.dataset.astralStage = "ready";
-    draw(buildStartedAt + (reducedMotion ? GACHA_BUILD_DURATION_MS : 0));
-    schedule();
+
+    const startBuild = () => {
+      buildStartedAt = performance.now();
+      canvas.dataset.astralStage = "ready";
+      draw(buildStartedAt + (reducedMotion ? GACHA_BUILD_DURATION_MS : 0));
+      schedule();
+      notifyReady();
+    };
+
+    if (reducedMotion) {
+      startBuild();
+    } else {
+      let settleFrameCount = 0;
+      let consecutiveHealthyFrames = 0;
+      let previousSettleAt = performance.now();
+      const settleCompositor = (now: number) => {
+        animationFrame = null;
+        if (disposed) return;
+        const interval = now - previousSettleAt;
+        previousSettleAt = now;
+        settleFrameCount += 1;
+        consecutiveHealthyFrames =
+          interval <= GACHA_SETTLE_HEALTHY_FRAME_MS
+            ? consecutiveHealthyFrames + 1
+            : 0;
+        draw(buildStartedAt);
+        if (
+          (settleFrameCount >= 3 && consecutiveHealthyFrames >= 2) ||
+          settleFrameCount >= GACHA_SETTLE_FRAME_LIMIT
+        ) {
+          startBuild();
+          return;
+        }
+        animationFrame = window.requestAnimationFrame(settleCompositor);
+      };
+      animationFrame = window.requestAnimationFrame(settleCompositor);
+    }
 
     return () => {
       disposed = true;

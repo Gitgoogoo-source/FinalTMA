@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import {
   playGachaRitualBuildUp,
@@ -31,8 +31,14 @@ export function GachaHatchAnimation({
   revealing: boolean;
   onMounted(): void;
 }): ReactNode {
-  useEffect(() => {
+  const [stageReady, setStageReady] = useState(false);
+  const handleStageReady = useCallback(() => {
+    setStageReady(true);
     onMounted();
+  }, [onMounted]);
+
+  useEffect(() => {
+    if (!stageReady) return;
     const stopAudio = playGachaRitualBuildUp();
     const timers = isLowPowerAnimationDevice()
       ? []
@@ -43,7 +49,7 @@ export function GachaHatchAnimation({
       stopAudio();
       timers.forEach((timer) => window.clearTimeout(timer));
     };
-  }, [onMounted]);
+  }, [stageReady]);
 
   useEffect(() => {
     if (!revealing || !revealRarity) return;
@@ -72,7 +78,11 @@ export function GachaHatchAnimation({
       <GachaAstralBackdrop />
 
       <div className="gacha-ritual-code-stage" aria-hidden="true">
-        <GachaAstralCanvas revealing={revealing} rarity={revealRarity} />
+        <GachaAstralCanvas
+          onReady={handleStageReady}
+          revealing={revealing}
+          rarity={revealRarity}
+        />
         <span className="gacha-ritual-reveal-meteor" />
         <span className="gacha-ritual-burst-rays" />
         <span className="gacha-ritual-impact-ring" />
