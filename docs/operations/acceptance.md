@@ -139,6 +139,8 @@ Battle stake / settlement / outbox event（脱敏）：
 
 ## 账号语言与 en-US 本地化验收
 
+开始本节前必须完成 [ADR-075](../architecture/adr/ADR-075-telegram-named-mini-app-release-isolation.md) 的入口恢复：`pokepets_dev` Web App URL 已从 `/maintenance.html` 改回环境根 URL，Main Mini App 与默认菜单按钮已恢复；仍显示维护页的 named 直链不能作为语言功能验收入口。
+
 语言验收必须使用同一 deployment SHA 的真实 iPhone Telegram Mini App，并同时用 Safari Web Inspector 检查 DOM、网络与控制台；静态词条检查、TypeScript、构建和桌面浏览器不能替代真机结论。不得创建视觉验收记录日志；证据按本文件既有模板保存引用。覆盖以下场景：
 
 1. 清除该 Telegram 账号的 `preferred_language` 历史影响并首次进入时，认证完成前后都显示英语，页面根节点为 `lang="en"`；不能按 Telegram、设备或地区语言自动切成中文。

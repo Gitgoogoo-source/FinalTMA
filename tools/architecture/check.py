@@ -79,6 +79,8 @@ REQUIRED_PATHS = (
     "docs/architecture/adr/ADR-053-battle-tick-alert-lifecycle.md",
     "docs/architecture/adr/ADR-054-ably-browser-csp-endpoint-allowlist.md",
     "docs/architecture/adr/ADR-059-bounded-operation-admission-and-retention.md",
+    "docs/architecture/adr/ADR-075-telegram-named-mini-app-release-isolation.md",
+    "apps/web/public/maintenance.html",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
     "docs/architecture/adr/ADR-025-battle-active-switch-atomicity.md",
@@ -189,6 +191,7 @@ def main() -> None:
     verify_web_boundaries()
     verify_identity_avatar_minimization()
     verify_browser_csp_boundaries()
+    verify_telegram_release_isolation()
     verify_persistent_page_route_leaves()
     verify_first_screen_runtime_boundaries()
     verify_first_screen_persistent_page_boundaries()
@@ -394,6 +397,65 @@ def verify_browser_csp_boundaries() -> None:
     ):
         raise SystemExit(
             "CSP connect-src must remain same-origin plus the exact Ably browser endpoint allowlist"
+        )
+
+
+def verify_telegram_release_isolation() -> None:
+    maintenance = (ROOT / "apps/web/public/maintenance.html").read_text(
+        encoding="utf-8"
+    )
+    forbidden_runtime_markers = (
+        "<script",
+        "<link",
+        "http://",
+        "https://",
+        "fetch(",
+        "XMLHttpRequest",
+        "Telegram.WebApp",
+        "/api/",
+    )
+    present_forbidden = [
+        marker for marker in forbidden_runtime_markers if marker in maintenance
+    ]
+    required_copy = (
+        '<html lang="en">',
+        'name="robots" content="noindex,nofollow"',
+        "PokePets is temporarily unavailable. Please check back a little later.",
+        'lang="zh-CN"',
+        "PokePets 暂时无法进入，请稍后再来。",
+        "No action is required · 无需进行任何操作",
+        "env(safe-area-inset-top)",
+        "env(safe-area-inset-bottom)",
+    )
+    missing_copy = [marker for marker in required_copy if marker not in maintenance]
+    if present_forbidden or missing_copy:
+        raise SystemExit(
+            "Telegram release isolation page boundary is incomplete: "
+            f"forbidden={present_forbidden}, missing={missing_copy}"
+        )
+
+    vercel = json.loads((ROOT / "vercel.json").read_text(encoding="utf-8"))
+    maintenance_routes = [
+        route
+        for route in vercel.get("headers", [])
+        if route.get("source") == "/maintenance.html"
+    ]
+    if len(maintenance_routes) != 1:
+        raise SystemExit(
+            "Telegram release isolation page must have one exact Vercel header rule"
+        )
+    headers = {
+        str(header.get("key", "")).lower(): header.get("value")
+        for header in maintenance_routes[0].get("headers", [])
+    }
+    expected_headers = {
+        "cache-control": "private, no-store, max-age=0",
+        "x-robots-tag": "noindex, nofollow",
+    }
+    if headers != expected_headers:
+        raise SystemExit(
+            "Telegram release isolation headers mismatch: "
+            f"expected {expected_headers}, found {headers}"
         )
 
 

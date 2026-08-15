@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#100a2d" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>PokePets — Temporarily Unavailable</title>
+    <style>
+      :root {
+        color: #f7f4ff;
+        background: #100a2d;
+        font-family:
+          Inter,
+          ui-rounded,
+          "SF Pro Rounded",
+          "SF Pro Display",
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+        margin: 0;
+      }
+
+      body {
+        min-height: 100svh;
+        display: grid;
+        place-items: center;
+        overflow-x: hidden;
+        padding: calc(24px + env(safe-area-inset-top))
+          calc(18px + env(safe-area-inset-right))
+          calc(24px + env(safe-area-inset-bottom))
+          calc(18px + env(safe-area-inset-left));
+        background:
+          radial-gradient(circle at 18% 14%, #894cff66 0 16%, transparent 42%),
+          radial-gradient(circle at 84% 78%, #21d9c555 0 13%, transparent 40%),
+          linear-gradient(160deg, #100a2d 0%, #21114f 52%, #091e37 100%);
+      }
+
+      .shell {
+        position: relative;
+        width: min(100%, 430px);
+        padding: 34px 28px 30px;
+        overflow: hidden;
+        border: 1px solid #ffffff2e;
+        border-radius: 30px;
+        background: linear-gradient(145deg, #ffffff18, #ffffff0a);
+        box-shadow:
+          0 24px 80px #05001588,
+          inset 0 1px 0 #ffffff40;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+      }
+
+      .shell::before,
+      .shell::after {
+        position: absolute;
+        border-radius: 999px;
+        content: "";
+        pointer-events: none;
+      }
+
+      .shell::before {
+        width: 170px;
+        height: 170px;
+        top: -112px;
+        right: -70px;
+        background: #9b6cff55;
+        filter: blur(8px);
+      }
+
+      .shell::after {
+        width: 120px;
+        height: 120px;
+        bottom: -80px;
+        left: -58px;
+        background: #31e3c844;
+        filter: blur(10px);
+      }
+
+      .emblem {
+        position: relative;
+        display: grid;
+        width: 72px;
+        height: 72px;
+        margin: 0 auto 20px;
+        place-items: center;
+        border: 1px solid #ffffff4d;
+        border-radius: 24px;
+        color: #170c3d;
+        background: linear-gradient(145deg, #ffe986, #7ff5dd);
+        box-shadow:
+          0 12px 32px #46e7c43d,
+          inset 0 2px 0 #ffffffb8;
+        font-size: 36px;
+        font-weight: 900;
+        letter-spacing: -0.08em;
+      }
+
+      .eyebrow {
+        margin: 0 0 9px;
+        color: #9df7e4;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.2em;
+        text-align: center;
+      }
+
+      h1,
+      h2,
+      p {
+        position: relative;
+        margin-block-start: 0;
+      }
+
+      h1 {
+        margin-block-end: 12px;
+        font-size: clamp(29px, 9vw, 40px);
+        line-height: 1.05;
+        letter-spacing: -0.04em;
+        text-align: center;
+      }
+
+      .message {
+        max-width: 34ch;
+        margin: 0 auto;
+        color: #d9d4ec;
+        font-size: 16px;
+        line-height: 1.55;
+        text-align: center;
+      }
+
+      .divider {
+        position: relative;
+        height: 1px;
+        margin: 25px 0 22px;
+        border: 0;
+        background: linear-gradient(90deg, transparent, #ffffff42, transparent);
+      }
+
+      .zh h2 {
+        margin-block-end: 9px;
+        font-size: 22px;
+        letter-spacing: 0.02em;
+        text-align: center;
+      }
+
+      .zh .message {
+        color: #c9c4dc;
+        font-size: 14px;
+      }
+
+      .status {
+        display: flex;
+        width: fit-content;
+        margin: 24px auto 0;
+        align-items: center;
+        gap: 9px;
+        border: 1px solid #8cf3df38;
+        border-radius: 999px;
+        padding: 9px 14px;
+        color: #aff8e9;
+        background: #2ad5b917;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .status::before {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #6ff2d7;
+        box-shadow: 0 0 14px #6ff2d7;
+        content: "";
+      }
+
+      @media (max-height: 620px) {
+        body {
+          align-items: start;
+        }
+
+        .shell {
+          padding-block: 25px;
+        }
+
+        .emblem {
+          width: 58px;
+          height: 58px;
+          margin-bottom: 15px;
+          border-radius: 19px;
+          font-size: 30px;
+        }
+
+        .divider {
+          margin-block: 18px;
+        }
+
+        .status {
+          margin-top: 18px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell" aria-labelledby="maintenance-title">
+      <div class="emblem" aria-hidden="true">P</div>
+      <p class="eyebrow">POKEPETS</p>
+      <h1 id="maintenance-title">We’ll be back soon.</h1>
+      <p class="message">
+        PokePets is temporarily unavailable. Please check back a little later.
+      </p>
+
+      <hr class="divider" />
+
+      <section class="zh" lang="zh-CN" aria-labelledby="maintenance-title-zh">
+        <h2 id="maintenance-title-zh">我们很快回来</h2>
+        <p class="message">PokePets 暂时无法进入，请稍后再来。</p>
+      </section>
+
+      <p class="status">No action is required · 无需进行任何操作</p>
+    </main>
+  </body>
+</html>
