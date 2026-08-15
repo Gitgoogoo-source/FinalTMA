@@ -493,8 +493,12 @@
     );
     height: var(--market-sell-workbench-height);
     min-height: 0;
-    grid-template-rows: 31% 21.5% 12% clamp(104px, 29%, 160px);
-    align-content: space-between;
+    grid-template-rows:
+      minmax(0, 31fr)
+      minmax(0, 21.5fr)
+      minmax(0, 12fr)
+      minmax(min-content, 1fr);
+    align-content: stretch;
     container-type: size;
     gap: clamp(3px, 0.9dvh, 8px);
   }
@@ -629,8 +633,8 @@
   }
 
   .app-shell .market-page-sell .market-sell-form {
-    min-height: 0;
-    height: 100%;
+    min-height: min-content;
+    height: auto;
     align-content: space-between;
     gap: clamp(3px, 0.9dvh, 9px);
     padding: clamp(5px, 1.3dvh, 12px);
