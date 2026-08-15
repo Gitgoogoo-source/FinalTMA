@@ -161,3 +161,4 @@ operation 准入与保留按 [ADR-059](adr/ADR-059-bounded-operation-admission-a
 - [开盒渲染器预热复用与静态星域](adr/ADR-069-gacha-renderer-prewarm-and-static-stage.md)
 - [开盒黑洞呼吸同步连续嗡鸣](adr/ADR-070-gacha-breath-synchronized-hum.md)
 - [市场出售页首屏自适应布局](adr/ADR-071-market-sell-first-screen-layout.md)
+- [进化随机失败结果真实轮廓剪影](adr/ADR-072-evolution-failure-silhouette.md)

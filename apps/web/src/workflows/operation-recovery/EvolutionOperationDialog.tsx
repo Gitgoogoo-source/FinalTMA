@@ -279,15 +279,15 @@ function EvolutionFailure({
     <EvolutionStage className="evolution-stage--failure" failure>
       <EvolutionPet
         url={result.source.image_detail_url}
-        alt={result.source.name}
-        className="evolution-stage-pet--restored"
+        alt={`${result.source.name}的黑影`}
+        className="evolution-stage-pet--failure-silhouette"
       />
       <section className="evolution-result-panel evolution-result-panel--dismissible evolution-failure-panel">
         <EvolutionResultClose disabled={busy} onClick={onAcknowledge} />
         <p className="evolution-result-kicker">藏品保持原形态</p>
         <h2 id="evolution-result-title">进化失败</h2>
         <p>
-          {result.source.name} 从暗色光点中恢复，本次没有获得{" "}
+          只留下 {result.source.name} 的黑色轮廓，本次没有获得{" "}
           {result.target.name}。
         </p>
         <SettlementDetails result={result} />
