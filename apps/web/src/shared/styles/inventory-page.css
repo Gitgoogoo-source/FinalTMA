@@ -581,6 +581,7 @@
   width: 100%;
 }
 .app-shell .inventory-filter-controls {
+  z-index: 3;
   grid-column: 1;
   grid-row: 6;
   width: 100%;
