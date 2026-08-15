@@ -1,4 +1,4 @@
-import { Coins, Crown, Gem } from "lucide-react";
+import { Coins, Gem } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { VipDailyBenefits } from "../../domains/vip/ui/VipDailyBenefits.tsx";
@@ -14,7 +14,6 @@ export function TopAssetBar({
   openDialog(dialog: GlobalDialog): void;
 }): ReactNode {
   const summary = useApiQuery("identity.summary");
-  const vip = useApiQuery("vip.get");
   const kcoin = summary.data?.assets.kcoin;
   const fgems = summary.data?.assets.fgems;
   const user = summary.data?.user;
@@ -60,27 +59,6 @@ export function TopAssetBar({
             <small>Fgems</small>
           </span>
         </div>
-        {vip.error ? (
-          <button
-            type="button"
-            className="summary-retry"
-            aria-label="VIP 状态加载失败，重新加载"
-            onClick={() => void vip.refetch()}
-          >
-            VIP
-          </button>
-        ) : vip.data?.active ? (
-          <button
-            type="button"
-            className="icon-action vip active"
-            aria-label="查看有效 VIP 月卡"
-            onPointerDown={() => prepareGlobalDialog("vip")}
-            onFocus={() => prepareGlobalDialog("vip")}
-            onClick={() => openDialog("vip")}
-          >
-            <Crown />
-          </button>
-        ) : null}
       </div>
     </header>
   );
