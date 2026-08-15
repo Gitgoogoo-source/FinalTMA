@@ -14,4 +14,4 @@
 
 - 召唤、图片失败重试和结果舞台共同渲染同一个 `GachaAstralBackdrop` 程序化背景，不再请求或显示月夜庭院图片；召唤 Canvas 只在该基础星域上叠加动态飞行和揭晓。
 - 开盒结果、请求数量、图片 `decode()` 门控、稀有度公开时点、触觉、声音和结果弹窗仍由 ADR-021 裁决；本 ADR 不改变任何数据库、API、RPC、资产或概率规则。
-- 特效模块继续位于动态开盒表现 chunk，首屏同步闭包不新增图形依赖或效果资源。真实验收必须在 iPhone Telegram 与 Safari Web Inspector 中检查 WebGL2、渲染档数据属性、Canvas 设备尺寸、单次 `gacha.open`、4.7 秒门控、同一 Canvas、星域连续性、帧间隔和控制台错误。
+- 特效模块继续位于动态开盒表现 chunk，首屏同步闭包不新增图形依赖或效果资源。真实验收必须在关闭 Safari Web Inspector 的 iPhone Telegram 中检查 4.7 秒门控、同一 Canvas、星域连续性和肉眼无明显停顿；另开一轮 Inspector 只核对 WebGL2、渲染档数据属性、Canvas 设备尺寸、单次 `gacha.open` 和控制台错误，不使用 Inspector 轮次裁决动画流畅度。

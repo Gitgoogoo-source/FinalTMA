@@ -16,6 +16,10 @@ import {
   CatalogImage,
   type CatalogImageStatus,
 } from "../../shared/ui/CatalogImage.tsx";
+import {
+  validatePublicPetUrl,
+  type CatalogImageVariant,
+} from "../../shared/ui/catalogImageUrl.ts";
 import { GachaAstralBackdrop } from "./GachaAstralBackdrop.tsx";
 
 type GachaResult = RouteOutput<"gacha.open">;
@@ -49,6 +53,43 @@ const initialRevealedLayerOrder = 0;
 const carouselLayerOffsets = [0, 0.24, 0.34, 0.42, 0.48, 0.53] as const;
 const carouselLayerScales = [1, 0.52, 0.43, 0.36, 0.3, 0.26] as const;
 const carouselLayerOpacities = [1, 0.82, 0.62, 0.44, 0.3, 0.2] as const;
+
+export function GachaResultImagePreloader({
+  result,
+}: {
+  result: GachaResult;
+}): null {
+  useEffect(() => {
+    const rankedResults = [...result.results].sort(
+      (left, right) =>
+        rarityRanks[right.rarity] - rarityRanks[left.rarity] ||
+        left.order - right.order,
+    );
+    const variant: CatalogImageVariant =
+      result.draw_count === 1 ? "detail" : "thumbnail";
+    const targets =
+      result.draw_count === 1 ? rankedResults.slice(0, 1) : rankedResults;
+    const images: HTMLImageElement[] = [];
+
+    targets.forEach((item, index) => {
+      const requestedUrl =
+        variant === "detail" ? item.image_detail_url : item.image_thumbnail_url;
+      const validUrl = validatePublicPetUrl(requestedUrl, variant);
+      if (!validUrl) return;
+      const image = new Image();
+      image.decoding = "async";
+      image.loading = "eager";
+      image.fetchPriority = index === 0 ? "high" : "auto";
+      image.src = validUrl;
+      images.push(image);
+      void image.decode().catch(() => undefined);
+    });
+
+    return () => images.forEach((image) => image.removeAttribute("src"));
+  }, [result]);
+
+  return null;
+}
 
 function resultImageKey(item: ResultItem): string {
   return `${item.order}-${item.template_id}`;

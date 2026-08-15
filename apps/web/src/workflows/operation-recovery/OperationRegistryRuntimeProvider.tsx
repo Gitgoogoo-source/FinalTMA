@@ -393,6 +393,9 @@ export function OperationRegistryRuntimeProvider({
   const gachaResultPreparationReady =
     animatedGachaOperationId === null ||
     gachaResultPreparationReadyId === animatedGachaOperationId;
+  const gachaResultStageReady =
+    animatedGachaOperationId === null ||
+    gachaTensionReadyId === animatedGachaOperationId;
   const activeGachaImagePreparation =
     gachaImagePreparation?.operationId === active?.id
       ? gachaImagePreparation
@@ -1517,6 +1520,10 @@ export function OperationRegistryRuntimeProvider({
     loadedPresentation?.kind === "gacha"
       ? loadedPresentation.module.GachaResultDialog
       : null;
+  const GachaResultImagePreloader =
+    loadedPresentation?.kind === "gacha"
+      ? loadedPresentation.module.GachaResultImagePreloader
+      : null;
   const EvolutionOperationDialog =
     loadedPresentation?.kind === "evolution"
       ? loadedPresentation.module.EvolutionOperationDialog
@@ -1556,6 +1563,12 @@ export function OperationRegistryRuntimeProvider({
           >
             {resumableUnresolved.length} 个操作待确认
           </button>
+        )}
+      {active?.routeId === "gacha.open" &&
+        gachaResult &&
+        GachaResultImagePreloader &&
+        gachaResultPreparationReady && (
+          <GachaResultImagePreloader key={active.id} result={gachaResult} />
         )}
       {active && showOperationDialog && (
         <div
@@ -1709,7 +1722,7 @@ export function OperationRegistryRuntimeProvider({
           ) : active.routeId === "gacha.open" &&
             gachaResult &&
             GachaResultDialog &&
-            gachaResultPreparationReady ? (
+            gachaResultStageReady ? (
             <>
               <GachaResultDialog
                 key={active.id}
