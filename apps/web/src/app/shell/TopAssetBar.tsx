@@ -32,6 +32,18 @@ export function TopAssetBar({
       </div>
       <VipDailyBenefits />
       <div className="asset-actions">
+        <div
+          className="asset-pill fgems"
+          role="status"
+          aria-live="polite"
+          aria-label={`Fgems：${fgems?.available ?? "加载中"}`}
+        >
+          <Gem />
+          <span className="asset-copy">
+            <strong>{formatAsset(fgems?.available, summary.isLoading)}</strong>
+            <small>Fgems</small>
+          </span>
+        </div>
         <button
           type="button"
           className="asset-pill kcoin"
@@ -47,18 +59,6 @@ export function TopAssetBar({
             <small>K-coin</small>
           </span>
         </button>
-        <div
-          className="asset-pill fgems"
-          role="status"
-          aria-live="polite"
-          aria-label={`Fgems：${fgems?.available ?? "加载中"}`}
-        >
-          <Gem />
-          <span className="asset-copy">
-            <strong>{formatAsset(fgems?.available, summary.isLoading)}</strong>
-            <small>Fgems</small>
-          </span>
-        </div>
       </div>
     </header>
   );
