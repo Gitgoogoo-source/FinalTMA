@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 import {
   playGachaRitualBuildUp,
@@ -32,21 +38,29 @@ export function GachaHatchAnimation({
   onMounted(): void;
 }): ReactNode {
   const [stageReady, setStageReady] = useState(false);
+  const stopBuildUpAudioRef = useRef<(() => void) | null>(null);
   const handleStageReady = useCallback(() => {
+    stopBuildUpAudioRef.current?.();
+    stopBuildUpAudioRef.current = playGachaRitualBuildUp();
     setStageReady(true);
     onMounted();
   }, [onMounted]);
 
   useEffect(() => {
+    return () => {
+      stopBuildUpAudioRef.current?.();
+      stopBuildUpAudioRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!stageReady) return;
-    const stopAudio = playGachaRitualBuildUp();
     const timers = isLowPowerAnimationDevice()
       ? []
       : [500, 2_000, 3_500].map((delay) =>
           window.setTimeout(selectionHaptic, delay),
         );
     return () => {
-      stopAudio();
       timers.forEach((timer) => window.clearTimeout(timer));
     };
   }, [stageReady]);
