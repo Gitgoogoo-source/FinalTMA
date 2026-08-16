@@ -69,7 +69,6 @@ export function TopAssetBar({
           <Gem />
           <span className="asset-copy">
             <strong>{formatAsset(fgems?.available, summary.isLoading)}</strong>
-            <small>Fgems</small>
           </span>
         </div>
         <button
@@ -84,7 +83,6 @@ export function TopAssetBar({
           <Coins />
           <span className="asset-copy">
             <strong>{formatAsset(kcoin?.available, summary.isLoading)}</strong>
-            <small>K-coin</small>
           </span>
         </button>
       </div>
