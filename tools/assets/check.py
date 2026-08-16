@@ -49,6 +49,8 @@ BRAND_ASSETS = {
     "apps/web/public/assets/ton/tonconnect-icon.png": ("png", 180, 180),
 }
 RESPONSIVE_STATIC_ASSETS = {
+    "apps/web/public/assets/topbar/fgems-gem.png": ((64, 64), 8 * 1024, True),
+    "apps/web/public/assets/topbar/kcoin-star.png": ((64, 64), 8 * 1024, True),
     "apps/web/public/assets/battle/rooms/battle-room-20.webp": ((800, 373), 80 * 1024, False),
     "apps/web/public/assets/battle/rooms/battle-room-100.webp": ((800, 373), 80 * 1024, False),
     "apps/web/public/assets/battle/rooms/battle-room-500.webp": ((800, 373), 80 * 1024, False),

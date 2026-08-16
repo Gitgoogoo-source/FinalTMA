@@ -1,4 +1,3 @@
-import { Coins, Gem } from "lucide-react";
 import { lazy, Suspense, useState, type ReactNode } from "react";
 
 import { VipDailyBenefits } from "../../domains/vip/ui/VipDailyBenefits.tsx";
@@ -66,7 +65,14 @@ export function TopAssetBar({
           aria-live="polite"
           aria-label={`Fgems: ${fgems?.available ?? tr("Loading", "加载中")}`}
         >
-          <Gem />
+          <img
+            className="asset-icon"
+            src="/assets/topbar/fgems-gem.png"
+            width="16"
+            height="16"
+            alt=""
+            aria-hidden="true"
+          />
           <span className="asset-copy">
             <strong>{formatAsset(fgems?.available, summary.isLoading)}</strong>
           </span>
@@ -80,7 +86,14 @@ export function TopAssetBar({
           onFocus={() => prepareGlobalDialog("topup")}
           onClick={() => openDialog("topup")}
         >
-          <Coins />
+          <img
+            className="asset-icon"
+            src="/assets/topbar/kcoin-star.png"
+            width="16"
+            height="16"
+            alt=""
+            aria-hidden="true"
+          />
           <span className="asset-copy">
             <strong>{formatAsset(kcoin?.available, summary.isLoading)}</strong>
           </span>

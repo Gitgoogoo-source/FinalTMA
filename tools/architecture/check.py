@@ -329,12 +329,18 @@ def verify_identity_avatar_minimization() -> None:
     )
     top_asset_bar = sources["top asset bar"].read_text(encoding="utf-8")
     battle_screens = sources["Battle screens"].read_text(encoding="utf-8")
+    avatar_component = (
+        top_asset_bar.split("function Avatar", maxsplit=1)[1]
+        if "function Avatar" in top_asset_bar
+        else top_asset_bar
+    )
     if (
         "export function getIdentityInitial" not in initial_helper
         or "Array.from(displayName.trim())[0]" not in initial_helper
         or "getIdentityInitial(name)" not in top_asset_bar
         or "getIdentityInitial(invite.creator_display_name)" not in battle_screens
-        or "<img" in top_asset_bar
+        or "function Avatar" not in top_asset_bar
+        or "<img" in avatar_component
         or "creator_avatar" in battle_screens
     ):
         raise SystemExit(

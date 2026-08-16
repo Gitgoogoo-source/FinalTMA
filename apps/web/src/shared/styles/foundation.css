@@ -1224,9 +1224,12 @@ p {
 .app-shell button.asset-pill {
   cursor: pointer;
 }
-.app-shell .asset-pill svg {
+.app-shell .asset-pill .asset-icon {
+  display: block;
   width: 15px;
+  height: 15px;
   flex: 0 0 auto;
+  object-fit: contain;
 }
 .app-shell .asset-pill span {
   min-width: 0;
@@ -1237,14 +1240,6 @@ p {
   font-variant-numeric: tabular-nums;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.app-shell .asset-pill.kcoin svg {
-  color: #ff8b00;
-  fill: rgba(255, 156, 0, 0.12);
-}
-.app-shell .asset-pill.fgems svg {
-  color: #54ad45;
-  fill: rgba(77, 187, 57, 0.12);
 }
 .app-shell .asset-actions .wallet-action {
   width: clamp(54px, 14vw, 72px);
@@ -1539,7 +1534,7 @@ body,
     inset 0 1px 0 #fff,
     inset 0 -1px 0 rgba(214, 219, 218, 0.34);
 }
-.app-shell .asset-pill svg {
+.app-shell .asset-pill .asset-icon {
   width: 18px;
   height: 18px;
 }
@@ -1631,7 +1626,7 @@ body,
     gap: 3px;
     padding: 0 4px;
   }
-  .app-shell .asset-pill svg {
+  .app-shell .asset-pill .asset-icon {
     width: 14px;
     height: 14px;
   }
@@ -1749,7 +1744,7 @@ html[data-app-shell-active] #root {
   margin-left: auto;
 }
 
-.app-shell .asset-pill svg {
+.app-shell .asset-pill .asset-icon {
   width: 16px;
   height: 16px;
 }
