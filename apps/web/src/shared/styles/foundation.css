@@ -1,3 +1,12 @@
+@font-face {
+  font-family: "Teko Asset Digits";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/assets/fonts/teko-latin-600.woff2") format("woff2");
+  unicode-range: U+0030-0039;
+}
+
 :root {
   color-scheme: light dark;
   font-family: Inter, ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
@@ -1750,7 +1759,11 @@ html[data-app-shell-active] #root {
 }
 
 .app-shell .asset-pill .asset-copy strong {
-  font-size: 10px;
+  font-family: "Teko Asset Digits", "DIN Condensed", "Arial Narrow", sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 0.9;
+  letter-spacing: 0.01em;
 }
 
 .app-shell .bottom-nav {

@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState, type ReactNode } from "react";
 
 import { VipDailyBenefits } from "../../domains/vip/ui/VipDailyBenefits.tsx";
-import { formatNumber, getAppLanguage, tr } from "../../platform/i18n/index.ts";
+import { getAppLanguage, tr } from "../../platform/i18n/index.ts";
 import { useApiQuery } from "../../platform/query/index.ts";
 import { getIdentityInitial } from "../../shared/identityInitial.ts";
 import { preloadGlobalDialog } from "./global-dialog-loader.ts";
@@ -117,7 +117,7 @@ function prepareGlobalDialog(kind: GlobalDialog): void {
 
 function formatAsset(value: number | undefined, loading: boolean): string {
   if (value === undefined) return loading ? "…" : "—";
-  return formatNumber(value);
+  return String(value);
 }
 
 function Avatar({ name }: { name: string }): ReactNode {
