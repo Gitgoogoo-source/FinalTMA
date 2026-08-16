@@ -1,9 +1,9 @@
 @font-face {
   font-family: "Teko Asset Digits";
   font-style: normal;
-  font-weight: 600;
+  font-weight: 500;
   font-display: swap;
-  src: url("/assets/fonts/teko-latin-600.woff2") format("woff2");
+  src: url("/assets/fonts/teko-latin-500.woff2") format("woff2");
   unicode-range: U+0030-0039;
 }
 
@@ -1558,7 +1558,7 @@ body,
   overflow: hidden;
   color: #30383e;
   font-size: 11px;
-  font-weight: 900;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1761,7 +1761,7 @@ html[data-app-shell-active] #root {
 .app-shell .asset-pill .asset-copy strong {
   font-family: "Teko Asset Digits", "DIN Condensed", "Arial Narrow", sans-serif;
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 0.9;
   letter-spacing: 0.01em;
 }
