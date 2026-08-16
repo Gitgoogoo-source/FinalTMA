@@ -1745,8 +1745,8 @@ html[data-app-shell-active] #root {
 }
 
 .app-shell .asset-pill .asset-icon {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
 }
 
 .app-shell .asset-pill .asset-copy strong {

@@ -68,8 +68,8 @@ export function TopAssetBar({
           <img
             className="asset-icon"
             src="/assets/topbar/fgems-gem.png"
-            width="16"
-            height="16"
+            width="20"
+            height="20"
             alt=""
             aria-hidden="true"
           />
@@ -89,8 +89,8 @@ export function TopAssetBar({
           <img
             className="asset-icon"
             src="/assets/topbar/kcoin-star.png"
-            width="16"
-            height="16"
+            width="20"
+            height="20"
             alt=""
             aria-hidden="true"
           />
