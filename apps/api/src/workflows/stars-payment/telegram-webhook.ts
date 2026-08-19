@@ -1,7 +1,14 @@
 import type { HandlerMap } from "../../http/handlers.ts";
 import { rpc } from "../../platform/db/index.ts";
-import { answerPreCheckout } from "../../platform/telegram/bot.ts";
+import {
+  answerPreCheckout,
+  sendTelegramMessage,
+} from "../../platform/telegram/bot.ts";
 import { applyTelegramRefund } from "../refund-risk/apply-refund.ts";
+import {
+  isPaymentSupportCommand,
+  paymentSupportText,
+} from "./payment-support.ts";
 
 export const telegramWebhookHandlers = {
   "telegram.webhook": async (context) => {
@@ -32,6 +39,19 @@ export const telegramWebhookHandlers = {
       return { data: { ok: true } };
     }
     const message = update.message as Record<string, unknown> | undefined;
+    const chat = message?.chat as Record<string, unknown> | undefined;
+    if (
+      chat?.type === "private" &&
+      typeof chat.id === "number" &&
+      typeof message?.text === "string" &&
+      isPaymentSupportCommand(message.text)
+    ) {
+      await sendTelegramMessage({
+        chatId: chat.id,
+        text: paymentSupportText(),
+      });
+      return { data: { ok: true } };
+    }
     const payment = message?.successful_payment as
       | Record<string, unknown>
       | undefined;

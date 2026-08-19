@@ -192,6 +192,7 @@ def main() -> None:
     verify_identity_avatar_minimization()
     verify_browser_csp_boundaries()
     verify_telegram_release_isolation()
+    verify_telegram_payment_support_command()
     verify_persistent_page_route_leaves()
     verify_first_screen_runtime_boundaries()
     verify_first_screen_persistent_page_boundaries()
@@ -462,6 +463,72 @@ def verify_telegram_release_isolation() -> None:
         raise SystemExit(
             "Telegram release isolation headers mismatch: "
             f"expected {expected_headers}, found {headers}"
+        )
+
+
+def verify_telegram_payment_support_command() -> None:
+    contract = (
+        ROOT / "packages/api-contracts/src/domains/integrations/routes.ts"
+    ).read_text(encoding="utf-8")
+    bot_client = (API_ROOT / "platform/telegram/bot.ts").read_text(
+        encoding="utf-8"
+    )
+    support = (
+        API_ROOT / "workflows/stars-payment/payment-support.ts"
+    ).read_text(encoding="utf-8")
+    webhook = (
+        API_ROOT / "workflows/stars-payment/telegram-webhook.ts"
+    ).read_text(encoding="utf-8")
+    adr = (
+        ROOT
+        / "docs/architecture/adr/ADR-077-telegram-payment-support-command.md"
+    ).read_text(encoding="utf-8")
+    release = (ROOT / "docs/operations/release.md").read_text(encoding="utf-8")
+    required = {
+        "contract": (
+            "telegramChatSchema",
+            "chat: telegramChatSchema",
+            '"TELEGRAM_API_FAILED"',
+        ),
+        "bot client": ('"sendMessage"', "sendTelegramMessage"),
+        "support workflow": (
+            'PAYMENT_SUPPORT_COMMAND = "/paysupport"',
+            "PAYMENT_SUPPORT_URL",
+            "TELEGRAM_BOT_USERNAME",
+        ),
+        "webhook": (
+            'chat?.type === "private"',
+            "isPaymentSupportCommand(message.text)",
+            "await sendTelegramMessage({",
+        ),
+        "ADR": (
+            "`/paysupport`",
+            "`sendMessage`",
+            "`TELEGRAM_API_FAILED`",
+            "不读写订单",
+        ),
+        "release": (
+            '`allowed_updates=["message","pre_checkout_query"]`',
+            "`TELEGRAM_WEBHOOK_SECRET`",
+            "`getWebhookInfo`",
+        ),
+    }
+    sources = {
+        "contract": contract,
+        "bot client": bot_client,
+        "support workflow": support,
+        "webhook": webhook,
+        "ADR": adr,
+        "release": release,
+    }
+    missing = {
+        label: [term for term in terms if term not in sources[label]]
+        for label, terms in required.items()
+        if any(term not in sources[label] for term in terms)
+    }
+    if missing:
+        raise SystemExit(
+            f"Telegram payment support command boundary is incomplete: {missing}"
         )
 
 

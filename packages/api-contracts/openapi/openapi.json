@@ -36405,7 +36405,7 @@
             }
           },
           "502": {
-            "description": "Errors: RESPONSE_INVALID",
+            "description": "Errors: RESPONSE_INVALID, TELEGRAM_API_FAILED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -36425,6 +36425,7 @@
           "REQUEST_TOO_LARGE",
           "WEBHOOK_UNAUTHORIZED",
           "TELEGRAM_UPDATE_INVALID",
+          "TELEGRAM_API_FAILED",
           "PAYMENT_MISMATCH",
           "PAYMENT_NOT_DELIVERABLE"
         ],
@@ -36484,6 +36485,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "TELEGRAM_API_FAILED": {
+            "status": 502,
+            "message": "Telegram 服务暂时不可用",
+            "retryable": true,
+            "refreshScope": "payments",
+            "recoveryAction": "refresh"
           },
           "PAYMENT_MISMATCH": {
             "status": 409,
@@ -36559,6 +36567,19 @@
                         "minimum": -9007199254740991,
                         "maximum": 9007199254740991
                       },
+                      "chat": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "type": { "type": "string", "minLength": 1 }
+                        },
+                        "required": ["id", "type"],
+                        "additionalProperties": false
+                      },
                       "from": {
                         "type": "object",
                         "properties": {
@@ -36630,7 +36651,7 @@
                         "additionalProperties": false
                       }
                     },
-                    "required": ["message_id"],
+                    "required": ["message_id", "chat"],
                     "additionalProperties": false
                   }
                 },

@@ -8,6 +8,10 @@ const telegramUserSchema = z.object({
   first_name: z.string().optional(),
   username: z.string().optional(),
 });
+const telegramChatSchema = z.object({
+  id: z.number().int(),
+  type: z.string().min(1),
+});
 const successfulPaymentSchema = z.object({
   currency: z.literal("XTR"),
   total_amount: z.number().int().positive(),
@@ -36,6 +40,7 @@ const telegramUpdateSchema = z.object({
   message: z
     .object({
       message_id: z.number().int(),
+      chat: telegramChatSchema,
       from: telegramUserSchema.optional(),
       text: z.string().optional(),
       successful_payment: successfulPaymentSchema.optional(),
@@ -59,6 +64,7 @@ export const integrationRoutes = [
     errors: [
       "WEBHOOK_UNAUTHORIZED",
       "TELEGRAM_UPDATE_INVALID",
+      "TELEGRAM_API_FAILED",
       "PAYMENT_MISMATCH",
       "PAYMENT_NOT_DELIVERABLE",
       "INTERNAL_ERROR",

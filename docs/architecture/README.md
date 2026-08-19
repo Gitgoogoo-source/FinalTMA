@@ -169,3 +169,5 @@ operation 准入与保留按 [ADR-059](adr/ADR-059-bounded-operation-admission-a
 - [藏品筛选浮层堆叠与触控命中](adr/ADR-073-inventory-filter-layering.md)
 - [账号语言、默认英语与 en-US 游戏本地化](adr/ADR-074-account-language-and-en-us-localization.md)
 - [Telegram named Mini App 发布隔离页](adr/ADR-075-telegram-named-mini-app-release-isolation.md)
+- [顶部资产数值字体与纯整数格式](adr/ADR-076-top-asset-numeral-typography.md)
+- [Telegram 支付支持命令闭环](adr/ADR-077-telegram-payment-support-command.md)

@@ -80,6 +80,17 @@ export function answerPreCheckout(
   });
 }
 
+export function sendTelegramMessage(input: {
+  chatId: number;
+  text: string;
+}): Promise<{ message_id: number }> {
+  return callTelegram("sendMessage", {
+    chat_id: input.chatId,
+    text: input.text,
+    link_preview_options: { is_disabled: true },
+  });
+}
+
 export function savePreparedBattleMessage(input: {
   userId: number;
   resultId: string;

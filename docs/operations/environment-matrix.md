@@ -29,4 +29,6 @@ Web 公开构建当前不需要 `VITE_*`。API 机密配置以根 `.env.example`
 
 真实开发 Vercel Production 固定配置 `TELEGRAM_BOT_USERNAME=FinalTMA_bot` 与 `TELEGRAM_MINI_APP_SHORT_NAME=pokepets_dev`。推荐链接固定为 `https://t.me/FinalTMA_bot/pokepets_dev?startapp=<当前用户邀请码>`，Battle prepared-share deep link 固定为同一 Bot 与 named Mini App 路径加 `startapp=BTL_<32位base64url>`；环境变量变更必须由新部署生效。
 
+真实开发与生产 Bot 分别使用自己的 `setWebhook`：URL 唯一指向本环境 HTTPS `/api/telegram/webhook`，`secret_token` 与本环境 `TELEGRAM_WEBHOOK_SECRET` 一致，`allowed_updates` 精确为 `["message", "pre_checkout_query"]`。`message` 承载 `/paysupport`、`successful_payment` 和 `refunded_payment`，`pre_checkout_query` 承载付款前校验；两个环境禁止共用 Bot、token、webhook URL、secret 或上一次隐式保留的 update 订阅。
+
 真实开发 Telegram 正常开放态固定为同一组配置：Bot 为 `@FinalTMA_bot`；BotFather Main Mini App 已启用并指向 `https://final-tma-pi.vercel.app/`；named Mini App 的 short name 为 `pokepets_dev`，公开链接为 `https://t.me/FinalTMA_bot/pokepets_dev`，Web App URL 为环境根 URL；默认菜单按钮文字为 `Open PokePets`，目标为该 named Mini App 链接。发布隔离态按 [ADR-075](../architecture/adr/ADR-075-telegram-named-mini-app-release-isolation.md) 停用 Main、恢复默认菜单行为并仅把 named Web App URL 改为 `https://final-tma-pi.vercel.app/maintenance.html`，不删除 short name。发布验收必须恢复正常开放态，并同时满足 Bot API `getMe.result.has_main_web_app=true`，以及 `getChatMenuButton.result.web_app.url=https://t.me/FinalTMA_bot/pokepets_dev`。
