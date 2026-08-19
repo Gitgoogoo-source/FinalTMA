@@ -181,7 +181,7 @@ function CollectionSkillRail({
         <span className="inventory-skill-name">{t(selectedSkill.name)}</span>
         <span className="inventory-skill-divider" aria-hidden="true" />
         <span className="inventory-skill-damage">
-          {t("伤害")} <strong>{selectedSkill.damage}</strong>
+          <strong>{selectedSkill.damage}</strong>
         </span>
       </div>
 
