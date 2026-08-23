@@ -40,7 +40,7 @@ contracts/ton -> TON blockchain
 
 禁止反向依赖、跨领域深层导入、浏览器访问 Supabase Data API、Node 层组合多次资产写入。浏览器对 `pet-runtime` 公开对象的图片 GET 是唯一 Supabase 直连例外。
 
-默认开盒表现动态边界在页面空闲时创建并保留脱离文档流的 Canvas/WebGL 程序资源和首帧；WebGL 首帧必须以 `finish()` 在该空闲任务内同步完成，不能把仍在驱动队列中的绘制标为已预热。演出挂载只把同一 Canvas 放入既有宿主并按实际尺寸对齐，不创建或显隐独立的全屏合成 surface。所有设备另以有界空闲任务准备 Web Audio 黑洞呼吸自动化曲线，并在舞台发布 `ready` 的同一回调启动连续电子嗡鸣；四核及以下设备仍不触发演出期 Telegram `HapticFeedback`，但必须播放自定义 Web Audio；核心数不得关闭音效。首次可见呼吸不得承担 GPU 程序资源冷创建、延迟 GPU 提交、整段音频样本、自动化曲线同步生成或原生触觉桥接，唯一规则见 [ADR-069](adr/ADR-069-gacha-renderer-prewarm-and-static-stage.md) 与 [ADR-070](adr/ADR-070-gacha-breath-synchronized-hum.md)。
+默认开盒表现动态边界在页面空闲时创建并保留脱离文档流的 Canvas/WebGL 程序资源和首帧；WebGL 首帧必须以 `finish()` 在该空闲任务内同步完成，不能把仍在驱动队列中的绘制标为已预热。演出挂载只把同一 Canvas 放入既有宿主并按实际尺寸对齐，不创建或显隐独立的全屏合成 surface。所有设备另以有界空闲任务准备 Web Audio 黑洞呼吸自动化曲线与短有色噪声纹理，并在舞台发布 `ready` 的同一回调启动暖金奇幻汇聚声；四核及以下设备仍不触发演出期 Telegram `HapticFeedback`，但必须播放自定义 Web Audio；核心数不得关闭音效。首次可见呼吸不得承担 GPU 程序资源冷创建、延迟 GPU 提交、四秒成品音频生成、自动化曲线同步生成或原生触觉桥接，唯一规则见 [ADR-069](adr/ADR-069-gacha-renderer-prewarm-and-static-stage.md) 与 [ADR-081](adr/ADR-081-gacha-warm-gold-convergence-sound.md)。
 
 TMA 首屏同步闭包固定为入口、默认开盒页、首屏契约及各自同步依赖；活动 Web 按 [ADR-046](adr/ADR-046-first-screen-direct-dependency-and-native-navigation.md) 使用原生 History 导航状态和共享 UI 叶子导入，不加载 React Router 或非首屏共享 UI。Telegram 初始化后只预取首屏契约，轻量操作 Facade 随入口加载，重型操作运行时通常只在玩家意图或真实 operation 恢复需要后加载；唯一自动例外是默认开盒页的数据、规则和当前盲盒主图全部就绪后，通过既有动态边界准备开盒操作运行时与开盒表现 chunk，以保证首次点击直接进入程序化灵契星域，不把这些模块并入首屏同步闭包，也不预取业务数据、背景图片或结果宠物图。恢复 effect 通过 `useEffectEvent` 调用最新 `hydrate`，未决 operation 重进不会因 Runtime 展示状态发布而重复水合。默认开盒页完成上述开盒表现准备后，其他页面模块才按 [ADR-043](adr/ADR-043-adaptive-page-module-warmup.md) 在明确的前台 4G、非省流量条件下逐个后台准备藏品、任务、交易和图鉴；未知或受限网络不自动下载这些其他页面模块，Battle 页面模块永远只按玩家导航意图加载，模块准备不预取业务数据。玩家已经进入 Battle 后，按 [ADR-047](adr/ADR-047-battle-staged-runtime-loading.md) 只同步取得八状态、权威恢复、倒计时、操作与核心样式，Ably 和重技能轨迹运行时在非首页权威状态或玩家意图时立即准备，Battle 首页稳定后的自动准备仍须满足同一前台 4G、非省流量条件；[ADR-048](adr/ADR-048-battle-dynamic-preload-entry-deduplication.md) 禁止 realtime 动态 preload 再次提示或下载已经执行的应用入口 JS。除上述开盒表现准备外，操作运行时、操作结果、全局充值/VIP 弹窗和领域 CSS 只在对应意图或真实恢复需要后加载；生产构建按 [ADR-040](adr/ADR-040-first-screen-runtime-boundary.md) 对完整首屏闭包执行 JS `400000 / gzip 125000`、CSS `110000 / gzip 23000` 硬门禁和禁止模块检查，并对 Battle 增量核心执行 JS `160000 / gzip 45000`、CSS `45000 / gzip 9000` 门禁，禁止 Ably、重特效播放器和轨迹样式进入静态闭包，动态 preload 中的应用入口 JS 必须为零。`/game` 固定承载 React + TypeScript Battle，不引入 Phaser；Battle 只有在游戏页可见或当前 session 需要恢复 Battle participation/当场终局结果时读取专属状态，邀请 waiting 的创建者展示心跳和 lobby 的双方 presence 心跳只在页面可见时发送。隐藏、Telegram deactivated、`pagehide` 或离开 `/game` 立即结束当前 lease、中止在途 heartbeat 并尽力 offline；恢复先读取权威快照并取得新 lease，进入 `active_turn` 后停止 presence。
 
@@ -164,7 +164,7 @@ operation 准入与保留按 [ADR-059](adr/ADR-059-bounded-operation-admission-a
 - [开盒 WebGL 灵契黑洞渲染边界](adr/ADR-067-gacha-webgl-spirit-field.md)
 - [十连结果首帧预绘制与中心优先显现](adr/ADR-068-gacha-ten-result-first-frame.md)
 - [开盒渲染器预热复用与静态星域](adr/ADR-069-gacha-renderer-prewarm-and-static-stage.md)
-- [开盒黑洞呼吸同步连续嗡鸣](adr/ADR-070-gacha-breath-synchronized-hum.md)
+- [已取代：开盒黑洞呼吸同步连续嗡鸣](adr/ADR-070-gacha-breath-synchronized-hum.md)
 - [市场出售页首屏自适应布局](adr/ADR-071-market-sell-first-screen-layout.md)
 - [进化随机失败结果真实轮廓剪影](adr/ADR-072-evolution-failure-silhouette.md)
 - [藏品筛选浮层堆叠与触控命中](adr/ADR-073-inventory-filter-layering.md)
@@ -175,3 +175,4 @@ operation 准入与保留按 [ADR-059](adr/ADR-059-bounded-operation-admission-a
 - [宠物 PNG 原图导入与 WebP 母版契约](adr/ADR-078-png-master-import-contract.md)
 - [藏品详情稀有度与战斗力同行布局](adr/ADR-079-inventory-rarity-power-line.md)
 - [宠物美术对齐的 Battle 属性重分配](adr/ADR-080-battle-art-aligned-element-reassignment.md)
+- [开盒暖金奇幻汇聚音色](adr/ADR-081-gacha-warm-gold-convergence-sound.md)

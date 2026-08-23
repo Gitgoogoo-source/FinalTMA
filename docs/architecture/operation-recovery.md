@@ -1,6 +1,6 @@
 # 操作恢复
 
-开盒表现模块的空闲准备按 [ADR-069](adr/ADR-069-gacha-renderer-prewarm-and-static-stage.md) 创建并保留脱离文档流的 Canvas/WebGL 程序资源和首帧，WebGL 路径以一次 `finish()` 确认预热绘制及驱动延迟工作已经完成后才发布 `warm`；演出只把同一 Canvas 放入既有宿主并按实际尺寸对齐，不显隐独立的全屏合成 surface。所有设备另按 [ADR-070](adr/ADR-070-gacha-breath-synchronized-hum.md) 以有界空闲任务准备 Web Audio 黑洞呼吸自动化曲线，并在舞台发布 `ready` 的同一回调启动连续电子嗡鸣；四核及以下设备仍不触发演出期 Telegram `HapticFeedback`，但必须播放自定义 Web Audio；核心数不得关闭音效。首轮可见呼吸不得承担 GPU 程序资源冷创建、延迟 GPU 提交、四秒音频数组、自动化曲线同步生成或原生触觉桥接。
+开盒表现模块的空闲准备按 [ADR-069](adr/ADR-069-gacha-renderer-prewarm-and-static-stage.md) 创建并保留脱离文档流的 Canvas/WebGL 程序资源和首帧，WebGL 路径以一次 `finish()` 确认预热绘制及驱动延迟工作已经完成后才发布 `warm`；演出只把同一 Canvas 放入既有宿主并按实际尺寸对齐，不显隐独立的全屏合成 surface。所有设备另按 [ADR-081](adr/ADR-081-gacha-warm-gold-convergence-sound.md) 以有界空闲任务准备 Web Audio 黑洞呼吸自动化曲线与短有色噪声纹理，并在舞台发布 `ready` 的同一回调启动暖金奇幻汇聚声；四核及以下设备仍不触发演出期 Telegram `HapticFeedback`，但必须播放自定义 Web Audio；核心数不得关闭音效。首轮可见呼吸不得承担 GPU 程序资源冷创建、延迟 GPU 提交、四秒成品音频生成、自动化曲线同步生成或原生触觉桥接。
 
 用户确认会创建 operation 的写操作时，操作注册中心先使用 Web Crypto 生成 UUIDv7 并写入内存记录，再在下一动画帧提交请求。同一 operation 的会话恢复重试和结果查询始终复用该 UUIDv7；旧记录查询先于数据库新鲜度与配额，因此同 key 重试不创建或计数第二条 operation。Battle heartbeat 和 offline 不进入操作注册中心、不生成 UUID，也不通过 operations 查询恢复；Battle 结果按钮不发送请求。
 

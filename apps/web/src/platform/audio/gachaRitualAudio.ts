@@ -4,27 +4,41 @@ const BUILD_UP_DURATION_SECONDS = 4;
 const BUILD_UP_SOURCE_DURATION_SECONDS = 4.02;
 const BUILD_UP_AUTOMATION_SAMPLE_COUNT = 2_001;
 const BUILD_UP_PREPARATION_CHUNK_SIZE = 256;
+const BUILD_UP_TEXTURE_SAMPLE_RATE = 12_000;
+const BUILD_UP_TEXTURE_SAMPLE_COUNT = 16_384;
+const BUILD_UP_TEXTURE_PREPARATION_CHUNK_SIZE = 2_048;
 const GACHA_BREATH_PERIODS_SECONDS = [
   0.8, 0.58, 0.46, 0.38, 0.33, 0.29, 0.26, 0.23, 0.2, 0.17, 0.13, 0.1, 0.07,
 ] as const;
 
 type BuildUpAutomation = {
-  carrierFrequency: Float32Array;
-  carrierGain: Float32Array;
-  colorFrequency: Float32Array;
-  colorGain: Float32Array;
-  filterFrequency: Float32Array;
-  subFrequency: Float32Array;
+  foundationFrequency: Float32Array;
+  foundationGain: Float32Array;
+  auraFrequency: Float32Array;
+  auraGain: Float32Array;
+  airFrequency: Float32Array;
+  airGain: Float32Array;
+  shimmerFrequency: Float32Array;
+  shimmerGain: Float32Array;
 };
 
-type BuildUpAutomationPreparation = {
+type BuildUpAssets = {
   automation: BuildUpAutomation;
-  cursor: number;
+  texture: Float32Array;
+};
+
+type BuildUpAssetsPreparation = {
+  assets: BuildUpAssets;
+  automationCursor: number;
+  textureCursor: number;
+  textureRandomState: number;
+  textureColor: number;
 };
 
 let audioContext: AudioContext | null = null;
-let preparedBuildUpAutomation: BuildUpAutomation | null = null;
-let buildUpAutomationPreparation: BuildUpAutomationPreparation | null = null;
+let preparedBuildUpAssets: BuildUpAssets | null = null;
+let preparedBuildUpTextureBuffer: AudioBuffer | null = null;
+let buildUpAssetsPreparation: BuildUpAssetsPreparation | null = null;
 
 type AudioIdleWindow = Window & {
   requestIdleCallback?(
@@ -50,9 +64,10 @@ function getAudioContext(): AudioContext | null {
  */
 export function prepareGachaRitualAudio(): void {
   prepareGachaRitualAudioAssets();
-  finishBuildUpAutomationPreparation();
+  finishBuildUpAssetsPreparation();
   const context = getAudioContext();
   if (!context) return;
+  prepareBuildUpTextureBuffer(context);
   if (context.state === "suspended") {
     void context
       .resume()
@@ -75,28 +90,40 @@ function primeAudioContext(context: AudioContext): void {
 export function prepareGachaRitualAudioAssets(): void {
   if (
     typeof window === "undefined" ||
-    preparedBuildUpAutomation ||
-    buildUpAutomationPreparation
+    preparedBuildUpAssets ||
+    buildUpAssetsPreparation
   )
     return;
-  const preparation: BuildUpAutomationPreparation = {
-    automation: {
-      carrierFrequency: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
-      carrierGain: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
-      colorFrequency: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
-      colorGain: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
-      filterFrequency: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
-      subFrequency: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
+  const preparation: BuildUpAssetsPreparation = {
+    assets: {
+      automation: {
+        foundationFrequency: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
+        foundationGain: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
+        auraFrequency: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
+        auraGain: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
+        airFrequency: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
+        airGain: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
+        shimmerFrequency: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
+        shimmerGain: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
+      },
+      texture: new Float32Array(BUILD_UP_TEXTURE_SAMPLE_COUNT),
     },
-    cursor: 0,
+    automationCursor: 0,
+    textureCursor: 0,
+    textureRandomState: 0x6d2b79f5,
+    textureColor: 0,
   };
-  buildUpAutomationPreparation = preparation;
+  buildUpAssetsPreparation = preparation;
   const completeOrSchedule = () => {
-    if (buildUpAutomationPreparation !== preparation) return;
+    if (buildUpAssetsPreparation !== preparation) return;
     fillBuildUpAutomation(preparation, BUILD_UP_PREPARATION_CHUNK_SIZE);
-    if (preparation.cursor >= BUILD_UP_AUTOMATION_SAMPLE_COUNT) {
-      preparedBuildUpAutomation = preparation.automation;
-      buildUpAutomationPreparation = null;
+    fillBuildUpTexture(preparation, BUILD_UP_TEXTURE_PREPARATION_CHUNK_SIZE);
+    if (
+      preparation.automationCursor >= BUILD_UP_AUTOMATION_SAMPLE_COUNT &&
+      preparation.textureCursor >= BUILD_UP_TEXTURE_SAMPLE_COUNT
+    ) {
+      preparedBuildUpAssets = preparation.assets;
+      buildUpAssetsPreparation = null;
       return;
     }
     schedule(completeOrSchedule);
@@ -104,44 +131,96 @@ export function prepareGachaRitualAudioAssets(): void {
   schedule(completeOrSchedule);
 }
 
-function finishBuildUpAutomationPreparation(): void {
-  const preparation = buildUpAutomationPreparation;
+function finishBuildUpAssetsPreparation(): void {
+  const preparation = buildUpAssetsPreparation;
   if (!preparation) return;
   fillBuildUpAutomation(preparation, BUILD_UP_AUTOMATION_SAMPLE_COUNT);
-  preparedBuildUpAutomation = preparation.automation;
-  buildUpAutomationPreparation = null;
+  fillBuildUpTexture(preparation, BUILD_UP_TEXTURE_SAMPLE_COUNT);
+  preparedBuildUpAssets = preparation.assets;
+  buildUpAssetsPreparation = null;
 }
 
 function fillBuildUpAutomation(
-  preparation: BuildUpAutomationPreparation,
+  preparation: BuildUpAssetsPreparation,
   sampleCount: number,
 ): void {
-  const { automation } = preparation;
+  const { automation } = preparation.assets;
   const end = Math.min(
-    preparation.cursor + sampleCount,
+    preparation.automationCursor + sampleCount,
     BUILD_UP_AUTOMATION_SAMPLE_COUNT,
   );
-  for (; preparation.cursor < end; preparation.cursor += 1) {
-    const cursor = preparation.cursor;
+  for (
+    ;
+    preparation.automationCursor < end;
+    preparation.automationCursor += 1
+  ) {
+    const cursor = preparation.automationCursor;
     const seconds =
       (cursor / (BUILD_UP_AUTOMATION_SAMPLE_COUNT - 1)) *
       BUILD_UP_DURATION_SECONDS;
     const { overall, pulse } = breathAt(seconds);
-    const growth = Math.pow(overall, 0.76);
-    const pulseDepth = mix(1, 0.68, growth);
-    const audiblePulse = pulse * pulseDepth;
-    const carrierFrequency =
-      72 + growth * 46 + audiblePulse * (22 + growth * 8);
+    const growth = Math.pow(overall, 0.82);
+    const softPulse = Math.pow(pulse, 1.35);
+    const audiblePulse = softPulse * mix(0.92, 0.62, growth);
+    const foundationFrequency =
+      54 + growth * 16 + audiblePulse * (2.8 + growth * 1.2);
 
-    automation.carrierFrequency[cursor] = carrierFrequency;
-    automation.carrierGain[cursor] =
-      0.014 + growth * 0.022 + audiblePulse * (0.016 + growth * 0.007);
-    automation.colorFrequency[cursor] = carrierFrequency * 2.006;
-    automation.colorGain[cursor] =
-      0.0024 + growth * 0.006 + audiblePulse * (0.005 + growth * 0.004);
-    automation.filterFrequency[cursor] =
-      280 + growth * 720 + audiblePulse * (420 + growth * 460);
-    automation.subFrequency[cursor] = carrierFrequency * 0.5;
+    automation.foundationFrequency[cursor] = foundationFrequency;
+    automation.foundationGain[cursor] =
+      0.011 + growth * 0.009 + audiblePulse * (0.0045 + growth * 0.0015);
+    automation.auraFrequency[cursor] = foundationFrequency * 2.5;
+    automation.auraGain[cursor] =
+      0.002 + growth * 0.0035 + audiblePulse * (0.0025 + growth * 0.001);
+    automation.airFrequency[cursor] =
+      360 + growth * 920 + audiblePulse * (300 + growth * 420);
+    automation.airGain[cursor] =
+      0.016 + growth * 0.016 + audiblePulse * (0.021 + growth * 0.006);
+    automation.shimmerFrequency[cursor] =
+      1_500 + growth * 2_300 + audiblePulse * (420 + growth * 650);
+    automation.shimmerGain[cursor] =
+      0.003 + growth * 0.007 + audiblePulse * (0.009 + growth * 0.003);
+  }
+}
+
+function fillBuildUpTexture(
+  preparation: BuildUpAssetsPreparation,
+  sampleCount: number,
+): void {
+  const { texture } = preparation.assets;
+  const end = Math.min(
+    preparation.textureCursor + sampleCount,
+    BUILD_UP_TEXTURE_SAMPLE_COUNT,
+  );
+  for (; preparation.textureCursor < end; preparation.textureCursor += 1) {
+    let state = preparation.textureRandomState;
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    preparation.textureRandomState = state >>> 0;
+    const white = (preparation.textureRandomState / 0xffffffff) * 2 - 1;
+    preparation.textureColor = preparation.textureColor * 0.82 + white * 0.18;
+    texture[preparation.textureCursor] =
+      white * 0.36 + preparation.textureColor * 0.64;
+  }
+}
+
+function prepareBuildUpTextureBuffer(
+  context: AudioContext,
+): AudioBuffer | null {
+  if (preparedBuildUpTextureBuffer) return preparedBuildUpTextureBuffer;
+  const assets = preparedBuildUpAssets;
+  if (!assets) return null;
+  try {
+    const buffer = context.createBuffer(
+      1,
+      assets.texture.length,
+      BUILD_UP_TEXTURE_SAMPLE_RATE,
+    );
+    buffer.getChannelData(0).set(assets.texture);
+    preparedBuildUpTextureBuffer = buffer;
+    return buffer;
+  } catch {
+    return null;
   }
 }
 
@@ -156,88 +235,109 @@ function schedule(callback: () => void): void {
 
 export function playGachaRitualBuildUp(): () => void {
   prepareGachaRitualAudioAssets();
-  finishBuildUpAutomationPreparation();
+  finishBuildUpAssetsPreparation();
   const context = getAudioContext();
-  const automation = preparedBuildUpAutomation;
-  if (!context || context.state === "closed" || !automation)
-    return () => undefined;
+  const assets = preparedBuildUpAssets;
+  if (!context || context.state === "closed" || !assets) return () => undefined;
+  const textureBuffer = prepareBuildUpTextureBuffer(context);
+  const { automation } = assets;
 
   const startedAt = context.currentTime;
   const master = context.createGain();
-  const filter = context.createBiquadFilter();
   const compressor = context.createDynamicsCompressor();
   const nodes: AudioScheduledSourceNode[] = [];
+  const processors: AudioNode[] = [];
   master.gain.setValueAtTime(0.0001, startedAt);
-  master.gain.exponentialRampToValueAtTime(0.82, startedAt + 0.035);
-  master.gain.setValueAtTime(0.82, startedAt + 3.94);
+  master.gain.exponentialRampToValueAtTime(0.86, startedAt + 0.12);
+  master.gain.setValueAtTime(0.86, startedAt + 3.9);
   master.gain.exponentialRampToValueAtTime(
     0.0001,
     startedAt + BUILD_UP_DURATION_SECONDS,
   );
-  filter.type = "lowpass";
-  filter.Q.value = 1.25;
-  filter.frequency.setValueCurveAtTime(
-    automation.filterFrequency,
-    startedAt,
-    BUILD_UP_DURATION_SECONDS,
-  );
-  compressor.threshold.value = -22;
-  compressor.knee.value = 16;
-  compressor.ratio.value = 3;
-  compressor.attack.value = 0.006;
-  compressor.release.value = 0.08;
-  master.connect(filter).connect(compressor).connect(context.destination);
+  compressor.threshold.value = -24;
+  compressor.knee.value = 18;
+  compressor.ratio.value = 2.5;
+  compressor.attack.value = 0.012;
+  compressor.release.value = 0.16;
+  master.connect(compressor).connect(context.destination);
 
-  const carrier = context.createOscillator();
-  const carrierGain = context.createGain();
-  carrier.type = "sine";
-  carrier.frequency.setValueCurveAtTime(
-    automation.carrierFrequency,
+  const foundation = context.createOscillator();
+  const foundationGain = context.createGain();
+  foundation.type = "sine";
+  foundation.frequency.setValueCurveAtTime(
+    automation.foundationFrequency,
     startedAt,
     BUILD_UP_DURATION_SECONDS,
   );
-  carrierGain.gain.setValueCurveAtTime(
-    automation.carrierGain,
+  foundationGain.gain.setValueCurveAtTime(
+    automation.foundationGain,
     startedAt,
     BUILD_UP_DURATION_SECONDS,
   );
-  carrier.connect(carrierGain).connect(master);
-  carrier.start(startedAt);
-  carrier.stop(startedAt + BUILD_UP_SOURCE_DURATION_SECONDS);
-  nodes.push(carrier);
+  foundation.connect(foundationGain).connect(master);
+  foundation.start(startedAt);
+  foundation.stop(startedAt + BUILD_UP_SOURCE_DURATION_SECONDS);
+  nodes.push(foundation);
+  processors.push(foundationGain);
 
-  const color = context.createOscillator();
-  const colorGain = context.createGain();
-  color.type = "triangle";
-  color.frequency.setValueCurveAtTime(
-    automation.colorFrequency,
+  const aura = context.createOscillator();
+  const auraGain = context.createGain();
+  aura.type = "sine";
+  aura.frequency.setValueCurveAtTime(
+    automation.auraFrequency,
     startedAt,
     BUILD_UP_DURATION_SECONDS,
   );
-  colorGain.gain.setValueCurveAtTime(
-    automation.colorGain,
+  auraGain.gain.setValueCurveAtTime(
+    automation.auraGain,
     startedAt,
     BUILD_UP_DURATION_SECONDS,
   );
-  color.connect(colorGain).connect(master);
-  color.start(startedAt);
-  color.stop(startedAt + BUILD_UP_SOURCE_DURATION_SECONDS);
-  nodes.push(color);
+  aura.connect(auraGain).connect(master);
+  aura.start(startedAt);
+  aura.stop(startedAt + BUILD_UP_SOURCE_DURATION_SECONDS);
+  nodes.push(aura);
+  processors.push(auraGain);
 
-  const sub = context.createOscillator();
-  const subGain = context.createGain();
-  sub.type = "sine";
-  sub.frequency.setValueCurveAtTime(
-    automation.subFrequency,
-    startedAt,
-    BUILD_UP_DURATION_SECONDS,
-  );
-  subGain.gain.setValueAtTime(0.007, startedAt);
-  subGain.gain.linearRampToValueAtTime(0.013, startedAt + 3.9);
-  sub.connect(subGain).connect(master);
-  sub.start(startedAt);
-  sub.stop(startedAt + BUILD_UP_SOURCE_DURATION_SECONDS);
-  nodes.push(sub);
+  if (textureBuffer) {
+    const texture = context.createBufferSource();
+    const airFilter = context.createBiquadFilter();
+    const airGain = context.createGain();
+    const shimmerFilter = context.createBiquadFilter();
+    const shimmerGain = context.createGain();
+    texture.buffer = textureBuffer;
+    texture.loop = true;
+    airFilter.type = "bandpass";
+    airFilter.Q.value = 0.62;
+    airFilter.frequency.setValueCurveAtTime(
+      automation.airFrequency,
+      startedAt,
+      BUILD_UP_DURATION_SECONDS,
+    );
+    airGain.gain.setValueCurveAtTime(
+      automation.airGain,
+      startedAt,
+      BUILD_UP_DURATION_SECONDS,
+    );
+    shimmerFilter.type = "bandpass";
+    shimmerFilter.Q.value = 1.05;
+    shimmerFilter.frequency.setValueCurveAtTime(
+      automation.shimmerFrequency,
+      startedAt,
+      BUILD_UP_DURATION_SECONDS,
+    );
+    shimmerGain.gain.setValueCurveAtTime(
+      automation.shimmerGain,
+      startedAt,
+      BUILD_UP_DURATION_SECONDS,
+    );
+    texture.connect(airFilter).connect(airGain).connect(master);
+    texture.connect(shimmerFilter).connect(shimmerGain).connect(master);
+    texture.start(startedAt);
+    texture.stop(startedAt + BUILD_UP_SOURCE_DURATION_SECONDS);
+    nodes.push(texture);
+    processors.push(airFilter, airGain, shimmerFilter, shimmerGain);
+  }
 
   return () => {
     nodes.forEach((node) => {
@@ -248,7 +348,7 @@ export function playGachaRitualBuildUp(): () => void {
       }
       node.disconnect();
     });
-    filter.disconnect();
+    processors.forEach((processor) => processor.disconnect());
     compressor.disconnect();
     master.disconnect();
   };
