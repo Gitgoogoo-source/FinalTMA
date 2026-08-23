@@ -278,7 +278,7 @@ as $$
         jsonb_build_object(
           'fixture_version', 'battle-v1',
           'catalog_version', 'v1',
-          'catalog_checksum', '82ae510b2ae38d22db94197d667040c25813080dc73c6219eca30d42aa76404f',
+          'catalog_checksum', 'ec8d89aec0a700bfb504285401bf6327ed2a4c48c94d4d8bb92559bdae2ee61e',
           'battle_checksum', '8e9a250af9df2f44d45846b0fe5c6fbb4e2f26d74e07146e87ce84a86b8141c6',
           'matrix', jsonb_agg(
             jsonb_build_object(
@@ -791,7 +791,7 @@ begin
   from admin.battle_fixture_definition() d
   cross join lateral unnest(d.skill_slots) skill_slot
   where d.fixture_version = p_fixture_version;
-  if v_catalog_checksum <> '82ae510b2ae38d22db94197d667040c25813080dc73c6219eca30d42aa76404f'
+  if v_catalog_checksum <> 'ec8d89aec0a700bfb504285401bf6327ed2a4c48c94d4d8bb92559bdae2ee61e'
     or v_battle_checksum <> '8e9a250af9df2f44d45846b0fe5c6fbb4e2f26d74e07146e87ce84a86b8141c6'
     or not battle.rules_complete('battle-v1')
     or v_matrix_count <> 36

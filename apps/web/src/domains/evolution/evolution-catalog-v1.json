@@ -5,7 +5,7 @@
       "source_template_id": "PET-N-001-1",
       "target": {
         "template_id": "PET-N-001-2",
-        "name": "焰鬃狐",
+        "name": "苔冠晶芽",
         "rarity": "rare",
         "stage": 2
       },
@@ -16,7 +16,7 @@
       "source_template_id": "PET-N-001-2",
       "target": {
         "template_id": "PET-N-001-3",
-        "name": "赤曜火狐",
+        "name": "森晶巨冠",
         "rarity": "epic",
         "stage": 3
       },
@@ -27,7 +27,7 @@
       "source_template_id": "PET-N-002-1",
       "target": {
         "template_id": "PET-N-002-2",
-        "name": "潮纹獭",
+        "name": "焰爪战体",
         "rarity": "rare",
         "stage": 2
       },
@@ -38,7 +38,7 @@
       "source_template_id": "PET-N-002-2",
       "target": {
         "template_id": "PET-N-002-3",
-        "name": "沧浪王獭",
+        "name": "天焰翼皇",
         "rarity": "epic",
         "stage": 3
       },
@@ -49,7 +49,7 @@
       "source_template_id": "PET-N-003-1",
       "target": {
         "template_id": "PET-N-003-2",
-        "name": "森跃兔",
+        "name": "棱脊刺姬",
         "rarity": "rare",
         "stage": 2
       },
@@ -60,7 +60,7 @@
       "source_template_id": "PET-N-003-2",
       "target": {
         "template_id": "PET-N-003-3",
-        "name": "翠冠灵兔",
+        "name": "甲裙毒后",
         "rarity": "epic",
         "stage": 3
       },
@@ -71,7 +71,7 @@
       "source_template_id": "PET-N-004-1",
       "target": {
         "template_id": "PET-N-004-2",
-        "name": "岩垒龟",
+        "name": "冠须冰轮",
         "rarity": "rare",
         "stage": 2
       },
@@ -82,7 +82,7 @@
       "source_template_id": "PET-N-004-2",
       "target": {
         "template_id": "PET-N-004-3",
-        "name": "玄岳巨龟",
+        "name": "冰牙巨轮",
         "rarity": "epic",
         "stage": 3
       },
@@ -93,7 +93,7 @@
       "source_template_id": "PET-N-005-1",
       "target": {
         "template_id": "PET-N-005-2",
-        "name": "岚翼雀",
+        "name": "金甲静体",
         "rarity": "rare",
         "stage": 2
       },
@@ -104,7 +104,7 @@
       "source_template_id": "PET-N-005-2",
       "target": {
         "template_id": "PET-N-005-3",
-        "name": "青穹翔雀",
+        "name": "赤针战翼",
         "rarity": "epic",
         "stage": 3
       },
@@ -115,7 +115,7 @@
       "source_template_id": "PET-N-006-1",
       "target": {
         "template_id": "PET-N-006-2",
-        "name": "月灯蛾",
+        "name": "棘冠毒迅",
         "rarity": "rare",
         "stage": 2
       },
@@ -126,7 +126,7 @@
       "source_template_id": "PET-N-006-2",
       "target": {
         "template_id": "PET-N-006-3",
-        "name": "辉幕幻蛾",
+        "name": "晶角毒王",
         "rarity": "epic",
         "stage": 3
       },
@@ -137,7 +137,7 @@
       "source_template_id": "PET-N-007-1",
       "target": {
         "template_id": "PET-N-007-2",
-        "name": "霆尾鼠",
+        "name": "棱壳黏灵",
         "rarity": "rare",
         "stage": 2
       },
@@ -148,7 +148,7 @@
       "source_template_id": "PET-N-007-2",
       "target": {
         "template_id": "PET-N-007-3",
-        "name": "雷极迅鼠",
+        "name": "翼耳黏龙",
         "rarity": "epic",
         "stage": 3
       },
@@ -159,7 +159,7 @@
       "source_template_id": "PET-N-008-1",
       "target": {
         "template_id": "PET-N-008-2",
-        "name": "漠脊蜥",
+        "name": "雷鬃迅灵",
         "rarity": "rare",
         "stage": 2
       },
@@ -170,7 +170,7 @@
       "source_template_id": "PET-N-008-2",
       "target": {
         "template_id": "PET-N-008-3",
-        "name": "金尘龙蜥",
+        "name": "曜鬃电皇",
         "rarity": "epic",
         "stage": 3
       },
@@ -181,7 +181,7 @@
       "source_template_id": "PET-N-009-1",
       "target": {
         "template_id": "PET-N-009-2",
-        "name": "冰冠企鹅",
+        "name": "双银翼兽",
         "rarity": "rare",
         "stage": 2
       },
@@ -192,7 +192,7 @@
       "source_template_id": "PET-N-009-2",
       "target": {
         "template_id": "PET-N-009-3",
-        "name": "极光帝企鹅",
+        "name": "银甲战兽",
         "rarity": "epic",
         "stage": 3
       },
@@ -203,7 +203,7 @@
       "source_template_id": "PET-N-010-1",
       "target": {
         "template_id": "PET-N-010-2",
-        "name": "翠拳熊",
+        "name": "钢腕战体",
         "rarity": "rare",
         "stage": 2
       },
@@ -214,7 +214,7 @@
       "source_template_id": "PET-N-010-2",
       "target": {
         "template_id": "PET-N-010-3",
-        "name": "青竹武熊",
+        "name": "四臂武尊",
         "rarity": "epic",
         "stage": 3
       },
@@ -225,7 +225,7 @@
       "source_template_id": "PET-N-011-1",
       "target": {
         "template_id": "PET-N-011-2",
-        "name": "礁甲蟹",
+        "name": "影爪笑灵",
         "rarity": "rare",
         "stage": 2
       },
@@ -236,7 +236,7 @@
       "source_template_id": "PET-N-011-2",
       "target": {
         "template_id": "PET-N-011-3",
-        "name": "赤潮巨蟹",
+        "name": "紫影魔王",
         "rarity": "epic",
         "stage": 3
       },
@@ -247,7 +247,7 @@
       "source_template_id": "PET-N-012-1",
       "target": {
         "template_id": "PET-N-012-2",
-        "name": "花冠鹿",
+        "name": "云环灵体",
         "rarity": "rare",
         "stage": 2
       },
@@ -258,7 +258,7 @@
       "source_template_id": "PET-N-012-2",
       "target": {
         "template_id": "PET-N-012-3",
-        "name": "森庭圣鹿",
+        "name": "苍翼守皇",
         "rarity": "epic",
         "stage": 3
       },
@@ -269,7 +269,7 @@
       "source_template_id": "PET-N-013-1",
       "target": {
         "template_id": "PET-N-013-2",
-        "name": "霭角羊",
+        "name": "叶颈灵",
         "rarity": "rare",
         "stage": 2
       },
@@ -280,7 +280,7 @@
       "source_template_id": "PET-N-013-2",
       "target": {
         "template_id": "PET-N-013-3",
-        "name": "天幕云羊",
+        "name": "花冠圣体",
         "rarity": "epic",
         "stage": 3
       },
@@ -291,7 +291,7 @@
       "source_template_id": "PET-N-014-1",
       "target": {
         "template_id": "PET-N-014-2",
-        "name": "墨旋鱿",
+        "name": "焰背迅体",
         "rarity": "rare",
         "stage": 2
       },
@@ -302,7 +302,7 @@
       "source_template_id": "PET-N-014-2",
       "target": {
         "template_id": "PET-N-014-3",
-        "name": "深海墨皇",
+        "name": "烈焰暴君",
         "rarity": "epic",
         "stage": 3
       },
@@ -313,7 +313,7 @@
       "source_template_id": "PET-N-015-1",
       "target": {
         "template_id": "PET-N-015-2",
-        "name": "锻角甲",
+        "name": "双冠躁兽",
         "rarity": "rare",
         "stage": 2
       },
@@ -324,7 +324,7 @@
       "source_template_id": "PET-N-015-2",
       "target": {
         "template_id": "PET-N-015-3",
-        "name": "熔金战甲",
+        "name": "纹胸巨座",
         "rarity": "epic",
         "stage": 3
       },
@@ -335,7 +335,7 @@
       "source_template_id": "PET-N-016-1",
       "target": {
         "template_id": "PET-N-016-2",
-        "name": "荷冠蛙",
+        "name": "云翼灵",
         "rarity": "rare",
         "stage": 2
       },
@@ -346,7 +346,7 @@
       "source_template_id": "PET-N-016-2",
       "target": {
         "template_id": "PET-N-016-3",
-        "name": "青泉灵蛙",
+        "name": "天星圣翼",
         "rarity": "epic",
         "stage": 3
       },
@@ -357,7 +357,7 @@
       "source_template_id": "PET-N-017-1",
       "target": {
         "template_id": "PET-N-017-2",
-        "name": "灰焰浣熊",
+        "name": "壳涎灵体",
         "rarity": "rare",
         "stage": 2
       },
@@ -368,7 +368,7 @@
       "source_template_id": "PET-N-017-2",
       "target": {
         "template_id": "PET-N-017-3",
-        "name": "焚林火浣",
+        "name": "雨角黏皇",
         "rarity": "epic",
         "stage": 3
       },
@@ -379,7 +379,7 @@
       "source_template_id": "PET-N-018-1",
       "target": {
         "template_id": "PET-N-018-2",
-        "name": "霜翼鸮",
+        "name": "岩壳静体",
         "rarity": "rare",
         "stage": 2
       },
@@ -390,7 +390,7 @@
       "source_template_id": "PET-N-018-2",
       "target": {
         "template_id": "PET-N-018-3",
-        "name": "极夜雪鸮",
+        "name": "荒岩霸体",
         "rarity": "epic",
         "stage": 3
       },
@@ -401,7 +401,7 @@
       "source_template_id": "PET-N-019-1",
       "target": {
         "template_id": "PET-N-019-2",
-        "name": "金巢蜂",
+        "name": "旋耳月灵",
         "rarity": "rare",
         "stage": 2
       },
@@ -412,7 +412,7 @@
       "source_template_id": "PET-N-019-2",
       "target": {
         "template_id": "PET-N-019-3",
-        "name": "琥珀蜂后",
+        "name": "云翼月姬",
         "rarity": "epic",
         "stage": 3
       },
@@ -423,7 +423,7 @@
       "source_template_id": "PET-N-020-1",
       "target": {
         "template_id": "PET-N-020-2",
-        "name": "陶甲豚",
+        "name": "焰腕斗体",
         "rarity": "rare",
         "stage": 2
       },
@@ -434,7 +434,7 @@
       "source_template_id": "PET-N-020-2",
       "target": {
         "template_id": "PET-N-020-3",
-        "name": "地脉岩豚",
+        "name": "天火武皇",
         "rarity": "epic",
         "stage": 3
       },
@@ -445,7 +445,7 @@
       "source_template_id": "PET-N-021-1",
       "target": {
         "template_id": "PET-N-021-2",
-        "name": "沼纹猫",
+        "name": "沼纹战体",
         "rarity": "rare",
         "stage": 2
       },
@@ -456,7 +456,7 @@
       "source_template_id": "PET-N-021-2",
       "target": {
         "template_id": "PET-N-021-3",
-        "name": "碧泽灵猫",
+        "name": "巨潮重体",
         "rarity": "epic",
         "stage": 3
       },
@@ -467,7 +467,7 @@
       "source_template_id": "PET-N-022-1",
       "target": {
         "template_id": "PET-N-022-2",
-        "name": "旭冠鸟",
+        "name": "心舞灵",
         "rarity": "rare",
         "stage": 2
       },
@@ -478,7 +478,7 @@
       "source_template_id": "PET-N-022-2",
       "target": {
         "template_id": "PET-N-022-3",
-        "name": "曦光金翎",
+        "name": "星裙圣灵",
         "rarity": "epic",
         "stage": 3
       },
@@ -489,7 +489,7 @@
       "source_template_id": "PET-N-023-1",
       "target": {
         "template_id": "PET-N-023-2",
-        "name": "暮翼蝠",
+        "name": "钢甲重体",
         "rarity": "rare",
         "stage": 2
       },
@@ -500,7 +500,7 @@
       "source_template_id": "PET-N-023-2",
       "target": {
         "template_id": "PET-N-023-3",
-        "name": "蚀月夜蝠",
+        "name": "银铠巨尊",
         "rarity": "epic",
         "stage": 3
       },
@@ -511,7 +511,7 @@
       "source_template_id": "PET-N-024-1",
       "target": {
         "template_id": "PET-N-024-2",
-        "name": "松针飞鼠",
+        "name": "绷带影体",
         "rarity": "rare",
         "stage": 2
       },
@@ -522,7 +522,7 @@
       "source_template_id": "PET-N-024-2",
       "target": {
         "template_id": "PET-N-024-3",
-        "name": "森藏王鼠",
+        "name": "冥手巨灵",
         "rarity": "epic",
         "stage": 3
       },
@@ -533,7 +533,7 @@
       "source_template_id": "PET-N-025-1",
       "target": {
         "template_id": "PET-N-025-2",
-        "name": "镜海水母",
+        "name": "颅甲芽",
         "rarity": "rare",
         "stage": 2
       },
@@ -544,7 +544,7 @@
       "source_template_id": "PET-N-025-2",
       "target": {
         "template_id": "PET-N-025-3",
-        "name": "虹幕水母",
+        "name": "赤翼飞皇",
         "rarity": "epic",
         "stage": 3
       },
@@ -555,7 +555,7 @@
       "source_template_id": "PET-N-026-1",
       "target": {
         "template_id": "PET-N-026-2",
-        "name": "霜梅猞",
+        "name": "林甲厚体",
         "rarity": "rare",
         "stage": 2
       },
@@ -566,7 +566,7 @@
       "source_template_id": "PET-N-026-2",
       "target": {
         "template_id": "PET-N-026-3",
-        "name": "寒梅影猞",
+        "name": "森岳载体",
         "rarity": "epic",
         "stage": 3
       },
@@ -577,7 +577,7 @@
       "source_template_id": "PET-N-027-1",
       "target": {
         "template_id": "PET-N-027-2",
-        "name": "云脊牦",
+        "name": "焰拳迅体",
         "rarity": "rare",
         "stage": 2
       },
@@ -588,7 +588,7 @@
       "source_template_id": "PET-N-027-2",
       "target": {
         "template_id": "PET-N-027-3",
-        "name": "雪岭天牦",
+        "name": "烈焰斗圣",
         "rarity": "epic",
         "stage": 3
       },
@@ -599,7 +599,7 @@
       "source_template_id": "PET-N-028-1",
       "target": {
         "template_id": "PET-N-028-2",
-        "name": "熔纹螈",
+        "name": "海冠礼体",
         "rarity": "rare",
         "stage": 2
       },
@@ -610,7 +610,7 @@
       "source_template_id": "PET-N-028-2",
       "target": {
         "template_id": "PET-N-028-3",
-        "name": "火山帝螈",
+        "name": "帝潮铠皇",
         "rarity": "epic",
         "stage": 3
       },
@@ -621,7 +621,7 @@
       "source_template_id": "PET-N-029-1",
       "target": {
         "template_id": "PET-N-029-2",
-        "name": "莲冠鸭",
+        "name": "电鬃迅体",
         "rarity": "rare",
         "stage": 2
       },
@@ -632,7 +632,7 @@
       "source_template_id": "PET-N-029-2",
       "target": {
         "template_id": "PET-N-029-3",
-        "name": "碧池莲皇",
+        "name": "辉眼雷皇",
         "rarity": "epic",
         "stage": 3
       },
@@ -643,7 +643,7 @@
       "source_template_id": "PET-N-030-1",
       "target": {
         "template_id": "PET-N-030-2",
-        "name": "矿脊鼹",
+        "name": "刃鳍迅体",
         "rarity": "rare",
         "stage": 2
       },
@@ -654,7 +654,7 @@
       "source_template_id": "PET-N-030-2",
       "target": {
         "template_id": "PET-N-030-3",
-        "name": "晶窟巨鼹",
+        "name": "苍刃暴皇",
         "rarity": "epic",
         "stage": 3
       },
@@ -665,7 +665,7 @@
       "source_template_id": "PET-N-031-1",
       "target": {
         "template_id": "PET-N-031-2",
-        "name": "香雾狸",
+        "name": "焰杖术体",
         "rarity": "rare",
         "stage": 2
       },
@@ -676,7 +676,7 @@
       "source_template_id": "PET-N-031-2",
       "target": {
         "template_id": "PET-N-031-3",
-        "name": "茶境灵狸",
+        "name": "赤焰法皇",
         "rarity": "epic",
         "stage": 3
       },
@@ -687,7 +687,7 @@
       "source_template_id": "PET-N-032-1",
       "target": {
         "template_id": "PET-N-032-2",
-        "name": "潮笛豚",
+        "name": "球甲护体",
         "rarity": "rare",
         "stage": 2
       },
@@ -698,7 +698,7 @@
       "source_template_id": "PET-N-032-2",
       "target": {
         "template_id": "PET-N-032-3",
-        "name": "蓝海歌豚",
+        "name": "森铠巨卫",
         "rarity": "epic",
         "stage": 3
       },
@@ -709,7 +709,7 @@
       "source_template_id": "PET-N-033-1",
       "target": {
         "template_id": "PET-N-033-2",
-        "name": "藤甲壁虎",
+        "name": "双刃潮体",
         "rarity": "rare",
         "stage": 2
       },
@@ -720,7 +720,7 @@
       "source_template_id": "PET-N-033-2",
       "target": {
         "template_id": "PET-N-033-3",
-        "name": "古森龙壁",
+        "name": "海铠剑皇",
         "rarity": "epic",
         "stage": 3
       },
@@ -731,7 +731,7 @@
       "source_template_id": "PET-N-034-1",
       "target": {
         "template_id": "PET-N-034-2",
-        "name": "蜜风鼯",
+        "name": "双芽叶袍",
         "rarity": "rare",
         "stage": 2
       },
@@ -742,7 +742,7 @@
       "source_template_id": "PET-N-034-2",
       "target": {
         "template_id": "PET-N-034-3",
-        "name": "云糖飞鼯",
+        "name": "双镰叶姬",
         "rarity": "epic",
         "stage": 3
       },
@@ -753,7 +753,7 @@
       "source_template_id": "PET-N-035-1",
       "target": {
         "template_id": "PET-N-035-2",
-        "name": "针叶刺猬",
+        "name": "星罩静体",
         "rarity": "rare",
         "stage": 2
       },
@@ -764,7 +764,7 @@
       "source_template_id": "PET-N-035-2",
       "target": {
         "template_id": "PET-N-035-3",
-        "name": "苍松甲猬",
+        "name": "智域巨眼",
         "rarity": "epic",
         "stage": 3
       },
@@ -775,7 +775,7 @@
       "source_template_id": "PET-N-036-1",
       "target": {
         "template_id": "PET-N-036-2",
-        "name": "霖翎鹭",
+        "name": "晶裙水舞",
         "rarity": "rare",
         "stage": 2
       },
@@ -786,7 +786,7 @@
       "source_template_id": "PET-N-036-2",
       "target": {
         "template_id": "PET-N-036-3",
-        "name": "天雨玄鹭",
+        "name": "星珠歌姬",
         "rarity": "epic",
         "stage": 3
       },
@@ -797,7 +797,7 @@
       "source_template_id": "PET-N-037-1",
       "target": {
         "template_id": "PET-N-037-2",
-        "name": "豆甲猿",
+        "name": "晶鼻雪鬃",
         "rarity": "rare",
         "stage": 2
       },
@@ -808,7 +808,7 @@
       "source_template_id": "PET-N-037-2",
       "target": {
         "template_id": "PET-N-037-3",
-        "name": "醇香森猿",
+        "name": "冰冠巨牙",
         "rarity": "epic",
         "stage": 3
       },
@@ -819,7 +819,7 @@
       "source_template_id": "PET-N-038-1",
       "target": {
         "template_id": "PET-N-038-2",
-        "name": "晶潮海星",
+        "name": "晶掌伞灵",
         "rarity": "rare",
         "stage": 2
       },
@@ -830,7 +830,7 @@
       "source_template_id": "PET-N-038-2",
       "target": {
         "template_id": "PET-N-038-3",
-        "name": "五曜星冠",
+        "name": "鼓帽舞王",
         "rarity": "epic",
         "stage": 3
       },
@@ -841,7 +841,7 @@
       "source_template_id": "PET-N-039-1",
       "target": {
         "template_id": "PET-N-039-2",
-        "name": "珠纹蜗",
+        "name": "幽灯浮体",
         "rarity": "rare",
         "stage": 2
       },
@@ -852,7 +852,7 @@
       "source_template_id": "PET-N-039-2",
       "target": {
         "template_id": "PET-N-039-3",
-        "name": "珊宫宝蜗",
+        "name": "晶焰灯皇",
         "rarity": "epic",
         "stage": 3
       },
@@ -863,7 +863,7 @@
       "source_template_id": "PET-N-040-1",
       "target": {
         "template_id": "PET-N-040-2",
-        "name": "云帆鳐",
+        "name": "刃颚战体",
         "rarity": "rare",
         "stage": 2
       },
@@ -874,7 +874,7 @@
       "source_template_id": "PET-N-040-2",
       "target": {
         "template_id": "PET-N-040-3",
-        "name": "天幕巨鳐",
+        "name": "双斧龙皇",
         "rarity": "epic",
         "stage": 3
       },
@@ -885,7 +885,7 @@
       "source_template_id": "PET-A-001-1",
       "target": {
         "template_id": "PET-A-001-2",
-        "name": "寒镜灵狐",
+        "name": "赤刃将体",
         "rarity": "epic",
         "stage": 2
       },
@@ -896,7 +896,7 @@
       "source_template_id": "PET-A-001-2",
       "target": {
         "template_id": "PET-A-001-3",
-        "name": "九霄冰狐",
+        "name": "黑刃统皇",
         "rarity": "legendary",
         "stage": 3
       },
@@ -907,7 +907,7 @@
       "source_template_id": "PET-A-002-1",
       "target": {
         "template_id": "PET-A-002-2",
-        "name": "霆铠狮",
+        "name": "焰脊蜥",
         "rarity": "epic",
         "stage": 2
       },
@@ -918,7 +918,7 @@
       "source_template_id": "PET-A-002-2",
       "target": {
         "template_id": "PET-A-002-3",
-        "name": "天罚雷狮",
+        "name": "熔冠炎蜥",
         "rarity": "legendary",
         "stage": 3
       },
@@ -929,7 +929,7 @@
       "source_template_id": "PET-A-003-1",
       "target": {
         "template_id": "PET-A-003-2",
-        "name": "沧海蛟",
+        "name": "藤纹灵体",
         "rarity": "epic",
         "stage": 2
       },
@@ -940,7 +940,7 @@
       "source_template_id": "PET-A-003-2",
       "target": {
         "template_id": "PET-A-003-3",
-        "name": "镇海苍蛟",
+        "name": "翠冠君体",
         "rarity": "legendary",
         "stage": 3
       },
@@ -951,7 +951,7 @@
       "source_template_id": "PET-A-004-1",
       "target": {
         "template_id": "PET-A-004-2",
-        "name": "夜幕鸦",
+        "name": "蓝巾迅体",
         "rarity": "epic",
         "stage": 2
       },
@@ -962,7 +962,7 @@
       "source_template_id": "PET-A-004-2",
       "target": {
         "template_id": "PET-A-004-3",
-        "name": "冥月玄鸦",
+        "name": "雷刃犀皇",
         "rarity": "legendary",
         "stage": 3
       },
@@ -973,7 +973,7 @@
       "source_template_id": "PET-A-005-1",
       "target": {
         "template_id": "PET-A-005-2",
-        "name": "熔冠鹿",
+        "name": "岩垒掘兽",
         "rarity": "epic",
         "stage": 2
       },
@@ -984,7 +984,7 @@
       "source_template_id": "PET-A-005-2",
       "target": {
         "template_id": "PET-A-005-3",
-        "name": "烈阳圣鹿",
+        "name": "山垒镇甲兽",
         "rarity": "legendary",
         "stage": 3
       },
@@ -995,7 +995,7 @@
       "source_template_id": "PET-A-006-1",
       "target": {
         "template_id": "PET-A-006-2",
-        "name": "镜华蝶",
+        "name": "金缝四晶",
         "rarity": "epic",
         "stage": 2
       },
@@ -1006,7 +1006,7 @@
       "source_template_id": "PET-A-006-2",
       "target": {
         "template_id": "PET-A-006-3",
-        "name": "幻晶蝶后",
+        "name": "双塔晶岩",
         "rarity": "legendary",
         "stage": 3
       },
@@ -1017,7 +1017,7 @@
       "source_template_id": "PET-A-007-1",
       "target": {
         "template_id": "PET-A-007-2",
-        "name": "山铠猿",
+        "name": "翼发恶灵",
         "rarity": "epic",
         "stage": 2
       },
@@ -1028,7 +1028,7 @@
       "source_template_id": "PET-A-007-2",
       "target": {
         "template_id": "PET-A-007-3",
-        "name": "擎岳神猿",
+        "name": "荆鬃恶王",
         "rarity": "legendary",
         "stage": 3
       },
@@ -1039,7 +1039,7 @@
       "source_template_id": "PET-A-008-1",
       "target": {
         "template_id": "PET-A-008-2",
-        "name": "曜影豹",
+        "name": "枝冠灵体",
         "rarity": "epic",
         "stage": 2
       },
@@ -1050,7 +1050,7 @@
       "source_template_id": "PET-A-008-2",
       "target": {
         "template_id": "PET-A-008-3",
-        "name": "星陨猎豹",
+        "name": "绿油圣树",
         "rarity": "legendary",
         "stage": 3
       },
@@ -1061,7 +1061,7 @@
       "source_template_id": "PET-A-009-1",
       "target": {
         "template_id": "PET-A-009-2",
-        "name": "岚音鹤",
+        "name": "赤铃战体",
         "rarity": "epic",
         "stage": 2
       },
@@ -1072,7 +1072,7 @@
       "source_template_id": "PET-A-009-2",
       "target": {
         "template_id": "PET-A-009-3",
-        "name": "九天风鹤",
+        "name": "烈焰摔皇",
         "rarity": "legendary",
         "stage": 3
       },
@@ -1083,7 +1083,7 @@
       "source_template_id": "PET-A-010-1",
       "target": {
         "template_id": "PET-A-010-2",
-        "name": "幽棘蝎",
+        "name": "水裙歌体",
         "rarity": "epic",
         "stage": 2
       },
@@ -1094,7 +1094,7 @@
       "source_template_id": "PET-A-010-2",
       "target": {
         "template_id": "PET-A-010-3",
-        "name": "紫冥蝎王",
+        "name": "海声歌姬",
         "rarity": "legendary",
         "stage": 3
       },
@@ -1105,7 +1105,7 @@
       "source_template_id": "PET-A-011-1",
       "target": {
         "template_id": "PET-A-011-2",
-        "name": "蓝穹鲸",
+        "name": "金背玉龟",
         "rarity": "epic",
         "stage": 2
       },
@@ -1116,7 +1116,7 @@
       "source_template_id": "PET-A-011-2",
       "target": {
         "template_id": "PET-A-011-3",
-        "name": "深渊歌鲸",
+        "name": "战神龙龟",
         "rarity": "legendary",
         "stage": 3
       },
@@ -1127,7 +1127,7 @@
       "source_template_id": "PET-A-012-1",
       "target": {
         "template_id": "PET-A-012-2",
-        "name": "曜金鹰",
+        "name": "晶龙兽",
         "rarity": "epic",
         "stage": 2
       },
@@ -1138,7 +1138,7 @@
       "source_template_id": "PET-A-012-2",
       "target": {
         "template_id": "PET-A-012-3",
-        "name": "苍穹帝鹰",
+        "name": "金晶龙皇",
         "rarity": "legendary",
         "stage": 3
       },
@@ -1149,7 +1149,7 @@
       "source_template_id": "PET-A-013-1",
       "target": {
         "template_id": "PET-A-013-2",
-        "name": "银月狼",
+        "name": "甲鳞战体",
         "rarity": "epic",
         "stage": 2
       },
@@ -1160,7 +1160,7 @@
       "source_template_id": "PET-A-013-2",
       "target": {
         "template_id": "PET-A-013-3",
-        "name": "啸月狼皇",
+        "name": "杖尾龙尊",
         "rarity": "legendary",
         "stage": 3
       },
@@ -1171,7 +1171,7 @@
       "source_template_id": "PET-A-014-1",
       "target": {
         "template_id": "PET-A-014-2",
-        "name": "赤钢犀",
+        "name": "双槌迅体",
         "rarity": "epic",
         "stage": 2
       },
@@ -1182,7 +1182,7 @@
       "source_template_id": "PET-A-014-2",
       "target": {
         "template_id": "PET-A-014-3",
-        "name": "熔城巨犀",
+        "name": "森鼓巨王",
         "rarity": "legendary",
         "stage": 3
       },
@@ -1193,7 +1193,7 @@
       "source_template_id": "PET-A-015-1",
       "target": {
         "template_id": "PET-A-015-2",
-        "name": "幻沙貘",
+        "name": "焰球王牌",
         "rarity": "epic",
         "stage": 2
       },
@@ -1204,7 +1204,7 @@
       "source_template_id": "PET-A-015-2",
       "target": {
         "template_id": "PET-A-015-3",
-        "name": "永梦灵貘",
+        "name": "霜棱心核",
         "rarity": "legendary",
         "stage": 3
       },
@@ -1215,7 +1215,7 @@
       "source_template_id": "PET-A-016-1",
       "target": {
         "template_id": "PET-A-016-2",
-        "name": "碧炎蟒",
+        "name": "银河花使",
         "rarity": "epic",
         "stage": 2
       },
@@ -1226,7 +1226,7 @@
       "source_template_id": "PET-A-016-2",
       "target": {
         "template_id": "PET-A-016-3",
-        "name": "苍炎蛇皇",
+        "name": "万华宇庭",
         "rarity": "legendary",
         "stage": 3
       },
@@ -1237,7 +1237,7 @@
       "source_template_id": "PET-A-017-1",
       "target": {
         "template_id": "PET-A-017-2",
-        "name": "万华鹿",
+        "name": "冻脊战体",
         "rarity": "epic",
         "stage": 2
       },
@@ -1248,7 +1248,7 @@
       "source_template_id": "PET-A-017-2",
       "target": {
         "template_id": "PET-A-017-3",
-        "name": "百花圣鹿",
+        "name": "冰戟龙皇",
         "rarity": "legendary",
         "stage": 3
       },
@@ -1259,7 +1259,7 @@
       "source_template_id": "PET-A-018-1",
       "target": {
         "template_id": "PET-A-018-2",
-        "name": "极光熊",
+        "name": "熔盾角龙",
         "rarity": "epic",
         "stage": 2
       },
@@ -1270,7 +1270,7 @@
       "source_template_id": "PET-A-018-2",
       "target": {
         "template_id": "PET-A-018-3",
-        "name": "北辰巨熊",
+        "name": "火山王冠角龙",
         "rarity": "legendary",
         "stage": 3
       },
@@ -1281,7 +1281,7 @@
       "source_template_id": "PET-A-019-1",
       "target": {
         "template_id": "PET-A-019-2",
-        "name": "星湖天鹅",
+        "name": "节刃颚龙",
         "rarity": "epic",
         "stage": 2
       },
@@ -1292,7 +1292,7 @@
       "source_template_id": "PET-A-019-2",
       "target": {
         "template_id": "PET-A-019-3",
-        "name": "星河天鹅",
+        "name": "雷翼巨龙",
         "rarity": "legendary",
         "stage": 3
       },
@@ -1303,7 +1303,7 @@
       "source_template_id": "PET-A-020-1",
       "target": {
         "template_id": "PET-A-020-2",
-        "name": "机芯灵猫",
+        "name": "炎环战体",
         "rarity": "epic",
         "stage": 2
       },
@@ -1314,7 +1314,7 @@
       "source_template_id": "PET-A-020-2",
       "target": {
         "template_id": "PET-A-020-3",
-        "name": "天工圣猫",
+        "name": "烈火武王",
         "rarity": "legendary",
         "stage": 3
       },
@@ -1325,7 +1325,7 @@
       "source_template_id": "PET-T-001-1",
       "target": {
         "template_id": "PET-T-001-2",
-        "name": "天穹星龙",
+        "name": "深蓝宫使",
         "rarity": "legendary",
         "stage": 2
       },
@@ -1336,7 +1336,7 @@
       "source_template_id": "PET-T-001-2",
       "target": {
         "template_id": "PET-T-001-3",
-        "name": "创界星神龙",
+        "name": "万潮海庭",
         "rarity": "mythic",
         "stage": 3
       },
@@ -1347,7 +1347,7 @@
       "source_template_id": "PET-T-002-1",
       "target": {
         "template_id": "PET-T-002-2",
-        "name": "裂界天鲸",
+        "name": "天籁钟使",
         "rarity": "legendary",
         "stage": 2
       },
@@ -1358,7 +1358,7 @@
       "source_template_id": "PET-T-002-2",
       "target": {
         "template_id": "PET-T-002-3",
-        "name": "无垠虚空鲸",
+        "name": "万音神庭",
         "rarity": "mythic",
         "stage": 3
       },
@@ -1369,7 +1369,7 @@
       "source_template_id": "PET-T-003-1",
       "target": {
         "template_id": "PET-T-003-2",
-        "name": "炽天炎凰",
+        "name": "焰冠歌体",
         "rarity": "legendary",
         "stage": 2
       },
@@ -1380,7 +1380,7 @@
       "source_template_id": "PET-T-003-2",
       "target": {
         "template_id": "PET-T-003-3",
-        "name": "永昼太阳神凰",
+        "name": "骨焰声王",
         "rarity": "mythic",
         "stage": 3
       },
@@ -1391,7 +1391,7 @@
       "source_template_id": "PET-T-004-1",
       "target": {
         "template_id": "PET-T-004-2",
-        "name": "月蚀九尾",
+        "name": "流金幻碑",
         "rarity": "legendary",
         "stage": 2
       },
@@ -1402,7 +1402,7 @@
       "source_template_id": "PET-T-004-2",
       "target": {
         "template_id": "PET-T-004-3",
-        "name": "太阴月神狐",
+        "name": "无尽沙庭",
         "rarity": "mythic",
         "stage": 3
       },
@@ -1413,7 +1413,7 @@
       "source_template_id": "PET-T-005-1",
       "target": {
         "template_id": "PET-T-005-2",
-        "name": "岁轮玄龟",
+        "name": "曙轮裁使",
         "rarity": "legendary",
         "stage": 2
       },
@@ -1424,7 +1424,7 @@
       "source_template_id": "PET-T-005-2",
       "target": {
         "template_id": "PET-T-005-3",
-        "name": "万古时轮神龟",
+        "name": "永昼圣庭",
         "rarity": "mythic",
         "stage": 3
       },
@@ -1435,7 +1435,7 @@
       "source_template_id": "PET-T-006-1",
       "target": {
         "template_id": "PET-T-006-2",
-        "name": "界王圣狮",
+        "name": "曜环星使",
         "rarity": "legendary",
         "stage": 2
       },
@@ -1446,7 +1446,7 @@
       "source_template_id": "PET-T-006-2",
       "target": {
         "template_id": "PET-T-006-3",
-        "name": "混沌创世神狮",
+        "name": "诸界星冠",
         "rarity": "mythic",
         "stage": 3
       },
@@ -1457,7 +1457,7 @@
       "source_template_id": "PET-T-007-1",
       "target": {
         "template_id": "PET-T-007-2",
-        "name": "银河圣鹿",
+        "name": "六界棱翼龙",
         "rarity": "legendary",
         "stage": 2
       },
@@ -1468,7 +1468,7 @@
       "source_template_id": "PET-T-007-2",
       "target": {
         "template_id": "PET-T-007-3",
-        "name": "森罗宇宙神鹿",
+        "name": "混沌全谱棱龙皇",
         "rarity": "mythic",
         "stage": 3
       },
@@ -1479,7 +1479,7 @@
       "source_template_id": "PET-T-008-1",
       "target": {
         "template_id": "PET-T-008-2",
-        "name": "九霄雷麟",
+        "name": "万生树庭",
         "rarity": "legendary",
         "stage": 2
       },
@@ -1490,7 +1490,7 @@
       "source_template_id": "PET-T-008-2",
       "target": {
         "template_id": "PET-T-008-3",
-        "name": "万雷天劫麒麟",
+        "name": "森域神柱",
         "rarity": "mythic",
         "stage": 3
       },
@@ -1501,7 +1501,7 @@
       "source_template_id": "PET-T-009-1",
       "target": {
         "template_id": "PET-T-009-2",
-        "name": "灭界巨蟒",
+        "name": "万卷魂使",
         "rarity": "legendary",
         "stage": 2
       },
@@ -1512,7 +1512,7 @@
       "source_template_id": "PET-T-009-2",
       "target": {
         "template_id": "PET-T-009-3",
-        "name": "无光深渊神蛇",
+        "name": "终典神库",
         "rarity": "mythic",
         "stage": 3
       },
@@ -1523,7 +1523,7 @@
       "source_template_id": "PET-T-010-1",
       "target": {
         "template_id": "PET-T-010-2",
-        "name": "因果天蝶",
+        "name": "双首暗体",
         "rarity": "legendary",
         "stage": 2
       },
@@ -1534,7 +1534,7 @@
       "source_template_id": "PET-T-010-2",
       "target": {
         "template_id": "PET-T-010-3",
-        "name": "命运法则神蝶",
+        "name": "冥皇",
         "rarity": "mythic",
         "stage": 3
       },

@@ -7,7 +7,7 @@
 已发布 Catalog v1 的 immutable `product_checksum` / release identity 固定为：
 
 ```text
-82ae510b2ae38d22db94197d667040c25813080dc73c6219eca30d42aa76404f
+ec8d89aec0a700bfb504285401bf6327ed2a4c48c94d4d8bb92559bdae2ee61e
 ```
 
 该值不是当前产品文档全文 SHA。生成器另计算并打印 boundary 上方源文档 SHA-256，仅用于诊断；Catalog v1 release identity 必须同时与 tracked manifest 和 product-data migration 一致。架构文档只记录技术边界，不复制价格、概率、奖励或产品状态规则。
