@@ -229,14 +229,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.app-shell .inventory-title-rarity {
-  min-width: 0;
-  padding: 0;
-  color: #666a6e;
-  font-size: clamp(9px, 1.3dvh, 11px);
-  font-weight: 650;
-  line-height: 1.2;
-}
 .app-shell .inventory-title-board .detail-new-acquisition {
   position: absolute;
   top: 0;
@@ -395,9 +387,10 @@
 .app-shell .inventory-metric-grid {
   grid-column: 1;
   grid-row: 3;
-  width: min(58%, 220px);
+  width: max-content;
+  max-width: min(86%, 300px);
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, max-content);
   gap: 0;
   place-self: center;
   margin: 0 auto;
@@ -461,6 +454,23 @@
 }
 .app-shell .inventory-metric.power .inventory-metric-copy > strong {
   color: #303336;
+}
+.app-shell .inventory-metric-inline-rarity {
+  min-width: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  color: #666a6e;
+  font-size: clamp(9px, 1.3dvh, 11px);
+  font-weight: 650;
+  line-height: 1;
+}
+.app-shell .inventory-metric-inline-rarity > span {
+  color: rgba(41, 43, 46, 0.38);
+}
+.app-shell .inventory-metric-inline-rarity > strong {
+  color: #666a6e;
+  font: inherit;
 }
 .app-shell .inventory-quantity-summary {
   grid-column: 1;

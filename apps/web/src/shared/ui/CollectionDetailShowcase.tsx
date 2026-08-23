@@ -67,9 +67,6 @@ export function CollectionDetailShowcase({
       >
         <div className="inventory-title-copy">
           <h2 id={headingId}>{t(item.name)}</h2>
-          <strong className={`inventory-title-rarity ${item.rarity}`}>
-            {rarityLabels[item.rarity]}
-          </strong>
           {newAcquisition ? (
             <strong className="detail-new-acquisition">
               {t("本次新获得")}
@@ -102,6 +99,7 @@ export function CollectionDetailShowcase({
           label={t("战斗力")}
           value={formatNumber(item.combat_power)}
           tone="power"
+          rarity={rarityLabels[item.rarity]}
         />
       </div>
 
@@ -242,19 +240,31 @@ function InventoryMetric({
   label,
   value,
   tone,
+  rarity,
 }: {
   label: string;
   value: string;
   tone: "stage" | "power";
+  rarity?: string | undefined;
 }): ReactNode {
   return (
     <div
       className={`inventory-metric ${tone}`}
-      aria-label={`${label} ${value}`}
+      aria-label={
+        rarity
+          ? `${label} ${value}，${t("稀有度")} ${rarity}`
+          : `${label} ${value}`
+      }
     >
       <div className="inventory-metric-copy">
         <span>{label}</span>
         <strong>{value}</strong>
+        {rarity ? (
+          <span className="inventory-metric-inline-rarity" aria-hidden="true">
+            <span>·</span>
+            <strong>{rarity}</strong>
+          </span>
+        ) : null}
       </div>
     </div>
   );

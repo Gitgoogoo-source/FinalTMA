@@ -172,3 +172,4 @@ operation 准入与保留按 [ADR-059](adr/ADR-059-bounded-operation-admission-a
 - [顶部资产数值字体与纯整数格式](adr/ADR-076-top-asset-numeral-typography.md)
 - [Telegram 支付支持命令闭环](adr/ADR-077-telegram-payment-support-command.md)
 - [宠物 PNG 原图导入与 WebP 母版契约](adr/ADR-078-png-master-import-contract.md)
+- [藏品详情稀有度与战斗力同行布局](adr/ADR-079-inventory-rarity-power-line.md)
