@@ -28,6 +28,9 @@ BATTLE_SQL = BATTLE_ROOT / "battle-v1.sql"
 WEB_EVOLUTION_MANIFEST = (
     ROOT / "apps/web/src/domains/evolution/evolution-catalog-v1.json"
 )
+WEB_COLLECTION_SKILLS = (
+    ROOT / "apps/web/src/domains/inventory/collection-skills-v1.json"
+)
 ASSET_ROOT = ROOT / "apps/web/public/assets"
 PRODUCT_DATA_CHECKSUM_BOUNDARY = "<!-- PRODUCT_DATA_CHECKSUM_BOUNDARY -->"
 EVOLUTION_RULES = {
@@ -127,6 +130,51 @@ def build_web_evolution_manifest(
     return {"version": "v1", "routes": routes}
 
 
+def build_web_collection_skills(
+    battle_payload: dict[str, object],
+) -> list[dict[str, object]]:
+    skills = {
+        str(item["id"]): item
+        for item in battle_payload["skills"]
+        if isinstance(item, dict)
+    }
+    powers = {
+        str(item["id"]): int(item["power"])
+        for item in battle_payload["skill_slots"]
+        if isinstance(item, dict)
+    }
+    entries = []
+    for template in battle_payload["template_configs"]:
+        if not isinstance(template, dict):
+            raise RuntimeError("Battle template configuration must be an object")
+        template_skills = []
+        for skill_id in template["skill_ids"]:
+            skill = skills[str(skill_id)]
+            template_skills.append(
+                {
+                    "name": skill["name"],
+                    "damage": powers[str(skill["slot_id"])],
+                }
+            )
+        entries.append(
+            {
+                "template_id": template["template_id"],
+                "skills": template_skills,
+            }
+        )
+    if len(entries) != 210 or len({item["template_id"] for item in entries}) != 210:
+        raise RuntimeError("Collection skills must cover 210 unique templates")
+    stage_skill_counts = {
+        count: sum(len(item["skills"]) == count for item in entries)
+        for count in (2, 3, 4)
+    }
+    if stage_skill_counts != {2: 70, 3: 70, 4: 70}:
+        raise RuntimeError(
+            f"Collection skills must contain 70 templates per skill count: {stage_skill_counts}"
+        )
+    return entries
+
+
 def asset_files(templates: list[dict[str, object]]) -> list[Path]:
     if len(templates) != 210:
         raise RuntimeError("Catalog must contain exactly 210 templates")
@@ -174,6 +222,11 @@ def main() -> None:
         type=Path,
         default=WEB_EVOLUTION_MANIFEST,
     )
+    parser.add_argument(
+        "--web-collection-skills-path",
+        type=Path,
+        default=WEB_COLLECTION_SKILLS,
+    )
     parser.add_argument("--battle-json-path", type=Path, default=BATTLE_JSON)
     parser.add_argument("--battle-sha256-path", type=Path, default=BATTLE_SHA256)
     parser.add_argument("--battle-manifest-path", type=Path, default=BATTLE_MANIFEST)
@@ -191,6 +244,7 @@ def main() -> None:
     args.migration_path.parent.mkdir(parents=True, exist_ok=True)
     args.manifest_path.parent.mkdir(parents=True, exist_ok=True)
     args.web_evolution_manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    args.web_collection_skills_path.parent.mkdir(parents=True, exist_ok=True)
     args.battle_json_path.parent.mkdir(parents=True, exist_ok=True)
     args.battle_sha256_path.parent.mkdir(parents=True, exist_ok=True)
     args.battle_manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -204,6 +258,15 @@ def main() -> None:
     args.web_evolution_manifest_path.write_text(
         json.dumps(
             build_web_evolution_manifest(templates),
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    args.web_collection_skills_path.write_text(
+        json.dumps(
+            build_web_collection_skills(battle_payload),
             ensure_ascii=False,
             indent=2,
         )

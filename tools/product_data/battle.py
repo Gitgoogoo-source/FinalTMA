@@ -211,6 +211,17 @@ def parse_chain_configs(section: str) -> list[dict[str, Any]]:
             )
     if len(configs) != 70 or len({item["chain_id"] for item in configs}) != 70:
         raise ValueError("Battle chain mapping must contain 70 unique chains")
+    by_profile: dict[str, list[dict[str, Any]]] = {}
+    for item in configs:
+        by_profile.setdefault(item["profile_id"], []).append(item)
+    if set(by_profile) != {f"P{i:02d}" for i in range(1, 15)} or any(
+        len(items) != 5
+        or {item["element"] for item in items} != set(ELEMENT_IDS.values())
+        for items in by_profile.values()
+    ):
+        raise ValueError(
+            "Every Battle role profile must map exactly one chain to each element"
+        )
     return configs
 
 

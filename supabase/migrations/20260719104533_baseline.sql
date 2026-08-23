@@ -13085,18 +13085,18 @@ set search_path = ''
 as $$
   select *
   from (values
-    ('battle-v1', 'A', 500::bigint, 'PET-N-001-1', 2::bigint, 'fire', array['S01','S04']::text[]),
-    ('battle-v1', 'A', 500::bigint, 'PET-N-033-2', 1::bigint, 'grass', array['S05','S08','S03']::text[]),
+    ('battle-v1', 'A', 500::bigint, 'PET-N-001-1', 2::bigint, 'grass', array['S01','S04']::text[]),
+    ('battle-v1', 'A', 500::bigint, 'PET-N-033-2', 1::bigint, 'lightning', array['S05','S08','S03']::text[]),
     ('battle-v1', 'A', 500::bigint, 'PET-A-020-3', 1::bigint, 'earth', array['S04','S02','S06','S10']::text[]),
-    ('battle-v1', 'B', 500::bigint, 'PET-N-003-2', 2::bigint, 'grass', array['S01','S04','S06']::text[]),
-    ('battle-v1', 'B', 500::bigint, 'PET-N-039-3', 1::bigint, 'earth', array['S05','S08','S03','S07']::text[]),
-    ('battle-v1', 'B', 500::bigint, 'PET-A-018-1', 1::bigint, 'lightning', array['S04','S02']::text[]),
-    ('battle-v1', 'C', 500::bigint, 'PET-N-004-3', 2::bigint, 'earth', array['S01','S04','S06','S09']::text[]),
-    ('battle-v1', 'C', 500::bigint, 'PET-N-040-1', 1::bigint, 'lightning', array['S05','S08']::text[]),
-    ('battle-v1', 'C', 500::bigint, 'PET-A-019-2', 1::bigint, 'water', array['S04','S02','S06']::text[]),
+    ('battle-v1', 'B', 500::bigint, 'PET-N-003-2', 2::bigint, 'earth', array['S01','S04','S06']::text[]),
+    ('battle-v1', 'B', 500::bigint, 'PET-N-039-3', 1::bigint, 'fire', array['S05','S08','S03','S07']::text[]),
+    ('battle-v1', 'B', 500::bigint, 'PET-A-018-1', 1::bigint, 'fire', array['S04','S02']::text[]),
+    ('battle-v1', 'C', 500::bigint, 'PET-N-004-3', 2::bigint, 'water', array['S01','S04','S06','S09']::text[]),
+    ('battle-v1', 'C', 500::bigint, 'PET-N-040-1', 1::bigint, 'earth', array['S05','S08']::text[]),
+    ('battle-v1', 'C', 500::bigint, 'PET-A-019-2', 1::bigint, 'lightning', array['S04','S02','S06']::text[]),
     ('battle-v1', 'D', 100::bigint, 'PET-N-005-1', 2::bigint, 'lightning', array['S01','S04']::text[]),
     ('battle-v1', 'D', 100::bigint, 'PET-N-036-2', 1::bigint, 'water', array['S05','S08','S03']::text[]),
-    ('battle-v1', 'D', 100::bigint, 'PET-A-016-3', 1::bigint, 'fire', array['S04','S02','S06','S10']::text[])
+    ('battle-v1', 'D', 100::bigint, 'PET-A-016-3', 1::bigint, 'grass', array['S04','S02','S06','S10']::text[])
   ) definition(
     fixture_version, role, target_kcoin, template_id, target_quantity, element, skill_slots
   )
@@ -13116,7 +13116,7 @@ as $$
           'fixture_version', 'battle-v1',
           'catalog_version', 'v1',
           'catalog_checksum', 'ec8d89aec0a700bfb504285401bf6327ed2a4c48c94d4d8bb92559bdae2ee61e',
-          'battle_checksum', '8e9a250af9df2f44d45846b0fe5c6fbb4e2f26d74e07146e87ce84a86b8141c6',
+          'battle_checksum', '2f5b434a8854709ea6e659ffd250d79b95f30166ba7e9ea188ae05f7a6508fff',
           'matrix', jsonb_agg(
             jsonb_build_object(
               'role', d.role,
@@ -13629,7 +13629,7 @@ begin
   cross join lateral unnest(d.skill_slots) skill_slot
   where d.fixture_version = p_fixture_version;
   if v_catalog_checksum <> 'ec8d89aec0a700bfb504285401bf6327ed2a4c48c94d4d8bb92559bdae2ee61e'
-    or v_battle_checksum <> '8e9a250af9df2f44d45846b0fe5c6fbb4e2f26d74e07146e87ce84a86b8141c6'
+    or v_battle_checksum <> '2f5b434a8854709ea6e659ffd250d79b95f30166ba7e9ea188ae05f7a6508fff'
     or not battle.rules_complete('battle-v1')
     or v_matrix_count <> 36
     or v_matrix_element_count <> 5

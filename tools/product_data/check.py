@@ -22,6 +22,9 @@ BATTLE_SQL = BATTLE_ROOT / "battle-v1.sql"
 WEB_EVOLUTION_MANIFEST = (
     ROOT / "apps/web/src/domains/evolution/evolution-catalog-v1.json"
 )
+WEB_COLLECTION_SKILLS = (
+    ROOT / "apps/web/src/domains/inventory/collection-skills-v1.json"
+)
 PRODUCT = ROOT / "docs/product/功能说明文档.md"
 
 
@@ -43,6 +46,7 @@ def main() -> None:
         migration = directory / migration_source.name
         manifest = directory / "catalog-v1.json"
         web_evolution_manifest = directory / "evolution-catalog-v1.json"
+        web_collection_skills = directory / "collection-skills-v1.json"
         battle_json = directory / "battle-v1.json"
         battle_sha256 = directory / "battle-v1.sha256"
         battle_manifest = directory / "battle-manifest.json"
@@ -53,6 +57,7 @@ def main() -> None:
             "--migration-path", str(migration),
             "--manifest-path", str(manifest),
             "--web-evolution-manifest-path", str(web_evolution_manifest),
+            "--web-collection-skills-path", str(web_collection_skills),
             "--battle-json-path", str(battle_json),
             "--battle-sha256-path", str(battle_sha256),
             "--battle-manifest-path", str(battle_manifest),
@@ -65,6 +70,11 @@ def main() -> None:
                 "apps/web/src/domains/evolution/evolution-catalog-v1.json",
                 WEB_EVOLUTION_MANIFEST,
                 web_evolution_manifest,
+            ),
+            (
+                "apps/web/src/domains/inventory/collection-skills-v1.json",
+                WEB_COLLECTION_SKILLS,
+                web_collection_skills,
             ),
             ("generated/battle/battle-v1.json", BATTLE_JSON, battle_json),
             ("generated/battle/battle-v1.sha256", BATTLE_SHA256, battle_sha256),

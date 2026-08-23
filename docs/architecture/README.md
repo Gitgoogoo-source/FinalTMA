@@ -88,6 +88,7 @@ operation 准入与保留按 [ADR-059](adr/ADR-059-bounded-operation-admission-a
 - `generated/assets/art-assets-v2.json`
 - `generated/assets/releases/catalog-v1-initial.json`
 - `generated/battle/battle-v1.json`
+- `apps/web/src/domains/inventory/collection-skills-v1.json`
 - `packages/api-contracts/openapi/openapi.json`
 - `supabase/migrations/*_baseline.sql`
 - `supabase/migrations/*_product_data_v1.sql`
@@ -173,3 +174,4 @@ operation 准入与保留按 [ADR-059](adr/ADR-059-bounded-operation-admission-a
 - [Telegram 支付支持命令闭环](adr/ADR-077-telegram-payment-support-command.md)
 - [宠物 PNG 原图导入与 WebP 母版契约](adr/ADR-078-png-master-import-contract.md)
 - [藏品详情稀有度与战斗力同行布局](adr/ADR-079-inventory-rarity-power-line.md)
+- [宠物美术对齐的 Battle 属性重分配](adr/ADR-080-battle-art-aligned-element-reassignment.md)
