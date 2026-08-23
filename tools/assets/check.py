@@ -208,6 +208,43 @@ def assert_art_manifest(path: Path, runtime_version: str) -> None:
         or manifest.get("public_bucket") != "pet-runtime"
     ):
         raise SystemExit("Art manifest identity or buckets are invalid")
+    generator = manifest.get("generator")
+    if not isinstance(generator, dict):
+        raise SystemExit("Art manifest generator provenance is missing")
+    source_png = generator.get("source_png")
+    if source_png is not None:
+        expected_source = {
+            "format": "png",
+            "width": 1024,
+            "height": 1024,
+            "color_space": "srgb",
+            "channels": 4,
+            "depth": "uchar",
+            "bits_per_sample": 8,
+            "pages": 1,
+            "alpha": True,
+            "count": 210,
+            "filename_pattern": "NNN_CNNN-S_<catalog-name>.png",
+            "name_normalization": "trim surrounding whitespace and underscores",
+            "master": {
+                "format": "webp",
+                "width": 768,
+                "height": 768,
+                "lossless": True,
+                "effort": 6,
+                "alpha_quality": 100,
+                "kernel": "lanczos3",
+                "metadata": False,
+                "fit": "fill",
+            },
+        }
+        if (
+            not isinstance(source_png, dict)
+            or re.fullmatch(r"[0-9a-f]{64}", str(source_png.get("set_sha256"))) is None
+            or {key: value for key, value in source_png.items() if key != "set_sha256"}
+            != expected_source
+        ):
+            raise SystemExit("PNG source import provenance is invalid")
     catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
     templates = catalog.get("templates")
     assets = manifest.get("templates")

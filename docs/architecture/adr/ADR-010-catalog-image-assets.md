@@ -8,7 +8,9 @@
 
 宠物美术采用“私有母版 + 公开运行时 + Vercel 剪影”的唯一交付结构。Supabase Storage 私有桶 `art-masters` 永久保存全部历史母版并成为母版事实来源；公开桶 `pet-runtime` 只保存宠物运行时 WebP。Git 删除母版和宠物运行时二进制，只保留当前 `generated/assets/art-assets-v2.json`、历史发布清单、SHA-256 与 `tools/assets/release.mjs`。非宠物美术继续随 Vercel 版本发布。
 
-母版对象键固定为 `catalog/<template-id>/<source-sha256>.webp`。当前运行时对象键固定为 `catalog/v2/thumb/<template-id>.<runtime-sha256>.webp` 与 `catalog/v2/detail/<template-id>.<runtime-sha256>.webp`；既有 v1 对象仅用于 90 天退役保留。Node.js 24 使用锁定的 `sharp` 版本，把每张 768×768 WebP 母版生成 256×256、quality 82 的缩略图和 768×768、quality 74 的详情图；两者均使用 WebP、effort 6、alphaQuality 100、Lanczos3 并移除元数据。上传固定 `upsert = false`，同键对象只能校验和复用，不能覆盖；公开对象响应固定为 `public, max-age=31536000, immutable`，内容哈希对象键与禁止覆盖共同保证地址不可变。
+整体换图只接受 ADR-078 定义的 210 张 1024×1024 PNG 设计输入。`prepare-png` 在不修改原图的前提下完成模板身份、PNG 编码和透明像素校验，把完整画布确定性缩放为 768×768 lossless WebP 母版并移除元数据；源集合 SHA-256 与转换参数进入当前资源清单。PNG 不是运行时事实来源，不上传 Supabase，也不写入 Git。
+
+母版对象键固定为 `catalog/<template-id>/<master-sha256>.webp`。当前运行时对象键固定为 `catalog/v2/thumb/<template-id>.<runtime-sha256>.webp` 与 `catalog/v2/detail/<template-id>.<runtime-sha256>.webp`；既有 v1 对象仅用于 90 天退役保留。Node.js 24 使用锁定的 `sharp` 版本，把每张 768×768 WebP 母版生成 256×256、quality 82 的缩略图和 768×768、quality 74 的详情图；两者均使用 WebP、effort 6、alphaQuality 100、Lanczos3 并移除元数据。上传固定 `upsert = false`，同键对象只能校验和复用，不能覆盖；公开对象响应固定为 `public, max-age=31536000, immutable`，内容哈希对象键与禁止覆盖共同保证地址不可变。
 
 数据库以资源发布批次为原子切换单位。一个批次必须恰好覆盖 210 个模板及其母版、缩略图和详情图对象；当前批次指针和资源 revision 在单个 PostgreSQL RPC 事务内切换。API 字段固定为 `image_thumbnail_url` 与 `image_detail_url`。`catalog.current` 只返回当前 checksum、release key 和 revision；`catalog.release` 按 checksum + release key 解析指定 active/retired 批次，并按 ADR-042 一年不可变缓存。Battle、operation 结果、进化静态清单和市场设备收件箱都不持久保存 URL；原命令响应、幂等回放和恢复查询通过统一展示入口按模板 ID 注入当前 URL。资源发布独立于前端代码和 Vercel 部署；已打开页面不主动刷新，之后的新开、刷新和正常 API 读取使用当前指针，发布与回滚不清除旧缓存。
 

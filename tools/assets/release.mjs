@@ -2,8 +2,8 @@
 
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
+import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import sharp from "sharp";
@@ -17,6 +17,21 @@ const HISTORICAL_MANIFESTS = [
 const PRIVATE_BUCKET = "art-masters";
 const PUBLIC_BUCKET = "pet-runtime";
 const PUBLIC_CACHE_CONTROL = "public, max-age=31536000, immutable";
+const PNG_SOURCE = {
+  format: "png",
+  width: 1024,
+  height: 1024,
+  colorSpace: "srgb",
+  channels: 4,
+  depth: "uchar",
+  bitsPerSample: 8,
+  pages: 1,
+};
+const MASTER = {
+  width: 768,
+  maxBytes: 2 * 1024 * 1024,
+  effort: 6,
+};
 const EXPECTED_CATALOG_COUNTS = {
   chains: 70,
   templates: 210,
@@ -49,7 +64,21 @@ const templateIds = catalog.templates?.map((item) => String(item.id)) ?? [];
 if (templateIds.length !== 210 || new Set(templateIds).size !== 210)
   throw new Error("Catalog must contain exactly 210 unique templates");
 
-if (command === "prepare") {
+if (command === "prepare-png") {
+  const pngDirectory = requiredPath("png-dir");
+  const sourceDirectory = requiredPath("source-dir");
+  const runtimeDirectory = requiredPath("runtime-dir");
+  await assertIndependentDirectories([
+    pngDirectory,
+    sourceDirectory,
+    runtimeDirectory,
+  ]);
+  await assertDirectoryEmpty(sourceDirectory);
+  await assertDirectoryEmpty(runtimeDirectory);
+  const sourceImport = await importPngMasters(pngDirectory, sourceDirectory);
+  await generateRuntime(sourceDirectory, runtimeDirectory);
+  await writeManifest(sourceDirectory, runtimeDirectory, sourceImport);
+} else if (command === "prepare") {
   const sourceDirectory = requiredPath("source-dir");
   const runtimeDirectory = requiredPath("runtime-dir");
   await generateRuntime(sourceDirectory, runtimeDirectory);
@@ -150,6 +179,7 @@ function parseOptions(values) {
 
 function usage() {
   console.log(`Usage:
+  node tools/assets/release.mjs prepare-png --png-dir <1024-pngs> --source-dir <masters> --runtime-dir <output> --release-key <key>
   node tools/assets/release.mjs prepare --source-dir <masters> --runtime-dir <output> --release-key <key>
   node tools/assets/release.mjs manifest --source-dir <masters> --runtime-dir <variants> --release-key <key>
   node tools/assets/release.mjs sync --source-dir <masters> --runtime-dir <variants>
@@ -207,10 +237,17 @@ async function validateWebp(path, width, maxBytes) {
     metadata.width !== width ||
     metadata.height !== width ||
     (metadata.pages ?? 1) !== 1 ||
+    metadata.hasAlpha !== true ||
+    metadata.hasProfile === true ||
+    metadata.exif !== undefined ||
+    metadata.icc !== undefined ||
+    metadata.iptc !== undefined ||
+    metadata.xmp !== undefined ||
+    (metadata.comments?.length ?? 0) !== 0 ||
     data.byteLength > maxBytes
   )
     throw new Error(
-      `${path} violates its WebP, dimensions, frame, or byte budget`,
+      `${path} violates its WebP, dimensions, alpha, metadata, frame, or byte budget`,
     );
   return {
     data,
@@ -219,6 +256,204 @@ async function validateWebp(path, width, maxBytes) {
     width,
     height: width,
   };
+}
+
+function pathContains(parent, child) {
+  const difference = relative(parent, child);
+  return (
+    difference === "" ||
+    (!difference.startsWith("..") && !isAbsolute(difference))
+  );
+}
+
+async function assertIndependentDirectories(paths) {
+  for (let left = 0; left < paths.length; left += 1) {
+    for (let right = left + 1; right < paths.length; right += 1) {
+      if (
+        pathContains(paths[left], paths[right]) ||
+        pathContains(paths[right], paths[left])
+      )
+        throw new Error(
+          `PNG, master, and runtime directories must be independent: ${paths[left]} / ${paths[right]}`,
+        );
+    }
+  }
+}
+
+async function assertDirectoryEmpty(path) {
+  await mkdir(path, { recursive: true });
+  if ((await readdir(path)).length !== 0)
+    throw new Error(`Output directory must be empty: ${path}`);
+}
+
+function normalizedSourceName(value) {
+  return value.replace(/^[\s_]+|[\s_]+$/gu, "");
+}
+
+async function discoverPngSources(pngDirectory) {
+  const entries = (await readdir(pngDirectory, { withFileTypes: true })).filter(
+    (entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".png"),
+  );
+  if (entries.length !== templateIds.length)
+    throw new Error(
+      `PNG source directory must contain exactly ${templateIds.length} PNG files`,
+    );
+
+  const templatesByOrdinal = new Map(
+    catalog.templates.map((template) => [
+      Number(template.sort_order),
+      template,
+    ]),
+  );
+  if (templatesByOrdinal.size !== templateIds.length)
+    throw new Error(
+      "Catalog sort_order values must uniquely cover 1 through 210",
+    );
+
+  const records = new Array(templateIds.length);
+  for (const entry of entries) {
+    const match = /^(\d{3})_C(\d{3})-([1-3])_(.+)\.png$/iu.exec(entry.name);
+    if (!match)
+      throw new Error(
+        `PNG filename violates the import contract: ${entry.name}`,
+      );
+    const ordinal = Number(match[1]);
+    const chain = Number(match[2]);
+    const stage = Number(match[3]);
+    const template = templatesByOrdinal.get(ordinal);
+    if (!template || records[ordinal - 1])
+      throw new Error(`PNG ordinal is missing or duplicated: ${match[1]}`);
+    const expectedChain = Math.floor((ordinal - 1) / 3) + 1;
+    if (
+      chain !== expectedChain ||
+      stage !== Number(template.stage) ||
+      normalizedSourceName(match[4]) !== template.name
+    )
+      throw new Error(
+        `PNG filename does not match catalog identity ${template.id}: ${entry.name}`,
+      );
+    records[ordinal - 1] = {
+      path: resolve(pngDirectory, entry.name),
+      filename: entry.name,
+      templateId: String(template.id),
+    };
+  }
+  if (records.some((record) => record === undefined))
+    throw new Error("PNG ordinal coverage must be continuous from 001 to 210");
+  return records;
+}
+
+async function validatePngSource(record) {
+  const data = await readFile(record.path);
+  const image = sharp(data, { failOn: "error" });
+  const metadata = await image.metadata();
+  if (
+    metadata.format !== PNG_SOURCE.format ||
+    metadata.width !== PNG_SOURCE.width ||
+    metadata.height !== PNG_SOURCE.height ||
+    metadata.space !== PNG_SOURCE.colorSpace ||
+    metadata.channels !== PNG_SOURCE.channels ||
+    metadata.depth !== PNG_SOURCE.depth ||
+    metadata.bitsPerSample !== PNG_SOURCE.bitsPerSample ||
+    (metadata.pages ?? 1) !== PNG_SOURCE.pages ||
+    metadata.hasAlpha !== true
+  )
+    throw new Error(
+      `PNG source violates the 1024px, 8-bit sRGB RGBA contract: ${record.filename}`,
+    );
+
+  const { data: pixels, info } = await sharp(data)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  let minimumAlpha = 255;
+  let maximumAlpha = 0;
+  for (let offset = 3; offset < pixels.length; offset += info.channels) {
+    minimumAlpha = Math.min(minimumAlpha, pixels[offset]);
+    maximumAlpha = Math.max(maximumAlpha, pixels[offset]);
+  }
+  const alphaAt = (x, y) =>
+    pixels[(y * info.width + x) * info.channels + info.channels - 1];
+  const cornerAlpha = [
+    alphaAt(0, 0),
+    alphaAt(info.width - 1, 0),
+    alphaAt(0, info.height - 1),
+    alphaAt(info.width - 1, info.height - 1),
+  ];
+  if (
+    minimumAlpha !== 0 ||
+    maximumAlpha === 0 ||
+    cornerAlpha.some((alpha) => alpha !== 0)
+  )
+    throw new Error(
+      `PNG source must contain visible pixels and transparent corners: ${record.filename}`,
+    );
+  return { data, sha256: sha256(data), bytes: data.byteLength };
+}
+
+async function importPngMasters(pngDirectory, sourceDirectory) {
+  sharp.concurrency(4);
+  const records = await discoverPngSources(pngDirectory);
+  const provenance = new Array(records.length);
+  for (let index = 0; index < records.length; index += 8) {
+    await Promise.all(
+      records.slice(index, index + 8).map(async (record, offset) => {
+        const source = await validatePngSource(record);
+        const outputPath = resolve(
+          sourceDirectory,
+          `${record.templateId.toLowerCase()}.webp`,
+        );
+        await sharp(source.data)
+          .resize(MASTER.width, MASTER.width, {
+            fit: "fill",
+            kernel: sharp.kernel.lanczos3,
+          })
+          .webp({
+            lossless: true,
+            effort: MASTER.effort,
+            alphaQuality: 100,
+          })
+          .toFile(outputPath);
+        await validateWebp(outputPath, MASTER.width, MASTER.maxBytes);
+        provenance[index + offset] = {
+          template_id: record.templateId,
+          filename: record.filename,
+          sha256: source.sha256,
+          bytes: source.bytes,
+        };
+      }),
+    );
+  }
+  const sourceImport = {
+    format: PNG_SOURCE.format,
+    width: PNG_SOURCE.width,
+    height: PNG_SOURCE.height,
+    color_space: PNG_SOURCE.colorSpace,
+    channels: PNG_SOURCE.channels,
+    depth: PNG_SOURCE.depth,
+    bits_per_sample: PNG_SOURCE.bitsPerSample,
+    pages: PNG_SOURCE.pages,
+    alpha: true,
+    count: provenance.length,
+    filename_pattern: "NNN_CNNN-S_<catalog-name>.png",
+    name_normalization: "trim surrounding whitespace and underscores",
+    set_sha256: sha256(canonical(provenance)),
+    master: {
+      format: "webp",
+      width: MASTER.width,
+      height: MASTER.width,
+      lossless: true,
+      effort: MASTER.effort,
+      alpha_quality: 100,
+      kernel: "lanczos3",
+      metadata: false,
+      fit: "fill",
+    },
+  };
+  console.log(
+    `Imported ${records.length} PNGs into lossless masters; source set ${sourceImport.set_sha256}`,
+  );
+  return sourceImport;
 }
 
 async function generateRuntime(sourceDirectory, runtimeDirectory) {
@@ -256,7 +491,11 @@ async function generateRuntime(sourceDirectory, runtimeDirectory) {
   console.log(`Generated ${templateIds.length * 2} runtime WebPs`);
 }
 
-async function writeManifest(sourceDirectory, runtimeDirectory) {
+async function writeManifest(
+  sourceDirectory,
+  runtimeDirectory,
+  sourceImport = undefined,
+) {
   const releaseKey = requiredOption("release-key");
   if (!/^[a-z0-9][a-z0-9._-]{2,127}$/.test(releaseKey))
     throw new Error(
@@ -312,6 +551,7 @@ async function writeManifest(sourceDirectory, runtimeDirectory) {
         kernel: "lanczos3",
         metadata: false,
       },
+      ...(sourceImport ? { source_png: sourceImport } : {}),
     },
     release: {
       key: releaseKey,
