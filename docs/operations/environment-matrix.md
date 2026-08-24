@@ -27,7 +27,7 @@ Supabase 固定安装 `pg_cron`、`pg_net`、Vault 和 `pgcrypto`。三条 migra
 
 Vercel Production 固定配置 `APP_BASE_URL=https://final-tma-pi.vercel.app`、`TELEGRAM_BOT_USERNAME=EvoMyPet_bot` 与 `TELEGRAM_MINI_APP_SHORT_NAME=evomypet`。推荐链接固定为 `https://t.me/EvoMyPet_bot/evomypet?startapp=<当前用户邀请码>`，Battle prepared-share deep link 固定追加 `startapp=BTL_<32位base64url>`；环境变量变更必须由新的 `main` Production deployment 生效。
 
-生产 webhook URL 固定为 `https://final-tma-pi.vercel.app/api/telegram/webhook`，`secret_token` 与 Vercel Production 的 `TELEGRAM_WEBHOOK_SECRET` 一致，`allowed_updates` 精确为 `['message','pre_checkout_query']`。`message` 承载 `/paysupport`、`successful_payment` 和 `refunded_payment`，`pre_checkout_query` 承载付款前校验。`PAYMENT_SUPPORT_URL` 必须指向独立、有人持续查看的真实人工支持入口；未配置时禁止开放充值。
+生产 webhook URL 固定为 `https://final-tma-pi.vercel.app/api/telegram/webhook`，`secret_token` 与 Vercel Production 的 `TELEGRAM_WEBHOOK_SECRET` 一致，`allowed_updates` 精确为 `['message','pre_checkout_query']`。`message` 承载 `/paysupport`、`successful_payment` 和 `refunded_payment`，`pre_checkout_query` 承载付款前校验。`PAYMENT_SUPPORT_URL` 固定为独立且有人持续查看的人工支持入口 `https://t.me/EvoMyPetSupport`；真实 Bot 私聊验收未确认该回复前禁止开放充值。
 
 Telegram 正常开放态固定为：Bot `@EvoMyPet_bot`；Main Mini App 和 named Mini App 都指向 `https://final-tma-pi.vercel.app/`；short name 为 `evomypet`；公开链接为 `https://t.me/EvoMyPet_bot/evomypet`；默认菜单文字为 `Open EvoMyPet` 并指向该公开链接。发布隔离态按 [ADR-075](../architecture/adr/ADR-075-telegram-named-mini-app-release-isolation.md) 停用 Main、恢复默认菜单行为并把 named Web App URL 改为 `https://final-tma-pi.vercel.app/maintenance.html`，不删除 short name。
 

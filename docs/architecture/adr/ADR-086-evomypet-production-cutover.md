@@ -17,7 +17,7 @@ Bot 头像固定使用用户确认的金龙图。金龙图只属于 Telegram Bot
 
 生产 Vercel 固定设置 `APP_ENV=production`、`APP_BASE_URL=https://final-tma-pi.vercel.app`、`TELEGRAM_BOT_USERNAME=EvoMyPet_bot` 与 `TELEGRAM_MINI_APP_SHORT_NAME=evomypet`。生产 Bot token 只替换 `TELEGRAM_BOT_TOKEN`；`TELEGRAM_WEBHOOK_SECRET` 使用独立随机值，并同时用于 `setWebhook.secret_token` 与服务端验证。Bot token、webhook secret、Supabase service role、会话 secret、Battle secret 和 Ably key 均只保存在对应平台的生产 Secret，不进入 Git、聊天、截图、客户端或数据库表。
 
-`PAYMENT_SUPPORT_URL` 必须在开放充值前配置为与 Bot 独立、由人工持续查看且能处理付款问题的 Telegram 支持入口。它不得指向 `@EvoMyPet_bot`、Mini App 链接、占位账号或无人值守入口；未确认该真实值时，禁止开放充值和执行 Telegram Stars 付款，但不允许在文档或代码中虚构具体账号。
+生产 `PAYMENT_SUPPORT_URL` 固定为 `https://t.me/EvoMyPetSupport`。该入口与 Bot 独立，由人工持续查看并处理付款问题；它不得改指向 `@EvoMyPet_bot`、Mini App 链接、占位账号或无人值守入口。真实 Bot 私聊验收未确认 `/paysupport` 正确回复该链接前，禁止开放充值和执行 Telegram Stars 付款。
 
 ## 一次性数据库切换
 

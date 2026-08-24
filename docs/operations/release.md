@@ -19,7 +19,7 @@
 - Supabase 已安装 `pg_cron`、`pg_net`、Vault 和 `pgcrypto`，套餐与项目配置支持 `battle-tick-v1` 每秒执行；Ably 套餐固定为 Standard。
 - 生产 Bot 固定为 `@EvoMyPet_bot`；Main Mini App URL 固定为 `https://final-tma-pi.vercel.app/`；named Mini App 固定为 `https://t.me/EvoMyPet_bot/evomypet`；默认菜单按钮固定为 `Open EvoMyPet` 并指向该 named Mini App 链接。
 - 部署固定提供 [ADR-075](../architecture/adr/ADR-075-telegram-named-mini-app-release-isolation.md) 的 `/maintenance.html`；维护页固定为 `https://final-tma-pi.vercel.app/maintenance.html`，必须返回 HTML、`private, no-store, max-age=0` 与 `noindex, nofollow`，不得加载游戏、认证或 API。
-- Vercel Production 已配置独立人工支持入口 `PAYMENT_SUPPORT_URL`；它不得指向 Bot、Mini App、占位账号或无人值守入口。未确认该值时禁止开放充值和支付，但不得虚构支持账号。
+- Vercel Production 已把独立人工支持入口 `PAYMENT_SUPPORT_URL` 固定为 `https://t.me/EvoMyPetSupport`；它不得指向 Bot、Mini App、占位账号或无人值守入口。真实 Bot 私聊验收未确认该回复前禁止开放充值和支付。
 
 任何一项与目标环境对应的前提不成立：停止发布，不恢复旧 migration、未获批准的占位素材、mock、默认业务值或功能开关。
 
