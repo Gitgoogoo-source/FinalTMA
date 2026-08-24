@@ -68,7 +68,7 @@ export function GachaHatchAnimation({
 
   useEffect(() => {
     if (!revealing || !revealRarity) return;
-    const stopAudio = playGachaRitualReveal(revealRarity);
+    const stopAudio = playGachaRitualReveal();
     const hapticsEnabled = !isLowPowerAnimationDevice();
     if (hapticsEnabled) impactHaptic(revealImpact(revealRarity));
     const echo = hapticsEnabled

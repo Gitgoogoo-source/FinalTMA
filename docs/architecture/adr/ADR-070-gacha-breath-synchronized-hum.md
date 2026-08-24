@@ -2,7 +2,7 @@
 
 ## 状态
 
-本裁决的音色已由 [ADR-081](ADR-081-gacha-warm-gold-convergence-sound.md) 取代。本文只保留历史裁决来源；当前实现、产品说明和验收以 ADR-081 为准。
+本裁决的音色先由 [ADR-081](ADR-081-gacha-warm-gold-convergence-sound.md) 取代，ADR-081 后续又由 [ADR-082](ADR-082-gacha-unified-electronic-heartbeat-sound.md) 取代。本文只保留历史裁决来源；当前实现、产品说明和验收以 ADR-082 为准。
 
 ## 决定
 

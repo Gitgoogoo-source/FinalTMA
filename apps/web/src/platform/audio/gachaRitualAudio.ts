@@ -1,25 +1,25 @@
-type GachaRitualRarity = "common" | "rare" | "epic" | "legendary" | "mythic";
+import {
+  GACHA_RITUAL_BUILD_UP_DURATION_SECONDS,
+  GACHA_RITUAL_REVEAL_CAPSULE_POP,
+  GACHA_RITUAL_REVEAL_MASTER_GAIN_CURVE,
+  gachaRitualHeartbeatAt,
+} from "./gachaRitualSoundDesign.ts";
 
-const BUILD_UP_DURATION_SECONDS = 4;
 const BUILD_UP_SOURCE_DURATION_SECONDS = 4.02;
 const BUILD_UP_AUTOMATION_SAMPLE_COUNT = 2_001;
 const BUILD_UP_PREPARATION_CHUNK_SIZE = 256;
 const BUILD_UP_TEXTURE_SAMPLE_RATE = 12_000;
 const BUILD_UP_TEXTURE_SAMPLE_COUNT = 16_384;
 const BUILD_UP_TEXTURE_PREPARATION_CHUNK_SIZE = 2_048;
-const GACHA_BREATH_PERIODS_SECONDS = [
-  0.8, 0.58, 0.46, 0.38, 0.33, 0.29, 0.26, 0.23, 0.2, 0.17, 0.13, 0.1, 0.07,
-] as const;
-
 type BuildUpAutomation = {
-  foundationFrequency: Float32Array;
-  foundationGain: Float32Array;
-  auraFrequency: Float32Array;
-  auraGain: Float32Array;
-  airFrequency: Float32Array;
-  airGain: Float32Array;
-  shimmerFrequency: Float32Array;
-  shimmerGain: Float32Array;
+  subFrequency: Float32Array;
+  subGain: Float32Array;
+  bodyFrequency: Float32Array;
+  bodyGain: Float32Array;
+  transientFrequency: Float32Array;
+  transientGain: Float32Array;
+  currentFrequency: Float32Array;
+  currentGain: Float32Array;
 };
 
 type BuildUpAssets = {
@@ -97,14 +97,14 @@ export function prepareGachaRitualAudioAssets(): void {
   const preparation: BuildUpAssetsPreparation = {
     assets: {
       automation: {
-        foundationFrequency: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
-        foundationGain: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
-        auraFrequency: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
-        auraGain: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
-        airFrequency: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
-        airGain: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
-        shimmerFrequency: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
-        shimmerGain: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
+        subFrequency: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
+        subGain: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
+        bodyFrequency: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
+        bodyGain: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
+        transientFrequency: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
+        transientGain: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
+        currentFrequency: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
+        currentGain: new Float32Array(BUILD_UP_AUTOMATION_SAMPLE_COUNT),
       },
       texture: new Float32Array(BUILD_UP_TEXTURE_SAMPLE_COUNT),
     },
@@ -157,28 +157,27 @@ function fillBuildUpAutomation(
     const cursor = preparation.automationCursor;
     const seconds =
       (cursor / (BUILD_UP_AUTOMATION_SAMPLE_COUNT - 1)) *
-      BUILD_UP_DURATION_SECONDS;
-    const { overall, pulse } = breathAt(seconds);
-    const growth = Math.pow(overall, 0.82);
-    const softPulse = Math.pow(pulse, 1.35);
-    const audiblePulse = softPulse * mix(0.92, 0.62, growth);
-    const foundationFrequency =
-      54 + growth * 16 + audiblePulse * (2.8 + growth * 1.2);
+      GACHA_RITUAL_BUILD_UP_DURATION_SECONDS;
+    const { overall, primaryBeat, secondaryBeat, heartbeat, attack } =
+      gachaRitualHeartbeatAt(seconds);
+    const growth = Math.pow(overall, 0.86);
 
-    automation.foundationFrequency[cursor] = foundationFrequency;
-    automation.foundationGain[cursor] =
-      0.011 + growth * 0.009 + audiblePulse * (0.0045 + growth * 0.0015);
-    automation.auraFrequency[cursor] = foundationFrequency * 2.5;
-    automation.auraGain[cursor] =
-      0.002 + growth * 0.0035 + audiblePulse * (0.0025 + growth * 0.001);
-    automation.airFrequency[cursor] =
-      360 + growth * 920 + audiblePulse * (300 + growth * 420);
-    automation.airGain[cursor] =
-      0.016 + growth * 0.016 + audiblePulse * (0.021 + growth * 0.006);
-    automation.shimmerFrequency[cursor] =
-      1_500 + growth * 2_300 + audiblePulse * (420 + growth * 650);
-    automation.shimmerGain[cursor] =
-      0.003 + growth * 0.007 + audiblePulse * (0.009 + growth * 0.003);
+    automation.subFrequency[cursor] =
+      52 + growth * 7 + primaryBeat * 34 + secondaryBeat * 23;
+    automation.subGain[cursor] =
+      0.0025 + growth * 0.0015 + heartbeat * (0.055 + growth * 0.012);
+    automation.bodyFrequency[cursor] =
+      116 + growth * 28 + primaryBeat * 72 + secondaryBeat * 48;
+    automation.bodyGain[cursor] =
+      0.0015 + growth * 0.002 + heartbeat * (0.026 + growth * 0.006);
+    automation.transientFrequency[cursor] =
+      520 + growth * 740 + attack * (700 + growth * 650);
+    automation.transientGain[cursor] =
+      0.0008 + growth * 0.0015 + attack * (0.017 + growth * 0.004);
+    automation.currentFrequency[cursor] =
+      1_800 + growth * 2_200 + heartbeat * 520;
+    automation.currentGain[cursor] =
+      0.0005 + growth * 0.0035 + heartbeat * (0.003 + growth * 0.002);
   }
 }
 
@@ -248,95 +247,103 @@ export function playGachaRitualBuildUp(): () => void {
   const nodes: AudioScheduledSourceNode[] = [];
   const processors: AudioNode[] = [];
   master.gain.setValueAtTime(0.0001, startedAt);
-  master.gain.exponentialRampToValueAtTime(0.86, startedAt + 0.12);
-  master.gain.setValueAtTime(0.86, startedAt + 3.9);
+  master.gain.exponentialRampToValueAtTime(0.82, startedAt + 0.08);
+  master.gain.setValueAtTime(0.82, startedAt + 3.9);
   master.gain.exponentialRampToValueAtTime(
     0.0001,
-    startedAt + BUILD_UP_DURATION_SECONDS,
+    startedAt + GACHA_RITUAL_BUILD_UP_DURATION_SECONDS - 0.001,
   );
-  compressor.threshold.value = -24;
-  compressor.knee.value = 18;
-  compressor.ratio.value = 2.5;
-  compressor.attack.value = 0.012;
-  compressor.release.value = 0.16;
+  master.gain.setValueAtTime(
+    0,
+    startedAt + GACHA_RITUAL_BUILD_UP_DURATION_SECONDS,
+  );
+  compressor.threshold.value = -22;
+  compressor.knee.value = 16;
+  compressor.ratio.value = 3.2;
+  compressor.attack.value = 0.006;
+  compressor.release.value = 0.12;
   master.connect(compressor).connect(context.destination);
 
-  const foundation = context.createOscillator();
-  const foundationGain = context.createGain();
-  foundation.type = "sine";
-  foundation.frequency.setValueCurveAtTime(
-    automation.foundationFrequency,
+  const sub = context.createOscillator();
+  const subGain = context.createGain();
+  sub.type = "sine";
+  sub.frequency.setValueCurveAtTime(
+    automation.subFrequency,
     startedAt,
-    BUILD_UP_DURATION_SECONDS,
+    GACHA_RITUAL_BUILD_UP_DURATION_SECONDS,
   );
-  foundationGain.gain.setValueCurveAtTime(
-    automation.foundationGain,
+  subGain.gain.setValueCurveAtTime(
+    automation.subGain,
     startedAt,
-    BUILD_UP_DURATION_SECONDS,
+    GACHA_RITUAL_BUILD_UP_DURATION_SECONDS,
   );
-  foundation.connect(foundationGain).connect(master);
-  foundation.start(startedAt);
-  foundation.stop(startedAt + BUILD_UP_SOURCE_DURATION_SECONDS);
-  nodes.push(foundation);
-  processors.push(foundationGain);
+  sub.connect(subGain).connect(master);
+  sub.start(startedAt);
+  sub.stop(startedAt + BUILD_UP_SOURCE_DURATION_SECONDS);
+  nodes.push(sub);
+  processors.push(subGain);
 
-  const aura = context.createOscillator();
-  const auraGain = context.createGain();
-  aura.type = "sine";
-  aura.frequency.setValueCurveAtTime(
-    automation.auraFrequency,
+  const body = context.createOscillator();
+  const bodyFilter = context.createBiquadFilter();
+  const bodyGain = context.createGain();
+  body.type = "triangle";
+  body.frequency.setValueCurveAtTime(
+    automation.bodyFrequency,
     startedAt,
-    BUILD_UP_DURATION_SECONDS,
+    GACHA_RITUAL_BUILD_UP_DURATION_SECONDS,
   );
-  auraGain.gain.setValueCurveAtTime(
-    automation.auraGain,
+  bodyFilter.type = "lowpass";
+  bodyFilter.frequency.value = 780;
+  bodyFilter.Q.value = 0.72;
+  bodyGain.gain.setValueCurveAtTime(
+    automation.bodyGain,
     startedAt,
-    BUILD_UP_DURATION_SECONDS,
+    GACHA_RITUAL_BUILD_UP_DURATION_SECONDS,
   );
-  aura.connect(auraGain).connect(master);
-  aura.start(startedAt);
-  aura.stop(startedAt + BUILD_UP_SOURCE_DURATION_SECONDS);
-  nodes.push(aura);
-  processors.push(auraGain);
+  body.connect(bodyFilter).connect(bodyGain).connect(master);
+  body.start(startedAt);
+  body.stop(startedAt + BUILD_UP_SOURCE_DURATION_SECONDS);
+  nodes.push(body);
+  processors.push(bodyFilter, bodyGain);
 
   if (textureBuffer) {
     const texture = context.createBufferSource();
-    const airFilter = context.createBiquadFilter();
-    const airGain = context.createGain();
-    const shimmerFilter = context.createBiquadFilter();
-    const shimmerGain = context.createGain();
+    const transientFilter = context.createBiquadFilter();
+    const transientGain = context.createGain();
+    const currentFilter = context.createBiquadFilter();
+    const currentGain = context.createGain();
     texture.buffer = textureBuffer;
     texture.loop = true;
-    airFilter.type = "bandpass";
-    airFilter.Q.value = 0.62;
-    airFilter.frequency.setValueCurveAtTime(
-      automation.airFrequency,
+    transientFilter.type = "bandpass";
+    transientFilter.Q.value = 0.86;
+    transientFilter.frequency.setValueCurveAtTime(
+      automation.transientFrequency,
       startedAt,
-      BUILD_UP_DURATION_SECONDS,
+      GACHA_RITUAL_BUILD_UP_DURATION_SECONDS,
     );
-    airGain.gain.setValueCurveAtTime(
-      automation.airGain,
+    transientGain.gain.setValueCurveAtTime(
+      automation.transientGain,
       startedAt,
-      BUILD_UP_DURATION_SECONDS,
+      GACHA_RITUAL_BUILD_UP_DURATION_SECONDS,
     );
-    shimmerFilter.type = "bandpass";
-    shimmerFilter.Q.value = 1.05;
-    shimmerFilter.frequency.setValueCurveAtTime(
-      automation.shimmerFrequency,
+    currentFilter.type = "highpass";
+    currentFilter.Q.value = 0.72;
+    currentFilter.frequency.setValueCurveAtTime(
+      automation.currentFrequency,
       startedAt,
-      BUILD_UP_DURATION_SECONDS,
+      GACHA_RITUAL_BUILD_UP_DURATION_SECONDS,
     );
-    shimmerGain.gain.setValueCurveAtTime(
-      automation.shimmerGain,
+    currentGain.gain.setValueCurveAtTime(
+      automation.currentGain,
       startedAt,
-      BUILD_UP_DURATION_SECONDS,
+      GACHA_RITUAL_BUILD_UP_DURATION_SECONDS,
     );
-    texture.connect(airFilter).connect(airGain).connect(master);
-    texture.connect(shimmerFilter).connect(shimmerGain).connect(master);
+    texture.connect(transientFilter).connect(transientGain).connect(master);
+    texture.connect(currentFilter).connect(currentGain).connect(master);
     texture.start(startedAt);
     texture.stop(startedAt + BUILD_UP_SOURCE_DURATION_SECONDS);
     nodes.push(texture);
-    processors.push(airFilter, airGain, shimmerFilter, shimmerGain);
+    processors.push(transientFilter, transientGain, currentFilter, currentGain);
   }
 
   return () => {
@@ -354,88 +361,50 @@ export function playGachaRitualBuildUp(): () => void {
   };
 }
 
-function breathAt(seconds: number): { overall: number; pulse: number } {
-  const elapsed = Math.min(BUILD_UP_DURATION_SECONDS, Math.max(0, seconds));
-  let startedAt = 0;
-  for (let index = 0; index < GACHA_BREATH_PERIODS_SECONDS.length; index += 1) {
-    const period = GACHA_BREATH_PERIODS_SECONDS[index] ?? 0.07;
-    const endedAt = startedAt + period;
-    if (
-      elapsed < endedAt ||
-      index === GACHA_BREATH_PERIODS_SECONDS.length - 1
-    ) {
-      const progress = clamp((elapsed - startedAt) / period);
-      return {
-        overall: clamp(
-          (index + progress) / GACHA_BREATH_PERIODS_SECONDS.length,
-        ),
-        pulse: Math.sin(progress * Math.PI),
-      };
-    }
-    startedAt = endedAt;
-  }
-  return { overall: 1, pulse: 0 };
-}
-
-function mix(from: number, to: number, amount: number): number {
-  return from + (to - from) * amount;
-}
-
-function clamp(value: number): number {
-  return Math.min(1, Math.max(0, value));
-}
-
-export function playGachaRitualReveal(rarity: GachaRitualRarity): () => void {
+export function playGachaRitualReveal(): () => void {
+  prepareGachaRitualAudioAssets();
+  finishBuildUpAssetsPreparation();
   const context = getAudioContext();
   if (!context || context.state === "closed") return () => undefined;
+  const textureBuffer = prepareBuildUpTextureBuffer(context);
 
-  const rank = {
-    common: 0,
-    rare: 1,
-    epic: 2,
-    legendary: 3,
-    mythic: 4,
-  }[rarity];
   const startedAt = context.currentTime;
   const master = context.createGain();
+  const compressor = context.createDynamicsCompressor();
   const nodes: AudioScheduledSourceNode[] = [];
-  master.gain.setValueAtTime(0.0001, startedAt);
-  master.gain.exponentialRampToValueAtTime(
-    0.12 + rank * 0.012,
-    startedAt + 0.025,
+  const processors: AudioNode[] = [];
+  scheduleRevealGain(
+    master.gain,
+    GACHA_RITUAL_REVEAL_MASTER_GAIN_CURVE,
+    startedAt,
   );
-  master.gain.exponentialRampToValueAtTime(0.0001, startedAt + 0.66);
-  master.connect(context.destination);
+  compressor.threshold.value = -20;
+  compressor.knee.value = 12;
+  compressor.ratio.value = 3;
+  compressor.attack.value = 0.001;
+  compressor.release.value = 0.07;
+  master.connect(compressor).connect(context.destination);
 
-  const baseFrequency = 260 + rank * 42;
-  [1, 1.5, 2].slice(0, rank >= 3 ? 3 : 2).forEach((ratio, index) => {
-    const oscillator = context.createOscillator();
-    oscillator.type = index === 0 ? "sawtooth" : "sine";
-    oscillator.frequency.setValueAtTime(baseFrequency * ratio, startedAt);
-    oscillator.frequency.exponentialRampToValueAtTime(
-      baseFrequency * ratio * 1.38,
-      startedAt + 0.58,
+  if (textureBuffer) {
+    const texture = context.createBufferSource();
+    texture.buffer = textureBuffer;
+    GACHA_RITUAL_REVEAL_CAPSULE_POP.layers.forEach((layer) => {
+      const filter = context.createBiquadFilter();
+      const gain = context.createGain();
+      filter.type = layer.type;
+      filter.frequency.value = layer.frequency;
+      filter.Q.value = layer.quality;
+      scheduleRevealGain(gain.gain, layer.gainCurve, startedAt);
+      texture.connect(filter).connect(gain).connect(master);
+      processors.push(filter, gain);
+    });
+    texture.start(
+      startedAt + GACHA_RITUAL_REVEAL_CAPSULE_POP.startAt,
+      GACHA_RITUAL_REVEAL_CAPSULE_POP.textureOffset,
     );
-    oscillator.connect(master);
-    oscillator.start(startedAt);
-    oscillator.stop(startedAt + 0.68);
-    nodes.push(oscillator);
-  });
-
-  const noiseLength = Math.max(1, Math.round(context.sampleRate * 0.18));
-  const noiseBuffer = context.createBuffer(1, noiseLength, context.sampleRate);
-  const noise = noiseBuffer.getChannelData(0);
-  for (let index = 0; index < noise.length; index += 1)
-    noise[index] = (Math.random() * 2 - 1) * (1 - index / noise.length);
-  const burst = context.createBufferSource();
-  const burstFilter = context.createBiquadFilter();
-  burst.buffer = noiseBuffer;
-  burstFilter.type = "bandpass";
-  burstFilter.frequency.value = 900 + rank * 280;
-  burstFilter.Q.value = 0.7;
-  burst.connect(burstFilter).connect(master);
-  burst.start(startedAt);
-  nodes.push(burst);
+    texture.stop(startedAt + GACHA_RITUAL_REVEAL_CAPSULE_POP.endAt);
+    nodes.push(texture);
+  }
 
   return () => {
     nodes.forEach((node) => {
@@ -446,6 +415,22 @@ export function playGachaRitualReveal(rarity: GachaRitualRarity): () => void {
       }
       node.disconnect();
     });
+    processors.forEach((processor) => processor.disconnect());
+    compressor.disconnect();
     master.disconnect();
   };
+}
+
+function scheduleRevealGain(
+  parameter: AudioParam,
+  curve: readonly (readonly [number, number])[],
+  startedAt: number,
+): void {
+  curve.forEach(([seconds, value], index) => {
+    if (index === 0) {
+      parameter.setValueAtTime(value, startedAt + seconds);
+      return;
+    }
+    parameter.exponentialRampToValueAtTime(value, startedAt + seconds);
+  });
 }
