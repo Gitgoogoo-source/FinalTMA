@@ -12,6 +12,7 @@ export type AppLocation = {
   search: string;
   hash: string;
   state: unknown;
+  canGoBack: boolean;
 };
 
 export type AppNavigationTarget =
@@ -42,10 +43,24 @@ type AppNavigate = (
 
 const NavigationContext = createContext(false);
 const subscribers = new Set<() => void>();
+const NAVIGATION_HISTORY_KEY = "__pokepets_navigation_v1__" as const;
+const navigationSessionId = window.crypto.randomUUID();
 let popstateListening = false;
 let cachedHref = "";
 let cachedState: unknown;
 let cachedSnapshot: AppLocation | null = null;
+
+type NavigationHistoryEntry = {
+  session_id: string;
+  index: number;
+  state: unknown;
+};
+
+type NavigationHistoryEnvelope = {
+  [NAVIGATION_HISTORY_KEY]: NavigationHistoryEntry;
+};
+
+initializeNavigationHistory();
 
 export function AppNavigationProvider({
   children,
@@ -122,10 +137,21 @@ function navigateApp(
     window.history.go(target);
     return;
   }
+  const currentEntry = currentNavigationHistoryEntry();
   const url = resolveTarget(target);
-  if (options.replace)
-    window.history.replaceState(options.state ?? null, "", url);
-  else window.history.pushState(options.state ?? null, "", url);
+  if (
+    !options.replace &&
+    options.state === undefined &&
+    url === currentAppUrl()
+  )
+    return;
+  const state = navigationHistoryEnvelope({
+    session_id: navigationSessionId,
+    index: options.replace ? currentEntry.index : currentEntry.index + 1,
+    state: options.state ?? null,
+  });
+  if (options.replace) window.history.replaceState(state, "", url);
+  else window.history.pushState(state, "", url);
   publishNavigation();
 }
 
@@ -173,6 +199,7 @@ function publishNavigation(): void {
 }
 
 function getNavigationSnapshot(): AppLocation {
+  const entry = currentNavigationHistoryEntry();
   const href = window.location.href;
   const state = window.history.state as unknown;
   if (cachedSnapshot && cachedHref === href && cachedState === state)
@@ -183,9 +210,65 @@ function getNavigationSnapshot(): AppLocation {
     pathname: window.location.pathname,
     search: window.location.search,
     hash: window.location.hash,
-    state,
+    state: entry.state,
+    canGoBack: entry.index > 0,
   };
   return cachedSnapshot;
+}
+
+function initializeNavigationHistory(): void {
+  currentNavigationHistoryEntry();
+}
+
+function currentNavigationHistoryEntry(): NavigationHistoryEntry {
+  const state = window.history.state as unknown;
+  const existing = readNavigationHistoryEntry(state);
+  if (existing?.session_id === navigationSessionId) return existing;
+  const root: NavigationHistoryEntry = {
+    session_id: navigationSessionId,
+    index: 0,
+    state: existing?.state ?? state,
+  };
+  window.history.replaceState(
+    navigationHistoryEnvelope(root),
+    "",
+    currentAppUrl(),
+  );
+  return root;
+}
+
+function navigationHistoryEnvelope(
+  entry: NavigationHistoryEntry,
+): NavigationHistoryEnvelope {
+  return { [NAVIGATION_HISTORY_KEY]: entry };
+}
+
+function readNavigationHistoryEntry(
+  state: unknown,
+): NavigationHistoryEntry | null {
+  if (!isRecord(state)) return null;
+  const entry = state[NAVIGATION_HISTORY_KEY];
+  if (
+    !isRecord(entry) ||
+    typeof entry.session_id !== "string" ||
+    !Number.isSafeInteger(entry.index) ||
+    typeof entry.index !== "number" ||
+    entry.index < 0
+  )
+    return null;
+  return {
+    session_id: entry.session_id,
+    index: entry.index,
+    state: entry.state,
+  };
+}
+
+function currentAppUrl(): string {
+  return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 function matchPathParams(

@@ -9,7 +9,7 @@
 
 ## 决策
 
-活动 Web 使用项目自有的原生浏览器导航状态层。`platform/navigation` 以单一共享 `popstate` 监听、History API 和 `useSyncExternalStore` 发布稳定位置快照，统一支持绝对应用路径、`pathname/search/hash` 对象、`pushState`、`replaceState`、`history.go(number)`、历史 state、查询参数和同源约束。登录后的 `/` 或 `/game` 路径替换、五个主导航、任务/支付/操作结果跳转、图鉴返回和 Telegram BackButton 全部使用同一接口。`AppRouter` 直接按位置快照选择常驻主壳或 `/album`，其他路径在 layout effect 中 replace 到 `/`；`AppShell` 继续保留五个主页面，只以明确的临时页面插槽承载图鉴。导航不得读取或预取业务数据。
+活动 Web 使用项目自有的原生浏览器导航状态层。`platform/navigation` 以单一共享 `popstate` 监听、History API 和 `useSyncExternalStore` 发布稳定位置快照，统一支持绝对应用路径、`pathname/search/hash` 对象、`pushState`、`replaceState`、`history.go(number)`、历史 state、查询参数和同源约束。登录后的 `/` 或 `/game` 路径替换、五个主导航、任务/支付/操作结果跳转、图鉴返回和 Telegram BackButton 全部使用同一接口。`AppRouter` 直接按位置快照选择常驻主壳或 `/album`，其他路径在 layout effect 中 replace 到 `/`；`AppShell` 继续保留五个主页面，只以明确的临时页面插槽承载图鉴。导航不得读取或预取业务数据。Telegram 标题栏返回的可见性与当前 Web 文档会话的安全历史位置统一由 [ADR-084](ADR-084-telegram-session-history-back-button.md)裁决；页面组件不得局部控制 BackButton。
 
 活动 Web 永久移除 `react-router-dom` 依赖。所有共享 UI 从组件叶子文件直接导入，`apps/web/src/shared/ui/index.tsx` 永久删除。首屏共享 UI 只允许 `Button`、`Card`、`CatalogImage` 和 `PageState`；`AppModal`、`Badge`、`CollectionDetailShowcase`、`InventoryActionDialogHeader` 与 `QuantityControl` 不得进入首屏同步闭包。领域页面、全局弹窗和操作表现继续按 ADR-040/043 的玩家意图或自适应预热边界加载。
 
@@ -19,6 +19,7 @@ ADR-040 的 JS 硬门禁收紧为原始 `400000` 字节、gzip `125000` 字节�
 
 - Startup 画面、文案、资源、ARIA、出现时序、登录阶段和失败重试不变。
 - 五个主页面、图鉴、查询参数、系统前进/后退、Telegram BackButton、滚动恢复和页面保活结果不变。
+- 当前 Web 文档首次历史项是唯一根，真实 push 递增会话位置，replace 保留位置，相同地址空跳转不生成历史；只有存在安全应用内前项时才显示 Telegram 原生返回。
 - 玩家导航意图仍先准备目标页面模块且不等待模块 Promise；ADR-043 的网络门禁、自动顺序和 Battle 禁止自动预热规则不变。
 - REST、OpenAPI、身份、会话、React Query、刷新范围、操作恢复、幂等、数据库 RPC、资产和业务结果不变。
 - Zod 输入/输出校验、数据库最终事实来源和前端 Supabase 边界不因包体优化削弱。

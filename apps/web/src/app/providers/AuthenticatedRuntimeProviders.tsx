@@ -4,6 +4,7 @@ import { PageModulePreparationProvider } from "../../shared/navigation/PageModul
 import { OperationRegistryProvider } from "../../workflows/operation-recovery/OperationRegistryProvider.tsx";
 import { NavigationIntentProvider } from "../../workflows/payment-recovery/NavigationIntentProvider.tsx";
 import { preparePageModule } from "../router/pageRoutes.ts";
+import { TelegramBackNavigation } from "../router/TelegramBackNavigation.tsx";
 
 export function AuthenticatedRuntimeProviders({
   children,
@@ -13,7 +14,10 @@ export function AuthenticatedRuntimeProviders({
   return (
     <PageModulePreparationProvider prepare={preparePageModule}>
       <NavigationIntentProvider>
-        <OperationRegistryProvider>{children}</OperationRegistryProvider>
+        <OperationRegistryProvider>
+          <TelegramBackNavigation />
+          {children}
+        </OperationRegistryProvider>
       </NavigationIntentProvider>
     </PageModulePreparationProvider>
   );

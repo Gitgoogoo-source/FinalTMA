@@ -13,7 +13,6 @@ import {
   useDormantOperationCommands,
 } from "../../../dormant/api.ts";
 import { useApiQuery } from "../../../platform/query/index.ts";
-import { useTelegramBackButton } from "../../../platform/telegram/index.ts";
 import { Badge } from "../../../shared/ui/Badge.tsx";
 import { Button } from "../../../shared/ui/Button.tsx";
 import { Card } from "../../../shared/ui/Card.tsx";
@@ -33,7 +32,6 @@ export function MintView(): ReactNode {
   const walletStatus = useDormantApiQuery("wallet.get");
   const navigate = useAppNavigate();
   const back = useCallback(() => navigate(-1), [navigate]);
-  useTelegramBackButton(true, back);
   const item = inventory.data;
   const [tonConnect] = useTonConnectUI();
   const tonWallet = useTonWallet();

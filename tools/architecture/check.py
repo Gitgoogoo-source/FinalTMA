@@ -80,6 +80,7 @@ REQUIRED_PATHS = (
     "docs/architecture/adr/ADR-054-ably-browser-csp-endpoint-allowlist.md",
     "docs/architecture/adr/ADR-059-bounded-operation-admission-and-retention.md",
     "docs/architecture/adr/ADR-075-telegram-named-mini-app-release-isolation.md",
+    "docs/architecture/adr/ADR-084-telegram-session-history-back-button.md",
     "apps/web/public/maintenance.html",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
@@ -555,11 +556,18 @@ def verify_persistent_page_route_leaves() -> None:
     )
     navigation_terms = (
         "useSyncExternalStore",
+        'const NAVIGATION_HISTORY_KEY = "__pokepets_navigation_v1__"',
+        "const navigationSessionId = window.crypto.randomUUID()",
+        "initializeNavigationHistory();",
         'window.addEventListener("popstate", publishNavigation)',
         'window.removeEventListener("popstate", publishNavigation)',
         "window.history.pushState",
         "window.history.replaceState",
         "window.history.go(target)",
+        "options.replace ? currentEntry.index : currentEntry.index + 1",
+        "options.state === undefined",
+        "url === currentAppUrl()",
+        "canGoBack: entry.index > 0",
         "APP_NAVIGATION_CROSS_ORIGIN_FORBIDDEN",
         "export function replaceAppLocation",
     )
@@ -570,6 +578,76 @@ def verify_persistent_page_route_leaves() -> None:
         raise SystemExit(
             "Native app navigation lifecycle is incomplete: "
             f"{missing_navigation}"
+        )
+
+    telegram_platform = (WEB_ROOT / "platform/telegram/index.ts").read_text(
+        encoding="utf-8"
+    )
+    telegram_back = (
+        WEB_ROOT / "app/router/TelegramBackNavigation.tsx"
+    ).read_text(encoding="utf-8")
+    authenticated_providers = (
+        WEB_ROOT / "app/providers/AuthenticatedRuntimeProviders.tsx"
+    ).read_text(encoding="utf-8")
+    required_telegram_platform = (
+        "export function setTelegramBackButtonVisible",
+        "export function subscribeTelegramBackButton",
+        "button.show()",
+        "button.hide()",
+        "button.onClick(callback)",
+        "button.offClick(callback)",
+    )
+    required_telegram_back = (
+        "useEffectEvent",
+        "useAppLocation",
+        "useOperationNavigationLocked",
+        "if (!canGoBack || navigationLocked) return;",
+        "navigate(-1)",
+        "subscribeTelegramBackButton(handleBack)",
+        "setTelegramBackButtonVisible(canGoBack)",
+        "setTelegramBackButtonVisible(false)",
+    )
+    missing_telegram_back = {
+        "platform": [
+            term for term in required_telegram_platform if term not in telegram_platform
+        ],
+        "controller": [
+            term for term in required_telegram_back if term not in telegram_back
+        ],
+        "provider": [
+            term
+            for term in ("<TelegramBackNavigation />", "<OperationRegistryProvider>")
+            if term not in authenticated_providers
+        ],
+    }
+    missing_telegram_back = {
+        label: terms for label, terms in missing_telegram_back.items() if terms
+    }
+    if missing_telegram_back:
+        raise SystemExit(
+            "Telegram session-history BackButton lifecycle is incomplete: "
+            f"{missing_telegram_back}"
+        )
+
+    forbidden_back_button_owners: list[str] = []
+    allowed_back_button_sources = {
+        WEB_ROOT / "types.d.ts",
+        WEB_ROOT / "platform/telegram/index.ts",
+        WEB_ROOT / "app/router/TelegramBackNavigation.tsx",
+    }
+    for source in typescript_files(WEB_ROOT):
+        text = source.read_text(encoding="utf-8")
+        if source not in allowed_back_button_sources and (
+            ".BackButton" in text
+            or "useTelegramBackButton" in text
+            or "setTelegramBackButtonVisible" in text
+            or "subscribeTelegramBackButton" in text
+        ):
+            forbidden_back_button_owners.append(relative(source))
+    if forbidden_back_button_owners:
+        raise SystemExit(
+            "Telegram BackButton must have one global owner: "
+            f"{sorted(forbidden_back_button_owners)}"
         )
 
     forbidden_router_imports: list[str] = []

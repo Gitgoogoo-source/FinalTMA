@@ -179,3 +179,4 @@ operation 准入与保留按 [ADR-059](adr/ADR-059-bounded-operation-admission-a
 - [宠物美术对齐的 Battle 属性重分配](adr/ADR-080-battle-art-aligned-element-reassignment.md)
 - [开盒统一电子心跳音效](adr/ADR-082-gacha-unified-electronic-heartbeat-sound.md)
 - [游戏 Stars 对外命名与 Telegram Stars 隔离](adr/ADR-083-game-stars-display-name.md)
+- [Telegram 会话历史原生返回按钮](adr/ADR-084-telegram-session-history-back-button.md)

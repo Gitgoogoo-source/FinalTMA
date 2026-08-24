@@ -1,5 +1,3 @@
-import { useEffect } from "react";
-
 let listening = false;
 const TELEGRAM_MOBILE_CONTROLS_HEIGHT = 44;
 const APP_CANVAS_COLOR = "#fffdfa";
@@ -107,20 +105,17 @@ function attemptTelegramMethod(action: () => void): void {
   }
 }
 
-export function useTelegramBackButton(
-  enabled: boolean,
-  callback: () => void,
-): void {
-  useEffect(() => {
-    const button = telegram()?.BackButton;
-    if (!button || !enabled) return;
-    button.show();
-    button.onClick(callback);
-    return () => {
-      button.offClick(callback);
-      button.hide();
-    };
-  }, [callback, enabled]);
+export function setTelegramBackButtonVisible(visible: boolean): void {
+  const button = telegram()?.BackButton;
+  if (!button) return;
+  attemptTelegramMethod(() => (visible ? button.show() : button.hide()));
+}
+
+export function subscribeTelegramBackButton(callback: () => void): () => void {
+  const button = telegram()?.BackButton;
+  if (!button) return () => undefined;
+  attemptTelegramMethod(() => button.onClick(callback));
+  return () => attemptTelegramMethod(() => button.offClick(callback));
 }
 
 export function haptic(
