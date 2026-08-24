@@ -40,7 +40,7 @@ const rarityLabels: Record<Rarity, string> = localized({
 const rejectedMessages: Record<string, string> = localized({
   EVOLUTION_NOT_AVAILABLE: "藏品状态已经变化，请重新选择",
   INSUFFICIENT_INVENTORY: "可用数量已经变化，请重新选择",
-  INSUFFICIENT_BALANCE: "Fgems 不足，无法进化",
+  INSUFFICIENT_BALANCE: "Gems 不足，无法进化",
   RATE_LIMITED: "操作过于频繁，请稍后再试",
 });
 
@@ -433,7 +433,7 @@ function SettlementDetails({
           <dd>×{result.materials.retained}</dd>
         </div>
         <div>
-          <dt>{t("实际扣除 Fgems")}</dt>
+          <dt>{t("实际扣除 Gems")}</dt>
           <dd>{result.fgems_spent}</dd>
         </div>
         {success ? (

@@ -11,7 +11,7 @@
 
 身份读取固定拆成两个互不替代的契约：
 
-- `GET /api/me/initial`（`identity.initial`）只用于正常 session generation 的入口建立与会话恢复，返回 `{ summary, recovery }`。`summary` 包含当前用户和 K-coin/Fgems；`recovery` 包含同一数据库语句快照中的 `authority_cursor`、`blocking_operations`、`payment_recovery_orders`、`pending_mints` 与 `battle_participation`。
+- `GET /api/me/initial`（`identity.initial`）只用于正常 session generation 的入口建立与会话恢复，返回 `{ summary, recovery }`。`summary` 包含当前用户和 K-coin/Gems；`recovery` 包含同一数据库语句快照中的 `authority_cursor`、`blocking_operations`、`payment_recovery_orders`、`pending_mints` 与 `battle_participation`。
 - `GET /api/me/summary`（`identity.summary`）只返回 `{ user, assets }`，是顶部资产、用户资料和日常资产回正的唯一身份读模型。
 
 开盒资格继续由 `gacha.bootstrap` 返回。身份读模型不再返回 `entitlements`、`catalog_version` 或 `server_time`。`identity.bootstrap` 路由、RPC、OpenAPI operation、权限和全部调用方删除，不保留兼容别名。

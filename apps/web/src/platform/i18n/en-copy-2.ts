@@ -56,7 +56,7 @@ export const englishCopy2: Readonly<Record<string, string>> = {
   "藏品已成功上架，可在管理页查看当前出售状态。":
     "The collection has been successfully put on the shelves. You can check the current sales status on the management page.",
   上架未完成: "Listing not completed",
-  "已存入 Fgems 余额": "Deposited Fgems balance",
+  "已存入 Gems 余额": "Deposited Gems balance",
   可在盲盒页面使用: "Available on blind box page",
   "VIP 专属": "VIP exclusive",
   每日好礼已领取: "Daily gifts have been received",

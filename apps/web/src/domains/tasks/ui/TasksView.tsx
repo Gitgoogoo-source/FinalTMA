@@ -117,12 +117,12 @@ const taskCodeIcons: Record<Task["code"], LucideIcon> = {
   mint_success: TicketCheck,
 };
 const checkInRewards = localized([
-  { amount: "20", unit: "Fgems", kind: "fgems" },
-  { amount: "30", unit: "Fgems", kind: "fgems" },
-  { amount: "50", unit: "Fgems", kind: "fgems" },
-  { amount: "80", unit: "Fgems", kind: "fgems" },
-  { amount: "100", unit: "Fgems", kind: "fgems" },
-  { amount: "150", unit: "Fgems", kind: "fgems" },
+  { amount: "20", unit: "Gems", kind: "fgems" },
+  { amount: "30", unit: "Gems", kind: "fgems" },
+  { amount: "50", unit: "Gems", kind: "fgems" },
+  { amount: "80", unit: "Gems", kind: "fgems" },
+  { amount: "100", unit: "Gems", kind: "fgems" },
+  { amount: "150", unit: "Gems", kind: "fgems" },
   { amount: "1", unit: "稀有盒资格", kind: "box" },
 ] as const);
 
@@ -397,7 +397,7 @@ export function TasksView({
                   <span>
                     {task.progress} / {task.target}
                   </span>
-                  <strong>+{task.reward_fgems} Fgems</strong>
+                  <strong>+{task.reward_fgems} Gems</strong>
                 </p>
                 <div className="meter">
                   <i

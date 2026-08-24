@@ -117,7 +117,7 @@ export function EvolutionConfirmationDialog({
             <div>
               <Gem aria-hidden="true" />
               <span>{t("预计消耗")}</span>
-              <strong>{totalCost} Fgems</strong>
+              <strong>{totalCost} Gems</strong>
             </div>
           </section>
 
@@ -145,7 +145,7 @@ export function EvolutionConfirmationDialog({
             <p>
               <span>
                 {t(
-                  "基础成功率不包含当前路线保底；提交后由系统按真实保底、材料和 Fgems 状态裁决。",
+                  "基础成功率不包含当前路线保底；提交后由系统按真实保底、材料和 Gems 状态裁决。",
                 )}
               </span>
               <span>
@@ -281,7 +281,7 @@ function startUnavailableReason({
     return tp("还缺 {{0}} 个相同藏品，集齐 3 个后即可开始", [3 - available]);
   if (availableFgems === undefined) return t("暂时无法开始进化");
   if (availableFgems < cost)
-    return tp("Fgems 不足，本次至少需要 {{0}} Fgems", [cost]);
+    return tp("Gems 不足，本次至少需要 {{0}} Gems", [cost]);
   if (!valid) return t("材料数量必须是 3 的正整数倍");
   return null;
 }

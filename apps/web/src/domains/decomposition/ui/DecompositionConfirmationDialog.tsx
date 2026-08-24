@@ -64,11 +64,11 @@ export function DecompositionConfirmationDialog({
           <dl className="result-summary">
             <div>
               <dt>{t("单个产出")}</dt>
-              <dd>{item.decompose_fgems} Fgems</dd>
+              <dd>{item.decompose_fgems} Gems</dd>
             </div>
             <div>
               <dt>{t("预计获得")}</dt>
-              <dd>{valid ? item.decompose_fgems * quantity : 0} Fgems</dd>
+              <dd>{valid ? item.decompose_fgems * quantity : 0} Gems</dd>
             </div>
           </dl>
           <p className="inventory-quantity-warning">

@@ -63,7 +63,7 @@ export function TopAssetBar({
           className="asset-pill fgems"
           role="status"
           aria-live="polite"
-          aria-label={`Fgems: ${fgems?.available ?? tr("Loading", "加载中")}`}
+          aria-label={`Gems: ${fgems?.available ?? tr("Loading", "加载中")}`}
         >
           <img
             className="asset-icon"

@@ -146,7 +146,7 @@ export const englishCopy1: Readonly<Record<string, string>> = {
   "正在创建 Telegram Stars 订单": "Creating Telegram Stars order",
   正在取消未付款订单: "Canceling unpaid order",
   正在确认充值失败结果: "Confirming recharge failure result",
-  "正在领取 VIP F-gems": "Receiving VIP F-gems",
+  "正在领取 VIP Gems": "Receiving VIP Gems",
   "正在领取 VIP 盲盒": "Receiving VIP blind box",
   正在取消未付款月卡订单: "Canceling unpaid monthly card order",
   "正在创建 VIP 付款订单": "Creating VIP payment order",
@@ -156,7 +156,7 @@ export const englishCopy1: Readonly<Record<string, string>> = {
     "The collection status has changed, please select again.",
   "可用数量已经变化，请重新选择":
     "The available quantity has changed, please choose again",
-  "Fgems 不足，无法进化": "Not enough Fgems to evolve",
+  "Gems 不足，无法进化": "Not enough Gems to evolve",
   "操作过于频繁，请稍后再试":
     "The operation is too frequent, please try again later.",
   本次没有产生结算: "No settlement occurred this time",
@@ -193,7 +193,7 @@ export const englishCopy1: Readonly<Record<string, string>> = {
   "· 失败": "· fail",
   实际扣除材料: "Actual deduction of materials",
   失败保留材料: "Failure to retain material",
-  "实际扣除 Fgems": "Actual deduction Fgems",
+  "实际扣除 Gems": "Actual deduction Gems",
   本批保底成功: "The guarantee for this batch was successful",
   次: "Second-rate",
   路线保底: "Route guarantee",

@@ -42,7 +42,7 @@ export const professionalEnglishCopy3: Readonly<Record<string, string>> = {
   "正在创建 VIP 月卡订单": "Preparing VIP Payment",
   正在匹配同档对手: "Finding an Opponent in This Tier",
   "正在登录，请稍候": "Entering PokePets…",
-  "正在领取 VIP 每日 100 Fgems": "Claiming 100 Daily VIP Fgems",
+  "正在领取 VIP 每日 100 Gems": "Claiming 100 Daily VIP Gems",
   "该地址是当前账号唯一经过 TON Proof 验证的主钱包。":
     "This is the primary TON wallet verified for your PokePets account.",
   "该藏品已经是最终形态，无法继续进化":

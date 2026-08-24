@@ -99,7 +99,7 @@ export function AlbumChainCard({
       <Button
         className={`album-gift ${chain.claimable ? "claimable" : "secondary"}`}
         disabled={claimBlocked || !chain.claimable}
-        aria-label={tp("{{0}}奖励，{{1}}，{{2}} Fgems", [
+        aria-label={tp("{{0}}奖励，{{1}}，{{2}} Gems", [
           t(chain.theme),
           claiming ? t("领取中") : status,
           chain.reward_fgems,
@@ -121,7 +121,7 @@ export function AlbumChainCard({
               : chain.claimable
                 ? t("可领取")
                 : t("未完成")}
-          <small>{chain.reward_fgems} Fgems</small>
+          <small>{chain.reward_fgems} Gems</small>
         </span>
       </Button>
     </Card>

@@ -54,7 +54,7 @@ Battle 队伍选择与有效邀请接受页按 [ADR-058](adr/ADR-058-battle-team
 
 账号语言按 [ADR-074](adr/ADR-074-account-language-and-en-us-localization.md) 固定支持 `en` 与 `zh-CN`，首次与新账号默认英语。数据库账号偏好覆盖按 Telegram ID 隔离的首帧本地提示；左上角既有身份区域打开全局账号菜单，不新增或增高顶部控件。静态文案、稳定错误码和共享 ID 化游戏内容注册表共同覆盖 Web、Telegram 外部消息与 NFT 元数据，任何语言切换都不改变模板、技能、任务、属性、概率、资产或 Battle 规则。
 
-游戏资源命名按 [ADR-083](adr/ADR-083-game-stars-display-name.md) 固定为 `Stars`，真实付款资产始终写作 `Telegram Stars`。数据库与契约继续保留 `KCOIN/kcoin` 稳定内部标识；内部标识不得直接显示给玩家，两种 Stars 不得合并或互相替代。
+游戏资源命名按 [ADR-083](adr/ADR-083-game-stars-display-name.md) 固定为 `Stars`，真实付款资产始终写作 `Telegram Stars`；绿色切面宝石资源按 [ADR-085](adr/ADR-085-gems-display-name.md) 固定为 `Gems`。数据库与契约继续保留 `KCOIN/kcoin` 与 `FGEMS/fgems` 稳定内部标识；内部标识不得直接显示给玩家，Gems、游戏 Stars 与 Telegram Stars 不得合并或互相替代。
 
 Telegram 发布隔离按 [ADR-075](adr/ADR-075-telegram-named-mini-app-release-isolation.md) 固定使用同一部署的独立 `/maintenance.html`。Main Mini App、默认菜单按钮和 named Mini App 是三个独立入口；named Mini App 不删除 `pokepets_dev`，只在隔离期间把 Web App URL 切到无缓存、无认证、无 API 的双语静态页，完整验收后再改回环境根 URL。
 
@@ -180,3 +180,4 @@ operation 准入与保留按 [ADR-059](adr/ADR-059-bounded-operation-admission-a
 - [开盒统一电子心跳音效](adr/ADR-082-gacha-unified-electronic-heartbeat-sound.md)
 - [游戏 Stars 对外命名与 Telegram Stars 隔离](adr/ADR-083-game-stars-display-name.md)
 - [Telegram 会话历史原生返回按钮](adr/ADR-084-telegram-session-history-back-button.md)
+- [Gems 对外名称与内部 FGEMS 标识隔离](adr/ADR-085-gems-display-name.md)

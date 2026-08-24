@@ -12,7 +12,7 @@ const rewardVisuals: Record<
   WheelReward["kind"],
   { image: string; name: string }
 > = localized({
-  fgems: { image: "/assets/wheel/fgems.webp", name: "Fgems" },
+  fgems: { image: "/assets/wheel/fgems.webp", name: "Gems" },
   kcoin: { image: "/assets/wheel/kcoin.webp", name: "Stars" },
   free_normal_box: {
     image: "/assets/wheel/free-normal.webp",
@@ -82,7 +82,7 @@ export function WheelResultDialog({
         >
           <img src={rewardVisuals.fgems.image} alt="" aria-hidden="true" />
           <span>{t("额外获得")}</span>
-          <strong>+{result.milestone.awarded_fgems} Fgems</strong>
+          <strong>+{result.milestone.awarded_fgems} Gems</strong>
         </div>
       ) : null}
 

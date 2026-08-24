@@ -19,7 +19,7 @@
 
 - `Stars` 余额来自既有服务端与数据库权威结果，前端不计算或裁决余额。
 - `Telegram Stars` 仍只通过 Telegram 的 `XTR` 付款流程处理；Stars 到账不等于 Telegram 付款窗口状态。
-- Fgems、VIP、藏品、免费资格、TON 和其他资产的名称、用途与规则不变。
+- Gems、VIP、藏品、免费资格、TON 和其他资产的名称、用途与规则不变。
 - 本次命名不授权、不发起也不验收任何真实 Telegram Stars 支付。
 - 英文和简体中文界面均固定使用品牌名 `Stars`，不恢复 `K-coin`，也不为单数金额改写成 `Star`。
 

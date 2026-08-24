@@ -53,7 +53,7 @@ const WHEEL_SLOTS: readonly WheelSlot[] = localized([
     kind: "fgems",
     amount: 20,
     primary: "20",
-    secondary: "Fgems",
+    secondary: "Gems",
     Icon: Gem,
   },
   {
@@ -61,7 +61,7 @@ const WHEEL_SLOTS: readonly WheelSlot[] = localized([
     kind: "fgems",
     amount: 30,
     primary: "30",
-    secondary: "Fgems",
+    secondary: "Gems",
     Icon: Gem,
   },
   {
@@ -69,7 +69,7 @@ const WHEEL_SLOTS: readonly WheelSlot[] = localized([
     kind: "fgems",
     amount: 50,
     primary: "50",
-    secondary: "Fgems",
+    secondary: "Gems",
     Icon: Gem,
   },
   {
@@ -77,7 +77,7 @@ const WHEEL_SLOTS: readonly WheelSlot[] = localized([
     kind: "fgems",
     amount: 100,
     primary: "100",
-    secondary: "Fgems",
+    secondary: "Gems",
     Icon: Gem,
   },
   {
@@ -423,16 +423,16 @@ function WheelPanelRuntime({
             </summary>
             <div className="wheel-rule-grid">
               <span>
-                20 Fgems <strong>24%</strong>
+                20 Gems <strong>24%</strong>
               </span>
               <span>
-                30 Fgems <strong>17%</strong>
+                30 Gems <strong>17%</strong>
               </span>
               <span>
-                50 Fgems <strong>7%</strong>
+                50 Gems <strong>7%</strong>
               </span>
               <span>
-                100 Fgems <strong>1.5%</strong>
+                100 Gems <strong>1.5%</strong>
               </span>
               <span>
                 10 Stars <strong>21%</strong>
@@ -457,7 +457,7 @@ function WheelPanelRuntime({
               </span>
               <p>
                 {t(
-                  "转盘格子大小不代表概率。免费资格达到当日上限后，将按规则替换为 Fgems，并在结果中说明。",
+                  "转盘格子大小不代表概率。免费资格达到当日上限后，将按规则替换为 Gems，并在结果中说明。",
                 )}
               </p>
             </div>
@@ -493,14 +493,14 @@ function MilestoneProgress({
           </>
         ) : spinCount >= 10 ? (
           <>
-            {t("已获得 25 Fgems · 再转")} <strong>{20 - spinCount}</strong>{" "}
+            {t("已获得 25 Gems · 再转")} <strong>{20 - spinCount}</strong>{" "}
             {t("次可获得")}
-            <em> 25 Fgems</em>
+            <em> 25 Gems</em>
           </>
         ) : (
           <>
             {t("再转")} <strong>{10 - spinCount}</strong> {t("次可获得")}
-            <em> 25 Fgems</em>
+            <em> 25 Gems</em>
           </>
         )}
       </p>
@@ -516,13 +516,13 @@ function MilestoneProgress({
           className={`wheel-progress-checkpoint checkpoint-10${milestone10Claimed ? " claimed" : ""}`}
         >
           <strong>10</strong>
-          <small>+25 Fgems</small>
+          <small>+25 Gems</small>
         </span>
         <span
           className={`wheel-progress-checkpoint checkpoint-20${milestone20Claimed ? " claimed" : ""}`}
         >
           <strong>20</strong>
-          <small>+25 Fgems</small>
+          <small>+25 Gems</small>
         </span>
       </div>
     </section>

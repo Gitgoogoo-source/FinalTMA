@@ -139,7 +139,7 @@ function DecompositionSuccess({
         <p className="decomposition-result-kicker">{t("分解完成")}</p>
         <h2 id="decomposition-result-title">
           <strong>+{result.fgems_earned}</strong>
-          <span>Fgems</span>
+          <span>Gems</span>
         </h2>
         <p>{tp("{{0}} × {{1}} 已化作晶辉", [name, result.quantity])}</p>
         <Button onClick={onCollect}>{t("收下")}</Button>

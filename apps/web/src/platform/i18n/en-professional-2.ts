@@ -1,8 +1,8 @@
 /** En-US editorial refinements for secondary screens and accessibility copy. */
 export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
   "/ 20 回合 · 行动": "/ 20 Turns · Action",
-  "100 Fgems，每个 UTC+0 日手动领取，{{0}}":
-    "100 Fgems · Claim daily at 00:00 UTC · {{0}}",
+  "100 Gems，每个 UTC+0 日手动领取，{{0}}":
+    "100 Gems · Claim daily at 00:00 UTC · {{0}}",
   "120 秒匹配期": "120-Second Matchmaking Window",
   "30 分钟等待期": "30-Minute Challenge Window",
   "5 / 10 阶梯资格": "5 / 10 Spin Milestones",
@@ -28,8 +28,8 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
   "{{0}} · {{1}} 阶 · {{2}}": "{{0}} · Stage {{1}} · {{2}}",
   "{{0}} · {{1}} 阶 · 可用 {{2}}": "{{0}} · Stage {{1}} · Available: {{2}}",
   "{{0}} · 第 {{1}} 阶": "{{0}} · Stage {{1}}",
-  "{{0}} · 第 {{1}} 阶 · {{2}} Fgems": "{{0}} · Stage {{1}} · {{2}} Fgems",
-  "{{0}} × {{1}} 已化作晶辉": "{{0}} × {{1}} transformed into Fgems.",
+  "{{0}} · 第 {{1}} 阶 · {{2}} Gems": "{{0}} · Stage {{1}} · {{2}} Gems",
+  "{{0}} × {{1}} 已化作晶辉": "{{0}} × {{1}} transformed into Gems.",
   "{{0}} 件藏品": "{{0}} Collectibles",
   "{{0}} 份藏品": "{{0}} Collectibles",
   "{{0}} 分钟完成": "{{0}} min",
@@ -48,7 +48,7 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
   "{{0}}三阶节点": "{{0}} Evolution Stages",
   "{{0}}使用{{1}}": "{{0}} used {{1}}",
   "{{0}}固定阵营头像": "{{0}} Team Avatar",
-  "{{0}}奖励，{{1}}，{{2}} Fgems": "{{0}} Reward · {{1}} · {{2}} Fgems",
+  "{{0}}奖励，{{1}}，{{2}} Gems": "{{0}} Reward · {{1}} · {{2}} Gems",
   "{{0}}换入": "{{0}} switched in",
   "{{0}}生命": "{{0}} HP",
   "{{0}}生命百分比": "{{0}} HP Percentage",
@@ -175,8 +175,8 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
   图鉴筛选: "Codex Filters",
   土系: "Earth",
   基础成功率: "Base Success Rate",
-  "基础成功率不包含当前路线保底；提交后由系统按真实保底、材料和 Fgems 状态裁决。":
-    "The base rate does not include this lineage's pity bonus. Your current pity, materials, and Fgems are checked when you evolve.",
+  "基础成功率不包含当前路线保底；提交后由系统按真实保底、材料和 Gems 状态裁决。":
+    "The base rate does not include this lineage's pity bonus. Your current pity, materials, and Gems are checked when you evolve.",
   "增加{{0}}": "Increase {{0}}",
   失败: "Failed",
   奖励到手: "Rewards Collected",
@@ -202,7 +202,7 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
     "This sale alert will remain on this device. Try again later.",
   "已关闭分享面板，房间继续等待，可再次分享":
     "Sharing closed. Your challenge is still waiting and can be shared again.",
-  "已存入 Fgems 余额": "Added to Fgems Balance",
+  "已存入 Gems 余额": "Added to Gems Balance",
   "已定位：{{0}}": "Showing: {{0}}",
   "已定位：{{0}} {{1}}": "Showing: {{0}} {{1}}",
   "已解锁 {{0}} / {{1}}": "Discovered: {{0}} / {{1}}",
@@ -351,8 +351,8 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
   "转动 10 次 · {{0}} Stars": "10 Spins · {{0}} Stars",
   "转动中...": "Spinning…",
   转盘暂时没有准备好: "The Prize Wheel isn't ready yet.",
-  "转盘格子大小不代表概率。免费资格达到当日上限后，将按规则替换为 Fgems，并在结果中说明。":
-    "Slot size does not indicate odds. Free Mystery Box rewards convert to Fgems after the daily limit, as shown in your results.",
+  "转盘格子大小不代表概率。免费资格达到当日上限后，将按规则替换为 Gems，并在结果中说明。":
+    "Slot size does not indicate odds. Free Mystery Box rewards convert to Gems after the daily limit, as shown in your results.",
   轮到当前玩家行动: "Current Player's Turn",
   轮到我方: "Your Turn",
   "返回 Battle 首页": "Back to Battle Home",
@@ -408,10 +408,10 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
   预计总价: "Estimated Total",
   预计成交: "Estimated Sale",
   预计消耗: "Estimated Cost",
-  "领取 100 Fgems": "Claim 100 Fgems",
-  "领取 {{0}} Fgems": "Claim {{0}} Fgems",
+  "领取 100 Gems": "Claim 100 Gems",
+  "领取 {{0}} Gems": "Claim {{0}} Gems",
   领取中: "Claiming…",
-  "领取成功，Fgems +100": "Claimed · +100 Fgems",
+  "领取成功，Gems +100": "Claimed · +100 Gems",
   "领取本轮第 {{0}} 天签到奖励": "Claim Day {{0}} Check-In Reward",
   额外获得里程碑奖励: "Bonus Milestone Reward",
   高级: "Advanced",

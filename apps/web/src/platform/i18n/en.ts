@@ -115,7 +115,7 @@ export const englishCopy: Readonly<Record<string, string>> = {
     "This collectible's status changed. Please choose again.",
   "可用数量已经变化，请重新选择":
     "The available amount changed. Please choose again.",
-  "Fgems 不足，无法进化": "Not enough Fgems to evolve.",
+  "Gems 不足，无法进化": "Not enough Gems to evolve.",
   "操作过于频繁，请稍后再试":
     "You're moving too fast. Please try again in a moment.",
   本次没有产生结算: "No result was created.",
@@ -131,7 +131,7 @@ export const englishCopy: Readonly<Record<string, string>> = {
   结算结果: "Result Details",
   实际扣除材料: "Materials Used",
   失败保留材料: "Materials Kept After Failure",
-  "实际扣除 Fgems": "Fgems Used",
+  "实际扣除 Gems": "Gems Used",
   本批保底成功: "Pity Triggered",
   路线保底: "Evolution Pity",
   原藏品: "Original Collectible",

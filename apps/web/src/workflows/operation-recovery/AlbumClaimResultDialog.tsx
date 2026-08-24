@@ -21,7 +21,7 @@ export function AlbumClaimResultDialog({
       </div>
       <p>
         <Gift aria-hidden="true" />
-        Fgems +{result.reward_fgems}
+        Gems +{result.reward_fgems}
       </p>
       <Button onClick={onConfirm}>{t("完成")}</Button>
     </div>

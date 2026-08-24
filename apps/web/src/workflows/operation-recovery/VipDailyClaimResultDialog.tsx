@@ -12,8 +12,8 @@ type VipDailyClaimResult =
 const rewardVisuals = localized({
   fgems: {
     image: "/assets/vip/daily-fgems.png",
-    label: "Fgems",
-    detail: "已存入 Fgems 余额",
+    label: "Gems",
+    detail: "已存入 Gems 余额",
   },
   free_rare_box: {
     image: "/assets/vip/vip-free-rare-ticket.webp",

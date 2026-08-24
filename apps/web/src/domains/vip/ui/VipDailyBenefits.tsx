@@ -102,7 +102,7 @@ export function VipDailyBenefits(): ReactNode {
     setFeedback((current) => ({ ...current, [benefit]: undefined }));
     const result = await run(
       benefit === "fgems"
-        ? t("正在领取 VIP 每日 100 Fgems")
+        ? t("正在领取 VIP 每日 100 Gems")
         : t("正在领取 VIP 免费稀有盲盒资格"),
       routeId,
       {},
@@ -145,7 +145,7 @@ export function VipDailyBenefits(): ReactNode {
     pending: fgemsPending,
     loading: unavailable,
     loadFailed,
-    available: t("领取 100 Fgems"),
+    available: t("领取 100 Gems"),
   });
   const freeBoxAction = benefitButtonText({
     active,
@@ -199,7 +199,7 @@ export function VipDailyBenefits(): ReactNode {
           <Button
             className={`vip-benefit-tile fgems ${fgemsVisualState}`}
             disabled={fgemsDisabled}
-            aria-label={tp("100 Fgems，每个 UTC+0 日手动领取，{{0}}", [
+            aria-label={tp("100 Gems，每个 UTC+0 日手动领取，{{0}}", [
               fgemsAction,
             ])}
             onPointerEnter={prepareDetails}
@@ -218,7 +218,7 @@ export function VipDailyBenefits(): ReactNode {
           <BenefitFeedback
             feedback={fgemsFeedbackStatus}
             claimed={fgemsClaimed}
-            success={t("领取成功，Fgems +100")}
+            success={t("领取成功，Gems +100")}
           />
         </article>
 

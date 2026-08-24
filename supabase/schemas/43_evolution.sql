@@ -218,7 +218,7 @@ begin
     where b.user_id = v_user_id and b.currency = 'FGEMS';
     v_fgems := coalesce(v_fgems, 0);
     v_fgems_required := v_cost * v_attempts;
-    if v_fgems < v_fgems_required then perform api.raise_business_error('INSUFFICIENT_BALANCE', 'Fgems 不足'); end if;
+    if v_fgems < v_fgems_required then perform api.raise_business_error('INSUFFICIENT_BALANCE', 'Gems 不足'); end if;
     insert into evolution.pity (user_id, from_template_id) values (v_user_id, v_source.id) on conflict do nothing;
     select failures into v_previous_failures from evolution.pity where user_id = v_user_id and from_template_id = v_source.id for update;
     v_current_failures := v_previous_failures;

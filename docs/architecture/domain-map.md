@@ -14,7 +14,7 @@
 | 8 市场             | market                                 | market                                   | market、inventory、economy、vip          | 成功上架 UTC 日/生命周期配额、事务供给读模型、FIFO 整笔购买、逐卖家结算、成交游标与设备收件箱 |
 | 9 任务与签到       | tasks、wheel                           | tasks                                    | tasks、economy                           | 12 项可见任务、转盘固定位置、奖励唯一发放                                                     |
 | 10 分享邀请        | referral、session-bootstrap            | referral                                 | referral、identity、operations、payments | 服务端交接门禁、唯一绑定、有效充值、日/生命周期上限                                           |
-| 11 分解            | inventory、decomposition               | decomposition                            | 33_decomposition、inventory、economy     | 数量与 Fgems 在同一事务变化                                                                   |
+| 11 分解            | inventory、decomposition               | decomposition                            | 33_decomposition、inventory、economy     | 数量与 Gems 在同一事务变化                                                                    |
 | 12 官方价格        | market、inventory、gacha               | catalog                                  | catalog、market                          | 前端不提交价格，服务端读取目录                                                                |
 | 13 图鉴            | album、inventory、market、gacha        | album                                    | album、inventory、catalog、economy       | 70×3 显式节点、六筛选、永久点亮、整链奖励唯一领取                                             |
 | 14 开盒            | gacha、operation-recovery              | gacha                                    | gacha、inventory、economy、operations    | 单抽/十连全成全败、结果只生成一次、展示按钮不写后端且不跨启动恢复                             |

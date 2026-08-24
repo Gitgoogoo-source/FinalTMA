@@ -73,7 +73,7 @@ export function VipBanner({ open }: { open(): void }): ReactNode {
             alt=""
             aria-hidden="true"
           />
-          <small>{t("每日 100 Fgems")}</small>
+          <small>{t("每日 100 Gems")}</small>
         </div>
         <div className="vip-market-benefit vip-market-benefit--rebate">
           <ReceiptText aria-hidden="true" />

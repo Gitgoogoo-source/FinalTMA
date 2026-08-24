@@ -23,7 +23,7 @@ Supabase Security Advisor 只有 43 条 `INFO / rls_enabled_no_policy`，与项�
 - 故障原因：`@FinalTMA_bot` 的 Main Mini App 未启用，Bot API 当时返回 `has_main_web_app=false`；named Mini App 配置存在于其他 Bot，导致项目指定 Bot 的入口配置漂移。故障时部署与健康检查正常，且没有对应的 `/api/auth/telegram` 请求，因此故障发生在 Vercel Function 与 Supabase 之前。
 - 修复后的唯一入口配置：Bot `@FinalTMA_bot`；Main Mini App URL `https://final-tma-pi.vercel.app/`；named Mini App `https://t.me/FinalTMA_bot/pokepets_dev`；默认菜单按钮 `Open PokePets` 指向该 named Mini App 链接。
 - Bot API 复核：`getMe.result.has_main_web_app=true`；`getChatMenuButton.result.type=web_app`；菜单 URL 与 named Mini App 链接完全一致。
-- Telegram Desktop 从 `@FinalTMA_bot` 左下角入口启动后成功加载 PokePets 开盒主界面，页面读取到当前账号、K-coin、Fgems、钱包、盲盒档次和主导航；未出现“请从 Telegram Mini App 打开应用”。
+- Telegram Desktop 从 `@FinalTMA_bot` 左下角入口启动后成功加载 PokePets 开盒主界面，页面读取到当前账号、K-coin、Gems、钱包、盲盒档次和主导航；未出现“请从 Telegram Mini App 打开应用”。
 - Vercel 真实请求：`POST /api/auth/telegram` 返回 200，`request_id=4f44bab9-f2b0-49a0-92a1-9dfc72dd82da`；`GET /api/me/bootstrap` 返回 200，`request_id=05deb75b-e3df-4e8c-bbf3-f65a3b145b54`；`GET /api/gacha/bootstrap` 返回 200，`request_id=7a824ce4-624c-4894-bb5f-e746d3732d7b`；`GET /api/topups/bootstrap` 返回 200，`request_id=39c9be7f-532e-47e1-ae90-448e1442dc41`。近 30 分钟没有 Vercel runtime error。
 - Supabase 同一启动链路：`identity_authenticate` 200，日志 ID `25fa8c30-6dd6-4cc8-b6d3-052db4a79a0a`；`identity_bootstrap` 200，日志 ID `d78ccfa0-0bd2-44dc-9ecc-3a8f3855fed2`；随后 `wallet_get`、`topup_bootstrap`、`vip_get` 与 `gacha_bootstrap` 均返回 200。数据库最终事实为 1 个既有用户、1 个有效会话，最新会话创建于 `2026-07-20 09:07:05.831612+00`，证明本次启动复用了既有账号并建立了新的短期会话。
 - 结论：入口配置漂移已修复；Telegram Desktop → Vercel 认证与 bootstrap → Supabase RPC 的真实链路通过。

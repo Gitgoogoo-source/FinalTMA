@@ -89,7 +89,7 @@ export function ReferralPanel(): ReactNode {
             <span>
               <Gift aria-hidden="true" />
               <small>{t("首次有效充值")}</small>
-              <strong>{t("邀请人 +500 Fgems")}</strong>
+              <strong>{t("邀请人 +500 Gems")}</strong>
             </span>
             <span>
               <BadgeCheck aria-hidden="true" />
@@ -167,7 +167,7 @@ export function ReferralPanel(): ReactNode {
             <Gem aria-hidden="true" />
           </span>
           <Badge>{t("累计奖励")}</Badge>
-          <strong>{query.data?.reward_fgems_total ?? 0} Fgems</strong>
+          <strong>{query.data?.reward_fgems_total ?? 0} Gems</strong>
         </Card>
       </div>
     </div>

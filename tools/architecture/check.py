@@ -81,6 +81,7 @@ REQUIRED_PATHS = (
     "docs/architecture/adr/ADR-059-bounded-operation-admission-and-retention.md",
     "docs/architecture/adr/ADR-075-telegram-named-mini-app-release-isolation.md",
     "docs/architecture/adr/ADR-084-telegram-session-history-back-button.md",
+    "docs/architecture/adr/ADR-085-gems-display-name.md",
     "apps/web/public/maintenance.html",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",

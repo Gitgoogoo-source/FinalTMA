@@ -90,8 +90,8 @@ export const englishCopy3: Readonly<Record<string, string>> = {
   "当前可用 ×": "Currently available ×",
   "· 每次使用 3 个": "· 3 per use",
   进化材料数量: "Amount of evolution materials",
-  "基础成功率不包含当前路线保底；提交后由系统按真实保底、材料和 Fgems 状态裁决。":
-    "The basic success rate does not include the current route guarantee; after submission, the system will determine the actual guarantee, materials, and Fgems status.",
+  "基础成功率不包含当前路线保底；提交后由系统按真实保底、材料和 Gems 状态裁决。":
+    "The basic success rate does not include the current route guarantee; after submission, the system will determine the actual guarantee, materials, and Gems status.",
   "每次失败扣除 2 个材料并保留 1 个，整批变化全部写入或全部不写入。":
     "For each failure, 2 materials are deducted and 1 is retained. The entire batch of changes is either written or not written.",
   开始进化: "Start evolving",
@@ -104,8 +104,7 @@ export const englishCopy3: Readonly<Record<string, string>> = {
   "个相同藏品，集齐 3 个后即可开始":
     "identical collections, you can start after collecting 3",
   暂时无法开始进化: "Unable to start evolving at the moment",
-  "Fgems 不足，本次至少需要":
-    "Fgems is not enough, this time you need at least",
+  "Gems 不足，本次至少需要": "Gems is not enough, this time you need at least",
   "材料数量必须是 3 的正整数倍":
     "Material quantity must be a positive multiple of 3",
   免费: "free",
@@ -129,14 +128,14 @@ export const englishCopy3: Readonly<Record<string, string>> = {
   查看奖品概率与规则: "View prize probabilities and rules",
   免费普通资格: "Free general qualification",
   免费稀有资格: "Free rare qualification",
-  "转盘格子大小不代表概率。免费资格达到当日上限后，将按规则替换为 Fgems，并在结果中说明。":
-    "The size of the turntable grid does not represent the probability. After the free qualification reaches the daily limit, it will be replaced by Fgems according to the rules and stated in the result.",
+  "转盘格子大小不代表概率。免费资格达到当日上限后，将按规则替换为 Gems，并在结果中说明。":
+    "The size of the turntable grid does not represent the probability. After the free qualification reaches the daily limit, it will be replaced by Gems according to the rules and stated in the result.",
   今日转盘里程碑: "Today’s Carousel Milestones",
   "今日转盘次数已用完 · 累计奖励已全部获得":
     "The number of spins today has been exhausted · All accumulated rewards have been obtained",
   "累计奖励已全部获得 · 今日还可转":
     "All accumulated rewards have been obtained · You can still transfer them today",
-  "已获得 25 Fgems · 再转": "Obtained 25 Fgems · Retransfer",
+  "已获得 25 Gems · 再转": "Obtained 25 Gems · Retransfer",
   次可获得: "times available",
   再转: "transfer again",
   正在加载钱包能力: "Loading wallet capabilities",
@@ -153,7 +152,7 @@ export const englishCopy3: Readonly<Record<string, string>> = {
   "查看 VIP MONTHLY PASS 详情": "View VIP MONTHLY PASS details",
   "VIP 月卡权益": "VIP monthly card benefits",
   每日免费盲盒: "Daily free blind box",
-  "每日 100 Fgems": "100 Fgems per day",
+  "每日 100 Gems": "100 Gems per day",
   交易手续费返还: "Transaction fee refund",
   "钱包未返回 TON Proof，请重新连接":
     "The wallet did not return TON Proof, please reconnect.",
@@ -173,15 +172,15 @@ export const englishCopy3: Readonly<Record<string, string>> = {
   正在验证: "Verifying",
   连接并验证钱包: "Connect and verify wallet",
   关闭: "closure",
-  "正在领取 VIP 每日 100 Fgems": "Receiving VIP daily 100 Fgems",
+  "正在领取 VIP 每日 100 Gems": "Receiving VIP daily 100 Gems",
   "正在领取 VIP 免费稀有盲盒资格":
     "Receiving VIP free rare blind box qualifications",
-  "领取 100 Fgems": "Get 100 Fgems",
+  "领取 100 Gems": "Get 100 Gems",
   领取免费稀有盲盒: "Get a free rare blind box",
   "月卡每日权益，": "Monthly card daily benefits,",
-  "100 Fgems，每个 UTC+0 日手动领取，":
-    "100 Fgems, collected manually every UTC+0 day,",
-  "领取成功，Fgems +100": "Successfully collected, Fgems +100",
+  "100 Gems，每个 UTC+0 日手动领取，":
+    "100 Gems, collected manually every UTC+0 day,",
+  "领取成功，Gems +100": "Successfully collected, Gems +100",
   "免费稀有盲盒 1 次，全部来源当前可用":
     "1 free rare blind box, all sources currently available",
   "领取成功，免费稀有盲盒次数 +1":
@@ -216,7 +215,7 @@ export const englishCopy3: Readonly<Record<string, string>> = {
   尚未开通: "Not yet open",
   剩余权益日: "remaining equity date",
   本有效期续费: "Renewal of this validity period",
-  "今日 100 Fgems": "100 Fgems Today",
+  "今日 100 Gems": "100 Gems Today",
   可在开盒页领取: "Available on the box opening page",
   不可领取: "Not available for collection",
   今日免费稀有盲盒: "Today’s free rare blind box",

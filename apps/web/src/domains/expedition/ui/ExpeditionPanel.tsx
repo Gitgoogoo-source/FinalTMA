@@ -152,7 +152,7 @@ export function ExpeditionPanel(): ReactNode {
                       disabled={blocked || !isReady}
                       onClick={() => claim(running.id)}
                     >
-                      {tp("领取 {{0}} Fgems", [running.reward_fgems])}
+                      {tp("领取 {{0}} Gems", [running.reward_fgems])}
                     </Button>
                   </div>
                 ) : (
@@ -203,7 +203,7 @@ export function ExpeditionPanel(): ReactNode {
                       <div>
                         <strong>{t(item.name)}</strong>
                         <small>
-                          {tp("{{0}} · 第 {{1}} 阶 · {{2}} Fgems", [
+                          {tp("{{0}} · 第 {{1}} 阶 · {{2}} Gems", [
                             item.rarity,
                             item.stage,
                             item.unit_reward_fgems,
@@ -240,7 +240,7 @@ export function ExpeditionPanel(): ReactNode {
                 })}
               </div>
             )}
-            <strong>{tp("预计奖励：{{0}} Fgems", [expectedReward])}</strong>
+            <strong>{tp("预计奖励：{{0}} Gems", [expectedReward])}</strong>
             <div className="button-row">
               <Button
                 className="secondary"

@@ -39,7 +39,7 @@ The user’s 2026-07-24 adjudication replaces the historical `72px` top-bar heig
 - top asset inner maximum width: `382px`;
 - avatar: `48 × 48px`;
 - wallet control: `48 × 38px`;
-- K-coin and Fgems controls: `82 × 38px` each;
+- K-coin and Gems controls: `82 × 38px` each;
 - bottom navigation: `378 × 60px`;
 - bottom-navigation offset: `10px` above the device bottom safe area;
 - each bottom-navigation button: `46px` high.

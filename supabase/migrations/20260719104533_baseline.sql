@@ -3231,7 +3231,7 @@ begin
     where b.user_id = v_user_id and b.currency = 'FGEMS';
     v_fgems := coalesce(v_fgems, 0);
     v_fgems_required := v_cost * v_attempts;
-    if v_fgems < v_fgems_required then perform api.raise_business_error('INSUFFICIENT_BALANCE', 'Fgems 不足'); end if;
+    if v_fgems < v_fgems_required then perform api.raise_business_error('INSUFFICIENT_BALANCE', 'Gems 不足'); end if;
     insert into evolution.pity (user_id, from_template_id) values (v_user_id, v_source.id) on conflict do nothing;
     select failures into v_previous_failures from evolution.pity where user_id = v_user_id and from_template_id = v_source.id for update;
     v_current_failures := v_previous_failures;
@@ -11105,7 +11105,7 @@ begin
   return jsonb_build_object(
     'referral_code', v_code,
     'link', 'https://t.me/' || p_bot_username || '/' || p_mini_app_short_name || '?startapp=' || v_code,
-    'share_text', '邀请好友一起开盲盒。好友通过你的链接加入并完成首次有效充值后，你可获得500 Fgems；累计邀请5位有效充值好友可额外获得1次免费普通盲盒资格，累计邀请10位有效充值好友可额外获得1次免费稀有盲盒资格。',
+    'share_text', '邀请好友一起开盲盒。好友通过你的链接加入并完成首次有效充值后，你可获得500 Gems；累计邀请5位有效充值好友可额外获得1次免费普通盲盒资格，累计邀请10位有效充值好友可额外获得1次免费稀有盲盒资格。',
     'bound_friends', (select count(*) from referral.relationships where inviter_id = v_user_id),
     'valid_recharge_friends', (select count(*) from referral.relationships where inviter_id = v_user_id and first_recharge_at is not null),
     'reward_fgems_total', (select coalesce(sum(reward_fgems), 0) from referral.relationships where inviter_id = v_user_id),

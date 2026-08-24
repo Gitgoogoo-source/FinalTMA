@@ -6,7 +6,7 @@ FinalTMA 禁止 Telegram Stars 代付与赠送。每笔 K-coin 或 VIP 订单都
 
 预结账在同一数据库事务内锁定订单与用户，先核对 invoice payload、Stars 金额、订单开放状态、有效期、账号状态和付款人身份，再记录唯一 `pre_checkout_query_id`、`verified_payer_telegram_id` 与结账开始时间。付款人不一致时直接返回拒绝，不能改变订单、operation、资产、权益、任务、邀请、账本或审计业务状态；同一预结账请求只有在 query ID 与已记录付款人同时一致时才能幂等重放成功。
 
-`successful_payment` 到达后，数据库同时核对预结账阶段保存的付款人和消息付款人。消息付款人缺失或不一致时，第一次 Telegram charge 仍原子绑定到原订单，但订单进入不可交付终态 `payment_identity_conflict`，记录冲突时间和内部原因；不得增加 K-coin、开通或续费 VIP、形成首次有效充值、发放 500 Fgems、推进 5/10 人阶梯、写入交付账本或自动退款。该终态重复回调只返回同一结果，不能重新进入 `paid` 或 `delivered`。平台以后确实发送与该 charge 对应的退款通知时，订单可转为 `refunded`，但保留付款身份冲突历史。
+`successful_payment` 到达后，数据库同时核对预结账阶段保存的付款人和消息付款人。消息付款人缺失或不一致时，第一次 Telegram charge 仍原子绑定到原订单，但订单进入不可交付终态 `payment_identity_conflict`，记录冲突时间和内部原因；不得增加 K-coin、开通或续费 VIP、形成首次有效充值、发放 500 Gems、推进 5/10 人阶梯、写入交付账本或自动退款。该终态重复回调只返回同一结果，不能重新进入 `paid` 或 `delivered`。平台以后确实发送与该 charge 对应的退款通知时，订单可转为 `refunded`，但保留付款身份冲突历史。
 
 玩家接口只公开订单状态和既有非敏感字段，不公开付款人 Telegram ID、charge ID、冲突内部原因或订单所属身份。K-coin 与 VIP 界面收到该终态时展示“支付身份校验异常”和“本次未到账，请前往支付助手发送 /paysupport”，不显示项目内客服、工单、订单查询或申诉入口，也不自动退款。
 

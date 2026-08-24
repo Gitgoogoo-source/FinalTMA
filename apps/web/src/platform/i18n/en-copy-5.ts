@@ -28,7 +28,7 @@ export const englishCopy5: Readonly<Record<string, string>> = {
   "{{0}} · {{1}} 阶 · {{2}}": "{{0}} · {{1}} order · {{2}}",
   "{{0}} · {{1}} 阶 · 可用 {{2}}": "{{0}} · {{1}} level · Available {{2}}",
   "{{0}} · {{1}} 阶": "{{0}} · {{1}} order",
-  "{{0}} · 第 {{1}} 阶 · {{2}} Fgems": "{{0}} · {{1}}th order · {{2}} Fgems",
+  "{{0}} · 第 {{1}} 阶 · {{2}} Gems": "{{0}} · {{1}}th order · {{2}} Gems",
   "{{0}} · 第 {{1}} 阶": "{{0}} · Level {{1}}",
   "{{0}} × {{1}} 已化作晶辉": "{{0}} × {{1}} has turned into crystal light",
   "{{0}} 个操作待确认": "{{0}} operations pending confirmation",
@@ -79,12 +79,12 @@ export const englishCopy5: Readonly<Record<string, string>> = {
   "获得 ×{{0}}": "Get ×{{0}}",
   "选择{{0}}远征藏品": "Select {{0}} Expedition Collection",
   "重新确认转动 {{0}} 次": "Reconfirm spins {{0}} times",
-  "预计奖励：{{0}} Fgems": "Estimated reward: {{0}} Fgems",
-  "领取 {{0}} Fgems": "Get {{0}} Fgems",
-  "100 Fgems，每个 UTC+0 日手动领取，{{0}}":
-    "100 Fgems, manually collected every UTC+0 day, {{0}}",
-  "Fgems 不足，本次至少需要 {{0}} Fgems":
-    "Insufficient Fgems. At least {{0}} Fgems are required this time.",
+  "预计奖励：{{0}} Gems": "Estimated reward: {{0}} Gems",
+  "领取 {{0}} Gems": "Get {{0}} Gems",
+  "100 Gems，每个 UTC+0 日手动领取，{{0}}":
+    "100 Gems, manually collected every UTC+0 day, {{0}}",
+  "Gems 不足，本次至少需要 {{0}} Gems":
+    "Insufficient Gems. At least {{0}} Gems are required this time.",
   "{{0}} Telegram Stars · 30 天": "{{0}} Telegram Stars · 30 days",
   "{{0}} 份藏品": "{{0}} collections",
   "{{0}} 发起挑战": "{{0}} Challenge",
@@ -98,7 +98,7 @@ export const englishCopy5: Readonly<Record<string, string>> = {
   "{{0}}% 生命": "{{0}}% health",
   "{{0}}三阶节点": "{{0}}Third-order node",
   "{{0}}固定阵营头像": "{{0}}Fixed camp avatar",
-  "{{0}}奖励，{{1}}，{{2}} Fgems": "{{0}} rewards, {{1}}, {{2}} Fgems",
+  "{{0}}奖励，{{1}}，{{2}} Gems": "{{0}} rewards, {{1}}, {{2}} Gems",
   "{{0}}生命": "{{0}} life",
   "{{0}}生命百分比": "{{0}}Health percentage",
   "{{0}}的黑影": "The dark shadow of {{0}}",

@@ -27,4 +27,4 @@ Supabase 从空数据库执行 migration 只恢复 Catalog v1 产品数据和资
 
 `publish` 继续使用 ADR-031 的耐久租约、fence、远端 SHA-256/MIME/尺寸/缓存策略校验和原子指针切换；本裁决不复制或改变资源生命周期与不可变缓存语义。新式 Supabase secret key 只发送 `apikey`，legacy `service_role` JWT 同时发送 `apikey` 与 Bearer。
 
-架构门禁必须锁定 ADR、本地两份 manifest、`status` 对三个读取 RPC 的调用、历史发布校验和 `ready` 输出，避免退化为只打印当前资源摘要。数据库验收必须证明 1050 个 active 登记对象、v1 retired、v2 active、每批 210 个映射、revision=2、无 running 变更租约，并执行两个目录 RPC 的权限、错误与真实执行计划验证。Vercel 和真实 Telegram 验收继续按 ADR-042 检查 pointer/release 缓存、503/`RESPONSE_INVALID` 日志、公开图片和浏览器无 Supabase Data API；静态、数据库、HTTP 与真机证据不得互相替代。
+架构门禁必须锁定 ADR、本地两份 manifest、`status` 对三个读取 RPC 的调用、历史发布校验和 `ready` 输出，避免退化为只打印当前资源摘要。数据库验收必须证明两份冻结 manifest 的唯一对象并集全部登记为 active；当前 v1 与 PNG 刷新后的 v2 分别拥有 210 个不同母版和 420 个运行时对象，因此合计为 1260 个 active 登记对象，同时要求 v1 retired、v2 active、每批 210 个映射、revision=2、无 running 变更租约，并执行两个目录 RPC 的权限、错误与真实执行计划验证。Vercel 和真实 Telegram 验收继续按 ADR-042 检查 pointer/release 缓存、503/`RESPONSE_INVALID` 日志、公开图片和浏览器无 Supabase Data API；静态、数据库、HTTP 与真机证据不得互相替代。

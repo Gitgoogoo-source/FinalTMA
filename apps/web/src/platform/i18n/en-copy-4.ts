@@ -1,7 +1,7 @@
 export const englishCopy4: Readonly<Record<string, string>> = {
   一起开盲盒: "Open the blind box together",
   首次有效充值: "First effective recharge",
-  "邀请人 +500 Fgems": "Inviter +500 Fgems",
+  "邀请人 +500 Gems": "Inviter +500 Gems",
   "5 / 10 阶梯资格": "5 / 10 Qualification ladder",
   "/ 10 位好友": "/ 10 friends",
   半透明橙色礼盒: "Translucent orange gift box",

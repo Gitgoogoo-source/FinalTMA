@@ -25,7 +25,7 @@ export const professionalEnglishCopy: Readonly<Record<string, string>> = {
   "正在创建 Telegram Stars 订单": "Preparing Telegram Stars Payment",
   正在取消未付款订单: "Canceling Unpaid Order",
   正在确认充值失败结果: "Reviewing Top-Up Result",
-  "正在领取 VIP F-gems": "Claiming VIP Fgems",
+  "正在领取 VIP Gems": "Claiming VIP Gems",
   "正在领取 VIP 盲盒": "Claiming VIP Mystery Box",
   正在取消未付款月卡订单: "Canceling Unpaid VIP Order",
   "正在创建 VIP 付款订单": "Preparing VIP Payment",
@@ -198,7 +198,7 @@ export const professionalEnglishCopy: Readonly<Record<string, string>> = {
     "No spins left today · All milestone rewards claimed",
   "累计奖励已全部获得·今日还可转":
     "All milestone rewards claimed · Spins remaining: ",
-  "已获得 25 Fgems · 再转": "25 Fgems claimed · Spin ",
+  "已获得 25 Gems · 再转": "25 Gems claimed · Spin ",
   每日免费盲盒: "Daily Free Mystery Box",
   免费普通盲盒资格: "Free Standard Mystery Box",
   免费稀有盲盒资格: "Free Rare Mystery Box",

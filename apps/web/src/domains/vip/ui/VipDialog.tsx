@@ -87,7 +87,7 @@ export function VipDialog({ close }: { close(): void }): ReactNode {
                 <strong>{data?.renewals_used ?? 0}/2</strong>
               </span>
               <span>
-                {t("今日 100 Fgems")}
+                {t("今日 100 Gems")}
                 <strong>
                   {data?.active
                     ? data.fgems_claimed_today

@@ -24,7 +24,7 @@ Battle 终局只在当前前台会话通过 `BattleRoomSnapshotDto.terminal_resu
 
 开盒、转盘、分解及其他没有专用服务端回执的结果展示都没有结果确认 API、RPC、数据库确认时间或已读状态。它们的“确定”“收下”“返回”等终态按钮只移除当前 Web 内存弹窗或执行本地导航，不发送 API、RPC、原操作查询或权威刷新；开盒的“再开一次”先移除旧展示，再按最新权威价格、资格和余额创建一笔新的 `gacha.open`。各业务 RPC 的原子终态在结果展示前已经完成扣款、消耗、发放、库存、任务和 operation 写入，结果弹窗不参与解锁或结算。进化成功、随机失败或拒绝结果执行规定动作前继续调用 `POST /api/inventory/evolution/results/:operation_id/acknowledge`；数据库只允许当前用户确认本人匹配 `inventory.evolve` 的终态，并以首次确认时间幂等落库。当前会话直接取得进化终态且结算后的第一次权威刷新成功时，进化确认只写入回执，不再次失效 `inventory.evolve` 的 refresh scope；由启动发现或原操作查询恢复的进化终态，以及第一次权威刷新失败的本地终态，在确认后补做一次刷新。第一次刷新和确认后补刷都必须传播活动查询的读取失败；补刷失败时保留结果层，用户重试只幂等确认同一回执并再次刷新。该运行期标记随 session generation 清理，不替代数据库事实。进化确认响应丢失时弹窗保持打开并允许重试；确认完成后启动与领域恢复查询不再返回该结果。前端内存和浏览器存储都不充当业务裁决事实来源。
 
-`album.claim` 成功且结果通过该命令输出 Schema 校验时展示图鉴奖励专用结果，包含服务端返回的链条名称和真实 Fgems 奖励，不显示 operation ID；确认前不提前显示奖励。图鉴是脱离主壳层的全屏页面，因此页面自身消费当前 generation 的 `identity.initial.recovery.blocking_operations` 并注入同一操作注册中心，网络中断后只查询原 `operation_id`。成功、失败或未知恢复都会按 `album.claim` 声明的资产与图鉴刷新范围重新读取 `album.get` 和 `identity.summary` 顶部资产事实，不从临时弹窗状态重放领取。
+`album.claim` 成功且结果通过该命令输出 Schema 校验时展示图鉴奖励专用结果，包含服务端返回的链条名称和真实 Gems 奖励，不显示 operation ID；确认前不提前显示奖励。图鉴是脱离主壳层的全屏页面，因此页面自身消费当前 generation 的 `identity.initial.recovery.blocking_operations` 并注入同一操作注册中心，网络中断后只查询原 `operation_id`。成功、失败或未知恢复都会按 `album.claim` 声明的资产与图鉴刷新范围重新读取 `album.get` 和 `identity.summary` 顶部资产事实，不从临时弹窗状态重放领取。
 
 每日幂等清理禁止删除被账本、库存、图鉴、市场、支付、任务或 Battle 引用的幂等锚点；这类终态在 `completed_at` 满 30 天后只清空 `request`、`result` 和转盘逐项结果并写入 `payload_purged_at`，继续保留 UUID、用户、用例、请求哈希、终态、错误码、权威序号和时间戳。无业务引用的失败 operation 满 7 天删除，无引用的成功 operation 满 37 天删除。非终态、尚未确认展示的进化终态和活动支付/Mint 不清理。压缩后同键异请求仍返回 `IDEMPOTENCY_KEY_REUSED`，同键同请求返回 `OPERATION_RESULT_EXPIRED`；删除后的旧 UUIDv7 因超过新鲜度窗口返回 `IDEMPOTENCY_KEY_INVALID`，两者都绝不重新执行原业务。
 
