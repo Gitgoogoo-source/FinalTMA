@@ -177,10 +177,6 @@ function CollectionSkillRail({
     <div className="inventory-skill-rail" aria-label={t("宠物技能")}>
       <div className="inventory-skill-summary" aria-live="polite">
         <span className="inventory-skill-name">{t(selectedSkill.name)}</span>
-        <span className="inventory-skill-divider" aria-hidden="true" />
-        <span className="inventory-skill-damage">
-          <strong>{selectedSkill.damage}</strong>
-        </span>
       </div>
 
       <div className="inventory-skill-tabs">

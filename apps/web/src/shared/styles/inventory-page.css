@@ -270,10 +270,8 @@
 }
 .app-shell .inventory-skill-summary {
   min-height: 16px;
-  display: inline-grid;
-  grid-template-columns: minmax(0, auto) 1px auto;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
   padding-left: 8px;
   color: #342f29;
   font-size: clamp(10px, 2.7vw, 11px);
@@ -333,21 +331,6 @@
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.app-shell .inventory-skill-divider {
-  width: 1px;
-  height: 10px;
-  background: rgba(52, 47, 41, 0.2);
-}
-.app-shell .inventory-skill-damage {
-  color: rgba(52, 47, 41, 0.82);
-  font-size: 0.92em;
-  font-weight: 700;
-}
-.app-shell .inventory-skill-damage strong {
-  color: #342f29;
-  font-size: 1.08em;
-  font-weight: 900;
 }
 .app-shell .inventory-hero-image-stack,
 .app-shell .inventory-hero-image-layer {
