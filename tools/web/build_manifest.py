@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 OUTPUT = ROOT / "apps/web/public/tonconnect-manifest.json"
 MANIFEST = {
     "url": "https://final-tma-pi.vercel.app",
-    "name": "PokePets",
+    "name": "EvoMyPet",
     "iconUrl": "https://final-tma-pi.vercel.app/assets/ton/tonconnect-icon.png",
 }
 

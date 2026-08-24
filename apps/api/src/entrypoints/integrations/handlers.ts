@@ -1,4 +1,4 @@
-import type { RouteId } from "@pokepets/api-contracts/integrations";
+import type { RouteId } from "@evomypet/api-contracts/integrations";
 
 import type { RouteHandler } from "../../http/handlers.ts";
 import { battleOutboxIntegrationHandlers } from "../../workflows/battle-outbox/routes.ts";

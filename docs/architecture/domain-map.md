@@ -36,4 +36,4 @@
 - 所有前端异步结果写入前同时验证 session generation 与 `normal` 账号状态。
 - Battle 前端只为创建、随机匹配、取消、接受以及 `attack | switch | replace_attack` 行动提交对应意图与幂等键；heartbeat/offline 提交目标房间、lease UUID、lifecycle version 与 command sequence 且不提交幂等键。结果页只消费房间快照并执行本地导航。公开候选、participant presence、lobby 完整性、首发速度先手、当前行动权、倒计时、命中、伤害、终局、退款与结算全部由数据库裁决。
 - Battle 的 Ably 消息只使 `state_version` 失效，viewer-specific 权威内容只通过 REST 读取。
-- 真实开发环境与未来生产环境使用相同 commit、相同 migration、不同环境密钥。
+- 既有 Vercel `final-tma` 与 Supabase `ebewtjerusxcioegpzjd` 是唯一生产资源；入口开放前从同一 `main` commit 完成最后一次空库重建，开放后 migration history 冻结。

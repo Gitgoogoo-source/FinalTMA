@@ -1,4 +1,4 @@
-import type { RecoverableRouteId } from "@pokepets/api-contracts/app-client";
+import type { RecoverableRouteId } from "@evomypet/api-contracts/app-client";
 
 export type OperationRegistryRuntimeModule =
   typeof import("./OperationRegistryRuntimeProvider.tsx");

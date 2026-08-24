@@ -27,7 +27,7 @@ const forbiddenModuleFragments = [
 
 export function battleRuntimeBudgetPlugin(): Plugin {
   return {
-    name: "pokepets-battle-runtime-budget",
+    name: "evomypet-battle-runtime-budget",
     apply: "build",
     generateBundle(_options, bundle) {
       const chunks = outputChunks(bundle);

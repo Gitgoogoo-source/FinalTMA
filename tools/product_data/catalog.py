@@ -31,7 +31,7 @@ EXPECTED_RARITIES = {
 
 
 def parse(markdown: str) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
-    section = markdown.split("### 1.8 PokePets 正式藏品目录", 1)[1].split("## 2.", 1)[0]
+    section = markdown.split("### 1.8 EvoMyPet 正式藏品目录", 1)[1].split("## 2.", 1)[0]
     chains: list[dict[str, object]] = []
     templates: list[dict[str, object]] = []
     row_pattern = re.compile(r"^\|\s*(\d+)\s*\|\s*`(CHAIN-[NAT]-\d{3})`\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|(.+)\|$")

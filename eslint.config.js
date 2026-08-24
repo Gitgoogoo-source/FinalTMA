@@ -41,15 +41,15 @@ export default tseslint.config(
         "error",
         {
           paths: [
-            "@pokepets/api-contracts",
-            "@pokepets/api-contracts/common",
-            "@pokepets/api-contracts/integrations",
-            "@pokepets/api-contracts/jobs",
-            "@pokepets/api-contracts/server",
+            "@evomypet/api-contracts",
+            "@evomypet/api-contracts/common",
+            "@evomypet/api-contracts/integrations",
+            "@evomypet/api-contracts/jobs",
+            "@evomypet/api-contracts/server",
           ],
           patterns: [
             {
-              group: ["@pokepets/api", "@pokepets/api/*", "@supabase/*"],
+              group: ["@evomypet/api", "@evomypet/api/*", "@supabase/*"],
               message: "Web 只能依赖公开 API 契约。",
             },
           ],
@@ -65,8 +65,8 @@ export default tseslint.config(
         {
           paths: [
             {
-              name: "@pokepets/api",
-              message: "API 入口只能依赖 @pokepets/api/entrypoints。",
+              name: "@evomypet/api",
+              message: "API 入口只能依赖 @evomypet/api/entrypoints。",
             },
           ],
           patterns: [
@@ -74,10 +74,10 @@ export default tseslint.config(
               group: [
                 "../packages/*/src/*",
                 "../apps/*",
-                "@pokepets/api/src/*",
-                "@pokepets/api-contracts/*",
+                "@evomypet/api/src/*",
+                "@evomypet/api-contracts/*",
               ],
-              message: "API 入口只能依赖 @pokepets/api/entrypoints。",
+              message: "API 入口只能依赖 @evomypet/api/entrypoints。",
             },
           ],
         },

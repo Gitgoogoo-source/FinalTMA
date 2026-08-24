@@ -13,9 +13,9 @@ EXPECTED = ROOT / "packages/api-contracts/openapi/openapi.json"
 
 
 def main() -> None:
-    with tempfile.TemporaryDirectory(prefix="pokepets-openapi-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="evomypet-openapi-") as temporary:
         actual = Path(temporary) / "openapi.json"
-        subprocess.run(["pnpm", "--filter", "@pokepets/api-contracts", "openapi", str(actual)], cwd=ROOT, check=True)
+        subprocess.run(["pnpm", "--filter", "@evomypet/api-contracts", "openapi", str(actual)], cwd=ROOT, check=True)
         if actual.read_bytes() != EXPECTED.read_bytes():
             raise SystemExit("OpenAPI drift detected; run pnpm contracts:openapi and commit the result")
         document = json.loads(actual.read_text(encoding="utf-8"))

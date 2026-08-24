@@ -178,7 +178,7 @@ begin
   if v_replay is not null then return v_replay; end if;
   v_user_id := v_operation.user_id;
   begin
-    perform pg_advisory_xact_lock(hashtextextended('pokepets:payment:' || v_user_id::text || ':kcoin_topup', 0));
+    perform pg_advisory_xact_lock(hashtextextended('evomypet:payment:' || v_user_id::text || ':kcoin_topup', 0));
     for v_stale in
       select * from payments.orders
       where user_id = v_user_id and kind = 'kcoin_topup' and status = 'pending' and checkout_started_at is null
@@ -370,7 +370,7 @@ begin
       perform api.raise_business_error('TOPUP_AMOUNT_INVALID', '充值模式无效');
     end if;
     insert into payments.orders (user_id, operation_id, kind, stars_amount, kcoin_amount, invoice_payload, intent, expires_at)
-    values (v_user_id, p_operation_id, 'kcoin_topup', v_required, v_required, 'pokepets:' || extensions.gen_random_uuid(), v_normalized_intent, now() + interval '15 minutes')
+    values (v_user_id, p_operation_id, 'kcoin_topup', v_required, v_required, 'evomypet:' || extensions.gen_random_uuid(), v_normalized_intent, now() + interval '15 minutes')
     returning * into v_order;
     v_result := payments.order_json(v_order);
     return operations.pending_command(p_operation_id, v_result);
@@ -410,12 +410,12 @@ begin
   if v_replay is not null then return v_replay; end if;
   v_user_id := v_operation.user_id;
   begin
-    perform pg_advisory_xact_lock(hashtextextended('pokepets:payment:' || v_user_id::text || ':vip', 0));
+    perform pg_advisory_xact_lock(hashtextextended('evomypet:payment:' || v_user_id::text || ':vip', 0));
     v_status := vip.status_json(v_user_id);
     if not coalesce((v_status->>'can_purchase')::boolean, false) and not coalesce((v_status->>'can_renew')::boolean, false) then perform api.raise_business_error('VIP_RENEWAL_LIMIT', '月卡续费次数已达上限'); end if;
     if exists (select 1 from payments.orders where user_id = v_user_id and kind = 'vip' and status in ('pending', 'processing', 'paid')) then perform api.raise_business_error('PAYMENT_ALREADY_PENDING', '已有待处理月卡订单'); end if;
     insert into payments.orders (user_id, operation_id, kind, stars_amount, invoice_payload, expires_at)
-    values (v_user_id, p_operation_id, 'vip', payments.vip_stars_price(), 'pokepets:' || extensions.gen_random_uuid(), now() + interval '15 minutes') returning * into v_order;
+    values (v_user_id, p_operation_id, 'vip', payments.vip_stars_price(), 'evomypet:' || extensions.gen_random_uuid(), now() + interval '15 minutes') returning * into v_order;
     v_result := payments.order_json(v_order);
     return operations.pending_command(p_operation_id, v_result);
   exception when others then
@@ -478,7 +478,7 @@ begin
   if v_replay is not null then return v_replay; end if;
   v_user_id := v_operation.user_id;
   begin
-    perform pg_advisory_xact_lock(hashtextextended('pokepets:payment:' || v_user_id::text || ':kcoin_topup', 0));
+    perform pg_advisory_xact_lock(hashtextextended('evomypet:payment:' || v_user_id::text || ':kcoin_topup', 0));
     select * into v_order from payments.orders
     where id = p_order_id and user_id = v_user_id and kind = 'kcoin_topup'
     for update;
@@ -517,7 +517,7 @@ begin
   if v_replay is not null then return v_replay; end if;
   v_user_id := v_operation.user_id;
   begin
-    perform pg_advisory_xact_lock(hashtextextended('pokepets:payment:' || v_user_id::text || ':vip', 0));
+    perform pg_advisory_xact_lock(hashtextextended('evomypet:payment:' || v_user_id::text || ':vip', 0));
     select * into v_order from payments.orders
     where id = p_order_id and user_id = v_user_id and kind = 'vip'
     for update;
@@ -556,7 +556,7 @@ begin
   if v_replay is not null then return v_replay; end if;
   v_user_id := v_operation.user_id;
   begin
-    perform pg_advisory_xact_lock(hashtextextended('pokepets:payment:' || v_user_id::text || ':kcoin_topup', 0));
+    perform pg_advisory_xact_lock(hashtextextended('evomypet:payment:' || v_user_id::text || ':kcoin_topup', 0));
     select * into v_order from payments.orders
     where id = p_order_id and user_id = v_user_id and kind = 'kcoin_topup'
     for update;

@@ -16,7 +16,7 @@ export const professionalEnglishCopy3: Readonly<Record<string, string>> = {
     "This collectible has no active listings and is no longer available to buy.",
   市场暂无有效挂单: "No Active Listings",
   开战倒计时已锁定: "Battle Countdown Locked",
-  当前宠物: "Current PokePet",
+  当前宠物: "Current Pet",
   "当前没有这只上一阶材料，无法进行进化。":
     "You don't own the previous-stage material required for this evolution.",
   当前藏品暂不支持进化: "This collectible can't evolve yet.",
@@ -41,11 +41,11 @@ export const professionalEnglishCopy3: Readonly<Record<string, string>> = {
     "Slot order determines your lead and automatic switch order.",
   "正在创建 VIP 月卡订单": "Preparing VIP Payment",
   正在匹配同档对手: "Finding an Opponent in This Tier",
-  "正在登录，请稍候": "Entering PokePets…",
+  "正在登录，请稍候": "Entering EvoMyPet…",
   "正在领取 VIP 每日 100 Gems": "Claiming 100 Daily VIP Gems",
   "该地址是当前账号唯一经过 TON Proof 验证的主钱包。":
-    "This is the primary TON wallet verified for your PokePets account.",
+    "This is the primary TON wallet verified for your EvoMyPet account.",
   "该藏品已经是最终形态，无法继续进化":
     "This collectible is already at its final stage.",
-  "请重新从 Telegram 打开游戏": "Reopen PokePets from Telegram.",
+  "请重新从 Telegram 打开游戏": "Reopen EvoMyPet from Telegram.",
 };

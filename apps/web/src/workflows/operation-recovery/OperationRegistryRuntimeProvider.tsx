@@ -17,11 +17,11 @@ import {
   type RecoverableRouteId,
   type RouteInput,
   type RouteOutput,
-} from "@pokepets/api-contracts/app-client";
+} from "@evomypet/api-contracts/app-client";
 import {
   errorDefinition,
   isErrorCode,
-} from "@pokepets/api-contracts/app-client/errors";
+} from "@evomypet/api-contracts/app-client/errors";
 
 import {
   ApiFailure,

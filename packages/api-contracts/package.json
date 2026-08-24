@@ -1,5 +1,5 @@
 {
-  "name": "@pokepets/api-contracts",
+  "name": "@evomypet/api-contracts",
   "version": "1.0.0",
   "private": true,
   "type": "module",

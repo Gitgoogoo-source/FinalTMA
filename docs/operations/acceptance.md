@@ -1,12 +1,12 @@
-# 真实环境验收证据模板
+# EvoMyPet 生产环境验收证据模板
 
-当前 MVP 的钱包与 Mint 验收结果固定为“功能不可见且不运行”：五个主页面没有钱包/Mint 入口或占位，任务页没有钱包/链上分类与任务，启动和恢复不请求对应接口或加载 TON Provider，`/mint/*` 不可达，OpenAPI 不发布钱包、Mint 或 Mint 对账端点且直接请求返回 `API_ROUTE_NOT_FOUND`，Vercel 只存在三项非 Mint Cron。不得执行钱包连接、签名、链上交易、Collection 发布或 Mint 对账来替代这一验收。
+当前 MVP 的钱包与 Mint 验收结果固定为“功能不可见且不运行”：五个主页面没有钱包/Mint 入口或占位，任务页没有钱包/链上分类与任务，启动和恢复不请求对应接口或加载 TON Provider，`/mint/*` 不可达，OpenAPI 不发布钱包、Mint 或 Mint 对账端点且直接请求返回 `API_ROUTE_NOT_FOUND`，Vercel 只存在四项非 Mint Cron。不得执行钱包连接、签名、链上交易、Collection 发布或 Mint 对账来替代这一验收。
 
 每个场景复制一份，所有字段必填；截图和日志只保存引用，不提交敏感值。
 
 ```text
 场景：
-环境：development / production-smoke
+环境：production
 Git commit：
 Vercel deployment id / status / source SHA：
 Migration：填写 `supabase/migrations` 中按文件名排序的三条实际迁移及校验和
@@ -32,7 +32,7 @@ Battle stake / settlement / outbox event（脱敏）：
 
 ## 必须覆盖的场景
 
-应用契约与数据库双向不兼容的开发切换必须保存版本对齐证据：活动 Battle、未发布 outbox 与未决 operation 为 0；`main` 的单一完整提交经 Git Integration 自动创建的 Production deployment 为 `READY`，source SHA 等于发布单元 Git commit；远端三条 migration、OpenAPI、Catalog manifest 与 `battle-v1` checksum 均来自同一提交。Vercel Production 在开发阶段保持启用，不需要项目暂停、`503 DEPLOYMENT_PAUSED`、`BLOCKED` deployment、空触发提交或部署后重新暂停的证据。开始验收时 Telegram 入口、webhook 与 Vercel Cron 仍保持关闭，所有受控账号均已关闭旧 Mini App 并从 Telegram 重新加载当前 deployment；应用与数据库已经对齐，且 `/api/health`、受控 API 与运行日志没有 `RESPONSE_INVALID` 后才恢复调度和入口。任一必要证据缺失都不得把切换记为 PASS。
+应用契约与数据库双向不兼容的开发切换必须保存版本对齐证据：活动 Battle、未发布 outbox 与未决 operation 为 0；`main` 的单一完整提交经 Git Integration 自动创建的 Production deployment 为 `READY`，source SHA 等于发布单元 Git commit；远端三条 migration、OpenAPI、Catalog manifest 与 `battle-v1` checksum 均来自同一提交。Vercel Production 在入口开放前保持启用，不需要项目暂停、`503 DEPLOYMENT_PAUSED`、`BLOCKED` deployment、空触发提交或部署后重新暂停的证据。开始验收时 Telegram 入口、webhook 与 Vercel Cron 仍保持关闭，所有受控账号均已关闭旧 Mini App 并从 Telegram 重新加载当前 deployment；应用与数据库已经对齐，且 `/api/health`、受控 API 与运行日志没有 `RESPONSE_INVALID` 后才恢复调度和入口。任一必要证据缺失都不得把切换记为 PASS。
 
 执行 Telegram 登录场景前，先保存入口配置证据：Bot API `getMe.result.username` 必须等于当前环境 Bot，`getMe.result.has_main_web_app` 必须为 `true`，默认菜单按钮必须为 `web_app` 类型并指向当前环境 named Mini App 链接；随后只能从该 Bot 的 Main Mini App、菜单按钮或 named Mini App 链接启动，不得用浏览器直接访问部署 URL 代替 Telegram 真机验收。
 
@@ -55,7 +55,7 @@ Battle stake / settlement / outbox event（脱敏）：
 - 表现模块失败：分别阻断开盒、进化、分解、市场、转盘、图鉴以及充值/VIP 的首次专用 chunk 或 CSS；操作反馈必须立即出现且无空白、FOUC、层级或安全区变化。业务请求已经发出时，重试按钮只能重新加载表现模块，网络记录和数据库证明没有第二次提交；尚未发出请求的契约模块失败必须明确失败且没有 `unknown` operation。恢复网络后原 operation 状态、幂等锁和权威结果保持正确。
 - 图鉴无障碍：仅用键盘完成返回、六筛选、210 个节点、详情关闭、三个获取入口和礼物盒领取；弹窗打开后焦点进入，Escape 或关闭按钮退出后焦点回原节点，读屏可读出节点名称、阶段、稀有度、点亮状态、当前数量及礼物盒状态，状态不只依赖颜色。
 - 市场：购买页只展示当前存在有效供给的正式模板，最多处理 210 条模板汇总，可买数量排除本人和 banned 卖家；首次上架、同模板追加、已有 9 种时第 10 种成功、已有 10 种时第 11 种拒绝且同模板追加成功。成功上架计数固定按 UTC 自然日 200 次与账号生命周期 20,000 次裁决：验证第 200 次成功、第 201 次返回 `MARKET_DAILY_LISTING_LIMIT` 且无新增 operation/listing/reservation，UTC 跨日后每日归零但生命周期不变；第 20,000 次成功、第 20,001 次及后续跨日均返回 `MARKET_LIFETIME_LISTING_LIMIT`，两项同时用尽时生命周期错误优先。相同 key 回放不计数，同键异请求拒绝不计数；并发争抢最后一次只允许一笔成功；模板、数量、库存和十种模板失败不计数；下架和成交不增减。出售页固定显示“今日剩余 N / 200 · 累计 M / 20,000”，任一剩余为零立即禁用，服务端并发拒绝后刷新权威配额。相同部署 SHA 必须在真实 Telegram iOS 与 Android 至少两种不同竖屏高度中确认出售页无需纵向滚动即可看到资产栏、共享页签、选中藏品、双行缩略图、价格摘要、数量、预计结算、配额和完整确认按钮；调试器必须证明确认按钮边界完全包含在出售表单内、按钮底边小于底部导航顶边，视口与安全区变化后仍成立。管理读取最多处理本人 10 条卖家模板汇总，卡片只显示藏品信息、`出售中 ×N`、官方单价和下架按钮，不存在出售中/总价值/预计到账汇总卡、累计已售、部分成交或管理页预计结算字段；出售确认页预计结算保持不变。上架 7 个并成交 1 个后，同一管理快照显示 `出售中 ×6` 且顶部新增 `已售出 ×1` 的红色 SOLD 卡片；同模板不同交易各生成一张，单笔交易跨同卖家多条挂单只生成一张聚合事件，全部售罄后当前卡片消失而 SOLD 保留。待展示 SOLD 非空时“管理”页签显示红点，点击页签不清除；多张提醒逐条隐藏时红点保留，最后一张隐藏时同步消失。点击整张 SOLD 卡片后必须立即出现 12 枚大型立体 Stars，金币在顶部资产栏至第三张 SOLD 卡片的上半屏分散且不显示运动轨迹，再汇聚到 Stars 胶囊；卡片在点击 600ms 后隐藏，装饰动画约 900ms 结束，动画层不拦截触摸，Stars 余额始终不变，全程没有网络写请求且不显示领取或服务端文案，重开仍隐藏；关闭 Mini App 期间的新成交重开后出现；首次设备基线、清缓存、换设备不补发旧成交；切换账号不串数据；可见交易页 10 秒内发现成交并显示红点，隐藏或离开交易页后停止轮询。真实 RPC 覆盖部分售出、全部售罄、多卖家 FIFO、下架、购买/下架并发、同键回放、同键异请求拒绝和 `normal → banned` 即时排除；任一失败事务的挂单、reservation、库存、余额、成交事件、上架计数与两级汇总共同回滚。按用户和模板全部下架与成交并发时只释放最终剩余 reservation，原键回放及新键重试无有效挂单均幂等成功且不重复释放；买家与成交提醒均不含卖家之外的身份。两项市场汇总不变量新增数量均为 0；owner 重建函数无应用角色权限；应用角色不能直接读取或修改配额表、调用配额 helper。
-- 市场性能：在真实开发库事务内保持当前在售状态不变，增加 100,000 条已售罄或已取消历史挂单前后，`market.bootstrap`、`market.template` 和 `market.my_listings` 的保留字段完全一致。三条 `EXPLAIN (ANALYZE, BUFFERS)` 只能访问两级汇总主键、目录和最多 100 条 `(seller_id, sequence)` 成交游标，不得扫描 `market.listings`、`market.trade_details` 或聚合无游标成交历史；保存修改前后中位耗时、shared buffers、购买/上架/下架事务耗时与死锁/超时计数，读取必须下降且写路径不得新增死锁或超时。
+- 市场性能：在上线前验收库事务内保持当前在售状态不变，增加 100,000 条已售罄或已取消历史挂单前后，`market.bootstrap`、`market.template` 和 `market.my_listings` 的保留字段完全一致。三条 `EXPLAIN (ANALYZE, BUFFERS)` 只能访问两级汇总主键、目录和最多 100 条 `(seller_id, sequence)` 成交游标，不得扫描 `market.listings`、`market.trade_details` 或聚合无游标成交历史；保存修改前后中位耗时、shared buffers、购买/上架/下架事务耗时与死锁/超时计数，读取必须下降且写路径不得新增死锁或超时。
 - Stars 充值与 Telegram Stars 支付：提交 Telegram Stars 前关闭立即取消且可重新创建，创建请求迟到不得打开 invoice，`processing/paid` 禁止关闭并在重进后恢复，同 charge 的相同或不同 update 重投只到账一次，取消/失败/过期与成功回调乱序时真实扣款仍唯一到账，invoice 创建失败不遗留开放操作，终态后无冷却立即再充值。开盒充值到账后只有创建该订单的当前 TMA 运行内存仍绑定同一订单 ID 时才打开底部确认弹窗：动态标题与当前盲盒一致，只显示简短的单抽／十连实际消耗，右上角关闭不产生 `gacha.open`，点击“确认开盒”只产生一次新的 `gacha.open`，页面不得出现充值恢复或后端重新确认规则文案。关闭或重新进入 TMA 后，即使 `topup.bootstrap` 返回带开盒 intent 的历史 `delivered` 订单，也必须直接显示常规首页，不导航、不打开确认或结果弹窗、不创建 `gacha.open`；Stars、藏品、账本与既有 operation 保持数据库权威值。同时覆盖金额、订单归属、幂等键篡改、退款、VIP 既有购买流程，以及 `battle_create`、`battle_matchmaking`、`battle_accept` 充值后只恢复最新确认界面且绝不自动创建、入队或接受。`battle_create` 与 `battle_matchmaking` 补差在本人已有 `preparing_share/waiting/lobby/active` 任一参与事实时统一返回 `BATTLE_ALREADY_PARTICIPATING` 且不创建订单。支付助手必须在真实 Bot 私聊中分别向 `/paysupport` 与 `/paysupport@<当前 Bot 用户名>` 回复与当前环境 `PAYMENT_SUPPORT_URL` 一致的默认英语外部链接；普通文本与群聊命令不回复，`sendMessage` 失败时 webhook 必须返回非 2xx 以便 Telegram 重试，且全程不查订单、不写数据库、不变更资产；该命令验收不得实际支付 Telegram Stars。
 - TON/Mint 休眠：顶部、藏品、任务、Web 路由、启动预取、前端恢复和 Vercel Cron 均不存在可达入口；OpenAPI 不含钱包、Mint 与 Mint 对账路径，逐个直接请求均返回 `API_ROUTE_NOT_FOUND`；不执行链上场景。
 - Cron：Vercel job 的同时触发、重复触发、运行租约、漏跑追赶、失败记录和手工重跑；`cleanup-catalog-assets` 还需验证最多领取 500 个对象、重复/并发领取不重删、过期租约恢复、Storage API 部分失败回写、90 天边界、当前引用和回滚锁保护、私有桶零删除。Supabase `battle-tick-v1` 在 migration 提交后独立 `pg_reload_conf()`，并以同一 jobid 至少两个连续自然周期证明每秒触发，保存 runid、起止时间、状态和返回摘要；验证 `battle.tick_health()`、advisory lock、`SKIP LOCKED` 分批、deadline 追赶和 pg_net 唤醒。`BATTLE_TICK_UNHEALTHY`/`BATTLE_TICK_RUN_FAILED` 必须验证失败优先、首次与最近失败保留、来源 job 与当前 job 区分、稳定健康后自动关闭、关闭后新失败使用新历史行，以及更新或关闭不增加 `processed_count`；真实历史告警的关闭必须由自然 `monitor-invariants` 完成，关闭后重新打开只允许在回滚事务内重放现存真实失败窗口。7 天运行明细保留及每日最多 100000 条清理保持不变；禁止手工调用 tick、制造失败、人工关闭或删除告警代替自然调度与恢复证据。
@@ -71,13 +71,11 @@ Battle stake / settlement / outbox event（脱敏）：
 - 目录重建门禁：空库 migration 完成后按 v1→v2 顺序只使用两份 Git manifest 执行 `publish`，不得使用 `bootstrap`、重新上传或手工写表。数据库必须为 1050 个 active 对象登记、v1 retired、v2 active、两批各 210 个映射、revision=2 且 `catalog.asset_mutation_runs` 无 `running`；`pnpm assets:release status` 必须输出 `status: "ready"`、当前 v2 checksum/release/revision、70/210/3/5 和历史 v1 摘要。缺失发布、指针漂移、manifest 漂移、URL 漂移或历史 v1 不可读都必须非零退出，不能进入 HTTP 或真机验收。
 - 目录 pointer/release：`GET /api/catalog` 每次只返回标准信封中的 v1 checksum、正整数 revision 和当前 release key，固定 `Cache-Control: no-store` 且 request ID 独立。对应 release raw JSON 精确为 70 条链、210 个模板、3 个箱子、5 个充值档位且不含 revision；成功头固定为浏览器与 Vercel CDN 一年缓存，没有项目级 `x-request-id`、`Authorization`、`Set-Cookie` 或 `Vary: *`，响应小于 10 MB。无效 checksum、staging、缺失映射和不可用运行时对象统一为未缓存 `CATALOG_UNAVAILABLE`。A→B 后 pointer 指向 B 而 A 内容逐字节不变；B→A 后 revision 递增而 A 继续复用。首次无快照失败使用既有初始错误，已有快照时新 release 失败不清空页面，人工重试只执行一次 pointer→release；真实 Telegram 网络瀑布为一个动态小 pointer 和一个浏览器/CDN 可复用 release。
 
-## Battle 受控验收夹具
+## Battle 验收夹具生产封锁
 
-数据库从空重建后先确认 `admin.database_identity` 与 `admin.environment_controls` 均为空，`PUBLIC`、`anon`、`authenticated`、`service_role` 无 schema usage、表权限和函数 execute，Data API/OpenAPI/GraphQL 不发现 `admin` 对象。owner 绑定 `environment = real_development` 与当前 project ref，再写入最长 24 小时 enable。环境缺失、`local`/`production`、project ref 不匹配、enable 关闭、过期、未知 fixture、非四用户、重复用户、用户缺失或 `banned`、任一活动 Battle/locked Stars/reservation/outbox/violation/市场/远征/Mint/支付/未决 operation、Catalog 或 Battle checksum 漂移必须拒绝，且 Stars、holding、ledger、ownership、binding 与 run audit 保持调用前状态。不同 request UUID 交换或替换角色用户时，验证旧绑定只减少其尚存 fixture-owned 数量、新绑定按目标重建，旧用户非 fixture-owned 余额与宠物总量保持不变。
+数据库从空重建后先确认 `admin.database_identity` 与 `admin.environment_controls` 均为空，`PUBLIC`、`anon`、`authenticated`、`service_role` 无 schema usage、表权限和函数 execute，Data API/OpenAPI/GraphQL 不发现 `admin` 对象。owner 只把数据库一次性绑定为 `production / ebewtjerusxcioegpzjd`，不得创建 enable 记录。随后必须证明 `admin.configure_battle_fixture_gate` 对 `production` 拒绝，`admin.reconcile_battle_fixture` 在门禁关闭时拒绝，且 Stars、holding、ledger、ownership、binding 与 run audit 保持调用前状态。
 
-四个真实 Telegram 用户按 A/B/C/D 有序传入；不得创建虚假 Telegram 用户。首次执行后用 `admin.battle_fixture_status` 核对固定 Stars、十二个模板、fixture-owned provenance、真实聚合、payload hash 和不可逆 run key。同一 request UUID 同 payload 回放必须返回同一结果且零新增 ledger/宠物变化/run audit；同 request UUID 交换任意用户必须返回幂等冲突；不同 request UUID 在已对齐状态必须产生一个 `noop` run audit且零资产变化。不同 request UUID 重新绑定角色时只调整 fixture-owned 数量，不得减少调用前已存在或后来获得的非夹具资产。
-
-完整正向、同 request 回放、不同 request no-op 与角色重绑定只在四个真实账号均已认证后执行；两账号基线只执行 ACL、静态、事务回滚和不涉及虚假身份的负向探针。
+生产不执行夹具正向、回放、no-op 或角色重绑定，不创建夹具账号或资产。既有上线前夹具验收只保留在历史证据中，不能在生产 identity 下复用。
 
 ## Battle 第 21 章验收
 
@@ -136,11 +134,11 @@ Battle stake / settlement / outbox event（脱敏）：
 20. UI 不存在密码、邮箱、手机号、手动用户号、钱包登录、退出、注销、删除或归档入口。
 21. iOS、Android、Telegram Desktop、Telegram Web 的浅色、深色、刘海安全区和视口变化下，登录结果一致且全部启动控件可见可操作。
 
-邀请交接场景必须额外记录会话 `referral_processed_at`、候选状态和门禁接口结果；存在绑定操作时记录原 `operation_id`，老用户静默进入场景确认候选与绑定操作均不存在；封禁竞态记录封禁前请求 generation、封禁后 generation、缓存键及最终空白界面截图；邀请信息记录 `/api/referrals` 为 200 且链接包含开发 Bot、`pokepets_dev` 与当前用户邀请码。
+邀请交接场景必须额外记录会话 `referral_processed_at`、候选状态和门禁接口结果；存在绑定操作时记录原 `operation_id`，老用户静默进入场景确认候选与绑定操作均不存在；封禁竞态记录封禁前请求 generation、封禁后 generation、缓存键及最终空白界面截图；邀请信息记录 `/api/referrals` 为 200 且链接包含生产 Bot、`evomypet` 与当前用户邀请码。
 
 ## 账号语言与 en-US 本地化验收
 
-开始本节前必须完成 [ADR-075](../architecture/adr/ADR-075-telegram-named-mini-app-release-isolation.md) 的入口恢复：`pokepets_dev` Web App URL 已从 `/maintenance.html` 改回环境根 URL，Main Mini App 与默认菜单按钮已恢复；仍显示维护页的 named 直链不能作为语言功能验收入口。
+开始本节前必须完成 [ADR-075](../architecture/adr/ADR-075-telegram-named-mini-app-release-isolation.md) 的入口恢复：`evomypet` Web App URL 已从 `/maintenance.html` 改回环境根 URL，Main Mini App 与默认菜单按钮已恢复；仍显示维护页的 named 直链不能作为语言功能验收入口。
 
 语言验收必须使用同一 deployment SHA 的真实 iPhone Telegram Mini App，并同时用 Safari Web Inspector 检查 DOM、网络与控制台；静态词条检查、TypeScript、构建和桌面浏览器不能替代真机结论。不得创建视觉验收记录日志；证据按本文件既有模板保存引用。覆盖以下场景：
 

@@ -8,7 +8,7 @@
 
 四账号 `battle-v1` 验收数据只允许通过内部 `admin.reconcile_battle_fixture` 在数据库所有者通道中对齐。`admin` 不属于 Data API Exposed schemas，不存在对应 HTTP、REST、GraphQL 或 Vercel 测试接口；`PUBLIC`、`anon`、`authenticated` 与 `service_role` 对 schema、表、序列和函数均无权限。管理函数使用 `SECURITY INVOKER` 与空 `search_path`，调用时再次确认当前角色属于 `admin` schema 所有者。
 
-迁移只创建默认关闭的能力，不写入项目身份或 enable 记录。数据库所有者在真实开发库从空重建后，先以 `admin.bind_database_identity` 一次性绑定 `environment = real_development` 与该库 project ref，再以 `admin.configure_battle_fixture_gate` 写入同一环境、同一 project ref、启用状态和不超过 24 小时的过期时间。项目身份不可改绑；执行时 project ref、环境、启用状态和过期时间必须同时通过。未来生产库迁移后没有项目身份和 enable 记录，且 `production` 身份不能启用该能力。
+迁移只创建默认关闭的能力，不写入项目身份或 enable 记录。历史上线前验收阶段可以在空库重建后一次性绑定 `environment = real_development` 与该库 project ref，并以同值配置不超过 24 小时的短期门禁。ADR-086 生效后的最终生产重建必须把现有项目一次性绑定为 `production / ebewtjerusxcioegpzjd`，不得恢复 `real_development` 绑定或任何 enable 记录；`production` 身份不能启用该能力。项目身份不可改绑；执行时 project ref、环境、启用状态和过期时间必须同时通过。
 
 输入固定为 `fixture_version`、request UUID 和按 A/B/C/D 排列的四个内部 user UUID。角色位置、fixture version 与 UUID 有序序列形成规范化 JSONB payload 和 SHA-256；同 request UUID 同 payload 回放持久结果，同 request UUID 不同 payload 返回 `BATTLE_FIXTURE_IDEMPOTENCY_CONFLICT`。不同 request UUID 重新绑定仍执行全部环境、用户、空闲状态、product-data 与 fixture-owned reconciliation 校验。
 

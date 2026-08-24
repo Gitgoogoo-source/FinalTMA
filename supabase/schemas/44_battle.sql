@@ -4806,7 +4806,7 @@ declare
   v_error_detail text;
 begin
   if not pg_try_advisory_xact_lock(
-    hashtextextended('pokepets:battle:process_due:v1', 0)
+    hashtextextended('evomypet:battle:process_due:v1', 0)
   ) then
     return 0;
   end if;

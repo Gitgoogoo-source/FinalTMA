@@ -8,7 +8,7 @@ import {
   loadEnglishCatalog,
 } from "./platform/i18n/index.ts";
 import { initializeTelegram } from "./platform/telegram/index.ts";
-import { preloadFirstScreenContracts } from "@pokepets/api-contracts/app-client";
+import { preloadFirstScreenContracts } from "@evomypet/api-contracts/app-client";
 import "./shared/styles/foundation.css";
 
 const telegram = initializeTelegram();

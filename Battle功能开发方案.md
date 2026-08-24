@@ -1,4 +1,4 @@
-# PokePets 宠物藏品 Battle 功能开发方案
+# EvoMyPet 宠物藏品 Battle 功能开发方案
 
 > 文档状态：已完成产品裁决后的唯一开发方案
 >

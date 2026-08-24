@@ -33,7 +33,7 @@ export const professionalEnglishCopy: Readonly<Record<string, string>> = {
   今日签到可领取: "Daily Check-In Ready",
   任务奖励待领取: "Task Reward Ready",
   继续今日任务: "Continue Today's Tasks",
-  邀请好友一起开盲盒: "Invite Friends to PokePets",
+  邀请好友一起开盲盒: "Invite Friends to EvoMyPet",
   "复制邀请链接或打开 Telegram 分享": "Copy your link or share it in Telegram.",
   在任务页查看今日转盘状态: "Check today's Prize Wheel progress.",
   进化图鉴: "Evolution Codex",
@@ -213,14 +213,14 @@ export const professionalEnglishCopy: Readonly<Record<string, string>> = {
   "领取成功，免费稀有盲盒次数加1": "Claimed · Free Rare Mystery Box +1",
   "领取未成功，已刷新最新状态":
     "The reward wasn't claimed. Your latest status is ready.",
-  "PokePets VIP 月卡": "PokePets VIP Pass",
+  "EvoMyPet VIP 月卡": "EvoMyPet VIP Pass",
   今日免费稀有盲盒: "Today's Free Rare Mystery Box",
   全部来源可用免费稀有盲盒: "Total Free Rare Mystery Boxes",
   "请在 Telegram 内打开": "Open in Telegram",
   "复制失败，请稍后重试": "Couldn't copy the link. Try again.",
   "分享失败，请复制邀请链接":
     "Couldn't open sharing. Copy your invite link instead.",
-  一起开盲盒: "Play PokePets Together",
+  一起开盲盒: "Play EvoMyPet Together",
   首次有效充值: "First Qualifying Top-Up",
   有效充值好友: "Friends with a Qualifying Top-Up",
   "请选择正好3个当前可用的藏品单位。":

@@ -1,7 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 
-import type { Gateway, RouteDefinition } from "@pokepets/api-contracts/common";
-import { operationIdSchema } from "@pokepets/api-contracts/common";
+import type { Gateway, RouteDefinition } from "@evomypet/api-contracts/common";
+import { operationIdSchema } from "@evomypet/api-contracts/common";
 
 import {
   authenticateSessionCredential,

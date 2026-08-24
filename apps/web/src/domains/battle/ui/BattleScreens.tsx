@@ -20,7 +20,7 @@ import type {
   BattleRoomSnapshotDto,
   BattleTerminalResultDto,
   RouteOutput,
-} from "@pokepets/api-contracts/app-client";
+} from "@evomypet/api-contracts/app-client";
 
 import { getIdentityInitial } from "../../../shared/identityInitial.ts";
 import { Button } from "../../../shared/ui/Button.tsx";

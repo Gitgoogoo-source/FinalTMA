@@ -1,5 +1,5 @@
 {
-  "name": "@pokepets/api",
+  "name": "@evomypet/api",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@pokepets/api-contracts": "workspace:*",
+    "@evomypet/api-contracts": "workspace:*",
     "@supabase/supabase-js": "catalog:",
     "@ton/core": "catalog:",
     "@ton/crypto": "catalog:",

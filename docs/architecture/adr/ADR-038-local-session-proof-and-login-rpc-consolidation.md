@@ -9,7 +9,7 @@
 
 ## 决定
 
-访问令牌固定为 `version byte + 16-byte session UUID + 32-byte HMAC-SHA256` 的 49 字节二进制结构，并以无填充 Base64URL 编码。版本固定为 `1`。Function 使用 `IDENTITY_SECURITY_SECRET` 和登录 UUID `Idempotency-Key` 在 `pokepets-session-id-v1` 域内确定性派生 UUIDv8 session ID，再在独立的 `pokepets-session-proof-v1` 域内对版本与 session ID 计算 HMAC。解析时必须严格校验 66 字符 Base64URL、规范编码、固定长度、版本和恒定时间 HMAC；任何失败统一返回 `SESSION_REQUIRED`，不得调用业务 RPC。令牌仍是浏览器不解释的自定义 opaque bearer，不是 JWT，不引入 Supabase Auth，数据库继续只保存完整令牌的 SHA-256。
+访问令牌固定为 `version byte + 16-byte session UUID + 32-byte HMAC-SHA256` 的 49 字节二进制结构，并以无填充 Base64URL 编码。版本固定为 `1`。Function 使用 `IDENTITY_SECURITY_SECRET` 和登录 UUID `Idempotency-Key` 在 `evomypet-session-id-v1` 域内确定性派生 UUIDv8 session ID，再在独立的 `evomypet-session-proof-v1` 域内对版本与 session ID 计算 HMAC。解析时必须严格校验 66 字符 Base64URL、规范编码、固定长度、版本和恒定时间 HMAC；任何失败统一返回 `SESSION_REQUIRED`，不得调用业务 RPC。令牌仍是浏览器不解释的自定义 opaque bearer，不是 JWT，不引入 Supabase Auth，数据库继续只保存完整令牌的 SHA-256。
 
 Function 的本地校验只证明令牌由当前服务签发并提取 `session_id`，不读取或裁决任何可变账号状态。每个玩家业务 RPC 必须在业务读取、写入或外部副作用前调用 `api.session_user`，或调用以 `api.session_user` 开始的 `operations.begin_command`。数据库继续唯一裁决会话存在、撤销、替换、绝对过期、账号封禁和 `pending` 入口交接。`referral.bind` 与受限 `operations.get` 的既有 `pending` 例外保持在数据库内；`api.identity_resolve_session` 删除。
 

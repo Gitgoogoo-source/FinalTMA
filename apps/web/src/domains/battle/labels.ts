@@ -2,7 +2,7 @@ import type {
   BattleEntryTier,
   BattleRoomStatus,
   BattleTerminalResultDto,
-} from "@pokepets/api-contracts/app-client";
+} from "@evomypet/api-contracts/app-client";
 import { localized } from "../../platform/i18n/index.ts";
 
 export const battleRarityLabels = localized({

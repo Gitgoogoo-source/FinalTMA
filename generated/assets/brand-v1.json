@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "brand": "PokePets",
+  "brand": "EvoMyPet",
   "palette": {
     "source": "apps/web/src/shared/styles/global.css",
     "primary": "#FF7A00",
@@ -11,14 +11,15 @@
   "generation": {
     "mode": "built-in imagegen",
     "generated_on": "2026-07-30",
+    "share_edited_on": "2026-08-24",
     "third_party_inputs": [],
     "prompts": {
-      "icon": "Use case: logo-brand\nAsset type: PokePets square app icon and master brand symbol\nPrimary request: Create one original, production-ready PokePets symbol that combines an upright mysterious blind-box hatching capsule or incubation pod, an abstract pet paw print integrated through clean negative space, and one small four-point star spark. The mark must represent mystery, collection, and light battle energy without depicting any specific pet.\nScene/backdrop: opaque warm paper-white #FFFDFA square background.\nSubject: one centered unified symbol, not three separate clip-art objects; the upright pod must have a distinctive non-circular silhouette and the paw must read clearly at small size.\nStyle/medium: modern flat vector-friendly logo mark, crisp geometric edges, friendly but not childish, subtle game energy, no 3D, no mockup, no photography.\nComposition/framing: exact square composition, centered, strong silhouette, balanced negative space, generous 18 percent outer margin, designed to remain legible at 180x180.\nColor palette: lock to PokePets UI tokens only: primary orange #FF7A00, secondary green #4DBB39, neutral ink #36434B, background paper #FFFDFA. No other brand colors.\nText: none.\nConstraints: opaque image; no words, letters, pseudo-text, numbers, watermark, signature, border, specific animal, creature face, character, battle lineup, user data, money, challenge details, or third-party asset. Original design only.\nAvoid: any red-and-white sphere, circular ball with a horizontal dividing band, equator line, central button-ball motif, lightning-bolt tail, Pokémon or Poké Ball resemblance, TON diamond logo, wallet logo, existing game IP, mascot, 3D rendering, gradients, glossy effects, shadows, decorative clutter.",
-      "share": "Use case: ads-marketing\nAsset type: Telegram and Open Graph PokePets share hero background, final target 1200x630\nInput images: Image 1 is the approved PokePets master brand symbol reference; preserve its exact upright angular hatching-pod silhouette, white paw negative space, single four-point star, and orange/green/ink/paper palette. Do not invent or substitute a second logo.\nPrimary request: Create a polished wide PokePets brand visual expressing mysterious collection and restrained battle energy through abstract flat geometric rays, capsule-shaped fragments, and a few small four-point star sparks. No concrete pet or battle content.\nScene/backdrop: opaque warm paper #FFFDFA with restrained abstract ink #36434B, orange #FF7A00, and green #4DBB39 shapes only.\nSubject: the same unified symbol from Image 1 remains the hero mark, large and clearly recognizable, positioned within the left-center safe area. Preserve generous margins. Keep the right-center safe area calm and mostly paper-white for deterministic local placement of one brand word later.\nStyle/medium: modern flat vector-friendly brand illustration, crisp, clean, friendly but not childish, light game energy; no 3D, no photo, no mockup.\nComposition/framing: wide 1200:630-style composition; all essential artwork inside a centered 960x504 safe area; symbol fully visible and not cropped; strong thumbnail readability; quiet right-center copy zone.\nColor palette: use only exact PokePets UI token colors: orange #FF7A00, green #4DBB39, ink #36434B, paper #FFFDFA.\nText: none. The generated image must contain no words, letters, pseudo-text, or numbers; the exact word PokePets will be added locally afterward.\nConstraints: opaque image; same core symbol as Image 1; no specific pet, mascot, face, character, template, lineup, rarity, attribute, skill, user identity, avatar, amount, wallet, challenge detail, watermark, signature, border, or third-party asset.\nAvoid: red-and-white sphere, circular ball with horizontal dividing band, equator line, central button-ball motif, lightning-bolt tail, Pokémon or Poké Ball resemblance, TON diamond logo, wallet logo, existing game IP, gradients, glossy effects, heavy shadows, decorative clutter, any text."
+      "icon": "Use case: logo-brand\nAsset type: EvoMyPet square app icon and master brand symbol\nPrimary request: Create one original, production-ready EvoMyPet symbol that combines an upright mysterious blind-box hatching capsule or incubation pod, an abstract pet paw print integrated through clean negative space, and one small four-point star spark. The mark must represent mystery, collection, and light battle energy without depicting any specific pet.\nScene/backdrop: opaque warm paper-white #FFFDFA square background.\nSubject: one centered unified symbol, not three separate clip-art objects; the upright pod must have a distinctive non-circular silhouette and the paw must read clearly at small size.\nStyle/medium: modern flat vector-friendly logo mark, crisp geometric edges, friendly but not childish, subtle game energy, no 3D, no mockup, no photography.\nComposition/framing: exact square composition, centered, strong silhouette, balanced negative space, generous 18 percent outer margin, designed to remain legible at 180x180.\nColor palette: lock to EvoMyPet UI tokens only: primary orange #FF7A00, secondary green #4DBB39, neutral ink #36434B, background paper #FFFDFA. No other brand colors.\nText: none.\nConstraints: opaque image; no words, letters, pseudo-text, numbers, watermark, signature, border, specific animal, creature face, character, battle lineup, user data, money, challenge details, or third-party asset. Original design only.\nAvoid: any red-and-white sphere, circular ball with a horizontal dividing band, equator line, central button-ball motif, lightning-bolt tail, Pokémon or Poké Ball resemblance, TON diamond logo, wallet logo, existing game IP, mascot, 3D rendering, gradients, glossy effects, shadows, decorative clutter.",
+      "share": "Edit the approved project-owned Telegram and Open Graph share image. Replace the old brand word on the right with the exact single word EvoMyPet. Preserve the orange and green upright hatching-pod symbol with white paw, warm paper background, ink outlines, geometric rays and star sparks. Keep the visual flat, crisp, opaque, wide and suitable for a 1200x630 final asset. Do not add the gold dragon Bot avatar, any pet, mascot, face, character, extra wording, pseudo-text, number, watermark, signature, third-party logo or existing game IP."
     }
   },
   "rights": {
-    "usage": "PokePets project-owned",
+    "usage": "EvoMyPet project-owned",
     "third_party_licenses": [],
     "license_source": null
   },
@@ -28,12 +29,12 @@
       "width": 1200,
       "height": 630,
       "opaque": true,
-      "sha256": "bf22b92aa9abf68ccbb01b56d62e7b6964bdd08d5eb2ac21e310be2f8ac57890",
-      "source_artifact_sha256": "57c2af8f5113ae80ba08f4fad3043f56748e8a7ef2272f40a44925be6711d2fa",
+      "sha256": "793e9f386422f87bb31d9872365c0374f7581333521076943e5761ad029ed51b",
+      "input_asset_sha256": "bf22b92aa9abf68ccbb01b56d62e7b6964bdd08d5eb2ac21e310be2f8ac57890",
+      "source_artifact_sha256": "d6c17453f64badb9989baefe4c1db97115a37ab1b179153a94f255ce2219a28a",
       "postprocessing": [
-        "Sharp 0.35.3: flatten on #FFFDFA, Lanczos3 cover resize and center crop to 1200x630",
-        "Sharp 0.35.3 SVG composite: exact PokePets word once at x=880 y=320 using Inter, ui-rounded, SF Pro Rounded, system-ui, sans-serif",
-        "Sharp 0.35.3: opaque WebP quality 90, effort 6, smart subsampling"
+        "Sharp 0.35.3: center-cover resize from the imagegen 1731x909 RGB PNG to 1200x630",
+        "Sharp 0.35.3: flatten on #FFFDFA and encode opaque WebP quality 90, effort 6"
       ]
     },
     "apps/web/public/assets/ton/tonconnect-icon.png": {

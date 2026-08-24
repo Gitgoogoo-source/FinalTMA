@@ -29,14 +29,14 @@ export function StartupScreen({
         aria-hidden="true"
       />
 
-      <header className="startup-brand" aria-label="PokePets">
+      <header className="startup-brand" aria-label="EvoMyPet">
         <img
           className="startup-emblem"
-          src="/assets/startup/pokepets-emblem.png"
+          src="/assets/startup/evomypet-emblem.png"
           alt=""
           aria-hidden="true"
         />
-        <strong>PokePets</strong>
+        <strong>EvoMyPet</strong>
       </header>
 
       <section

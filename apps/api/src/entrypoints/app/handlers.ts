@@ -1,4 +1,4 @@
-import type { RouteId } from "@pokepets/api-contracts/app";
+import type { RouteId } from "@evomypet/api-contracts/app";
 
 import { albumHandlers } from "../../domains/album/routes.ts";
 import { battleHandlers } from "../../domains/battle/routes.ts";

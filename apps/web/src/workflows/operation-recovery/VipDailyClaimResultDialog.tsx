@@ -1,6 +1,6 @@
 import { Crown, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
-import type { RouteOutput } from "@pokepets/api-contracts/app-client";
+import type { RouteOutput } from "@evomypet/api-contracts/app-client";
 
 import { Button } from "../../shared/ui/Button.tsx";
 import { localized, t, tp } from "../../platform/i18n/index.ts";

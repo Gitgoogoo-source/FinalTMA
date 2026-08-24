@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import type { RouteOutput } from "@pokepets/api-contracts/app-client";
+import type { RouteOutput } from "@evomypet/api-contracts/app-client";
 
 import { synchronizeAccountLanguage } from "../i18n/index.ts";
 

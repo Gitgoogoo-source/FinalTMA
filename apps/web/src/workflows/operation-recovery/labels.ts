@@ -1,4 +1,4 @@
-import type { RecoverableRouteId } from "@pokepets/api-contracts/app-client";
+import type { RecoverableRouteId } from "@evomypet/api-contracts/app-client";
 import { localized, t } from "../../platform/i18n/index.ts";
 
 const labels: Partial<Record<RecoverableRouteId, string>> = localized({

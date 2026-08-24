@@ -2,7 +2,7 @@ import {
   errorDefinition,
   isErrorCode,
   operationSummarySchema,
-} from "@pokepets/api-contracts/common";
+} from "@evomypet/api-contracts/common";
 
 import { ApiError } from "./errors.ts";
 import type { HandlerResult } from "./handlers.ts";

@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/tact-lang/tact/main/schemas/configSchema.json",
   "projects": [
     {
-      "name": "PokePetsNftCollection",
+      "name": "EvoMyPetNftCollection",
       "path": "./contracts/NftCollection.tact",
       "output": "./build",
       "options": {

@@ -1,6 +1,6 @@
 {
   "openapi": "3.1.0",
-  "info": { "title": "PokePets API", "version": "1.0.0" },
+  "info": { "title": "EvoMyPet API", "version": "1.0.0" },
   "servers": [{ "url": "/" }],
   "paths": {
     "/api/health": {
@@ -22,7 +22,7 @@
                       "type": "object",
                       "properties": {
                         "status": { "type": "string", "const": "ok" },
-                        "service": { "type": "string", "const": "pokepets" },
+                        "service": { "type": "string", "const": "evomypet" },
                         "time": {
                           "type": "string",
                           "format": "date-time",

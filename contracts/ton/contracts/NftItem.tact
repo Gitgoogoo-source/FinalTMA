@@ -1,6 +1,6 @@
 import "./messages";
 
-contract PokePetsNftItem {
+contract EvoMyPetNftItem {
     collection: Address;
     index: Int as uint64;
     owner: Address;

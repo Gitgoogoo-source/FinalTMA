@@ -23,7 +23,7 @@ export const walletHandlers = {
     }),
   }),
   "wallet.challenge": async (context) => {
-    const payload = createTonProofChallenge({ prefix: "pokepets" });
+    const payload = createTonProofChallenge({ prefix: "evomypet" });
     const expiresAt = createTonProofExpiresAt();
     return {
       data: await rpc("wallet_create_challenge", {

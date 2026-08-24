@@ -1,4 +1,4 @@
-project_id = "pokepets"
+project_id = "evomypet"
 
 [api]
 enabled = true

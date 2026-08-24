@@ -1,3 +1,3 @@
-import { createIntegrationsGateway } from "@pokepets/api/entrypoints";
+import { createIntegrationsGateway } from "@evomypet/api/entrypoints";
 
 export default { fetch: createIntegrationsGateway() };

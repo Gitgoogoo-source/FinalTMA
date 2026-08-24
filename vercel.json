@@ -3,7 +3,7 @@
   "framework": "vite",
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm build",
-  "devCommand": "pnpm --filter @pokepets/web dev",
+  "devCommand": "pnpm --filter @evomypet/web dev",
   "outputDirectory": "apps/web/dist",
   "functions": {
     "api/app.ts": { "maxDuration": 30, "supportsCancellation": true },

@@ -1,3 +1,3 @@
-import { createJobsGateway } from "@pokepets/api/entrypoints";
+import { createJobsGateway } from "@evomypet/api/entrypoints";
 
 export default { fetch: createJobsGateway() };

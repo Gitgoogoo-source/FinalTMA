@@ -1,7 +1,7 @@
 import type {
   RecoverableRouteId,
   RouteOutput,
-} from "@pokepets/api-contracts/app-client";
+} from "@evomypet/api-contracts/app-client";
 
 export function markOperationNewTemplates(
   routeId: RecoverableRouteId,

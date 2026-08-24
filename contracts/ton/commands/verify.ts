@@ -1,7 +1,7 @@
 import { Address, beginCell } from "@ton/core";
 import { TonClient } from "@ton/ton";
 
-import { PokePetsNftCollection } from "../build/PokePetsNftCollection_PokePetsNftCollection.ts";
+import { EvoMyPetNftCollection } from "../build/EvoMyPetNftCollection_EvoMyPetNftCollection.ts";
 
 const endpoint = required("TON_RPC_ENDPOINT");
 const address = Address.parse(required("TON_COLLECTION_ADDRESS"));
@@ -13,7 +13,7 @@ const client = new TonClient({
 });
 if (!(await client.isContractDeployed(address)))
   throw new Error("Collection contract is not deployed.");
-const collection = client.open(PokePetsNftCollection.fromAddress(address));
+const collection = client.open(EvoMyPetNftCollection.fromAddress(address));
 const data = await collection.getGetCollectionData();
 const royalty = await collection.getRoyaltyParams();
 const mintPublicKey = await collection.getMintPublicKey();

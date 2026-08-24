@@ -209,7 +209,7 @@ export const englishCopy3: Readonly<Record<string, string>> = {
   进入交易市场月卡详情后可购买:
     "You can purchase the monthly card after entering the trading market for details.",
   "正在创建 VIP 月卡订单": "Creating VIP monthly card order",
-  "PokePets VIP 月卡": "PokePets VIP Monthly Pass",
+  "EvoMyPet VIP 月卡": "EvoMyPet VIP Monthly Pass",
   "UTC+0 有效期": "UTC+0 validity period",
   至: "to",
   尚未开通: "Not yet open",

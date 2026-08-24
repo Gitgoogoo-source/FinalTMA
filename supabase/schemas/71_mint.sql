@@ -126,7 +126,7 @@ begin
   begin
     select * into v_wallet from onchain.wallets where user_id = v_user_id and status = 'verified' for share;
     if v_wallet.id is null then perform api.raise_business_error('WALLET_NOT_VERIFIED', '钱包尚未验证'); end if;
-    perform pg_advisory_xact_lock(hashtextextended('pokepets:mint:' || v_user_id::text || ':' || p_template_id, 0));
+    perform pg_advisory_xact_lock(hashtextextended('evomypet:mint:' || v_user_id::text || ':' || p_template_id, 0));
     if exists (select 1 from onchain.mints where user_id = v_user_id and template_id = p_template_id and status in ('reserved', 'submitted', 'unknown')) then perform api.raise_business_error('MINT_ALREADY_ACTIVE', '该藏品已有进行中的 Mint'); end if;
     if inventory.available_quantity(v_user_id, p_template_id) < 1 then perform api.raise_business_error('INSUFFICIENT_INVENTORY', '没有可 Mint 的藏品'); end if;
     insert into onchain.mints (user_id, wallet_id, template_id, operation_id, permit_expires_at)

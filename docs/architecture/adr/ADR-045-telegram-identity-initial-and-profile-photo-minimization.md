@@ -9,7 +9,7 @@ Telegram 签名 `initData` 可以携带用户 `photo_url`。原登录链曾把�
 
 ## 决策
 
-产品不展示 Telegram 真实用户头像。顶部身份标识、Battle 挑战卡和接受预览统一显示当前展示名称的第一个 Unicode 字符；展示名称继续按“名字与姓氏组合 → username → `PokePets`”回退。字首只由已验证的文本身份字段计算，不请求、缓存、代理、上传或持久化任何真实头像。
+产品不展示 Telegram 真实用户头像。顶部身份标识、Battle 挑战卡和接受预览统一显示当前展示名称的第一个 Unicode 字符；展示名称继续按“名字与姓氏组合 → username → `EvoMyPet`”回退。字首只由已验证的文本身份字段计算，不请求、缓存、代理、上传或持久化任何真实头像。
 
 认证端点仍必须验证 Telegram 原始 `initData` 的完整签名，但验证完成后只构造允许字段白名单，主动丢弃 user、receiver 与 chat 对象中的 `photo_url`。`identity.users`、登录 RPC、`identity.initial`、`identity.summary`、Battle viewer-specific DTO、OpenAPI 和 Web props 均不得包含头像 URL。CSP 保持原有 `img-src`，不得为用户头像增加 `t.me`、Telegram CDN 或新的 Storage 桶。
 
@@ -20,7 +20,7 @@ Telegram 签名 `initData` 可以携带用户 `photo_url`。原登录链曾把�
 - Telegram ID、名字、姓氏、username、语言、账号状态、邀请码、session、入口交接与身份幂等规则不变。
 - 浏览器仍不接收 Supabase SDK、密钥或 Data API 能力，也不新增头像代理、缓存、对象存储或后台任务。
 - `BattleChallengeCardDto` 与 `BattleInvitePreviewDto` 继续返回 `creator_display_name`，但不返回 `creator_avatar_url`；lobby 继续只使用固定阵营图与 presence。
-- 用户显示名缺失时仍回退为 `PokePets`，因此身份字首固定为 `P`，不得显示破图或外部请求错误。
+- 用户显示名缺失时仍回退为 `EvoMyPet`，因此身份字首固定为 `P`，不得显示破图或外部请求错误。
 
 ## 验收
 

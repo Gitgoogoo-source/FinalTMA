@@ -1,34 +1,34 @@
 # 环境矩阵
 
-| 项目            | 本地                                  | 真实开发                                                                        | 真实生产                                      |
-| --------------- | ------------------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------- |
-| Git commit      | 当前工作提交                          | 持续开发提交                                                                    | 与开发验收通过的提交相同                      |
-| Node / pnpm     | Node 24 / pnpm 11.1.3                 | Node 24 / pnpm 11.1.3                                                           | Node 24 / pnpm 11.1.3                         |
-| Vercel          | `vercel dev`                          | `final-tma` Project，`APP_ENV=development`                                      | 未来独立 Pro Project                          |
-| Supabase        | 本地 Postgres 17                      | `final-tma-real-test`（ref `ebewtjerusxcioegpzjd`）Postgres 17 Project          | 未来独立 Postgres 17                          |
-| Telegram        | 开发 Bot                              | 开发 Bot 与开发 webhook                                                         | 生产 Bot 与生产 webhook                       |
-| Ably            | 独立开发 app/key                      | 独立真实开发 Ably Standard app/key                                              | 独立生产 Ably Standard app/key                |
-| TON             | 不启用                                | 不发布 Collection、不启用 Mint 对账 Cron                                        | 不发布 Collection、不启用 Mint 对账 Cron      |
-| 藏品图片        | 1024 PNG 只读导入并在 Git 外生成 WebP | `art-masters` 私有桶 + `pet-runtime` 公开桶                                     | 环境隔离的同名私有桶与公开桶                  |
-| 数据            | 非业务本地数据                        | 独立真实开发与验收数据                                                          | 真实生产数据                                  |
-| Battle 验收夹具 | 默认未绑定、未启用                    | owner 绑定 `real_development` 与 `ebewtjerusxcioegpzjd`，按次启用且最长 24 小时 | 默认未绑定、未启用，`production` 身份禁止启用 |
+| 项目            | 本地                                  | 唯一生产资源                                                                 |
+| --------------- | ------------------------------------- | ---------------------------------------------------------------------------- |
+| Git commit      | 当前工作提交                          | `main` 上经完整门禁并由 Git Integration 部署的同一提交                       |
+| Node / pnpm     | Node 24 / pnpm 11.1.3                 | Node 24 / pnpm 11.1.3                                                        |
+| Vercel          | `vercel dev`、`APP_ENV=development`   | `final-tma` Project、`APP_ENV=production`、`https://final-tma-pi.vercel.app` |
+| Supabase        | 本地 Postgres 17                      | `final-tma-real-test`（ref `ebewtjerusxcioegpzjd`）Postgres 17               |
+| Telegram        | 不接生产 webhook                      | `@EvoMyPet_bot` 与唯一生产 webhook                                           |
+| Ably            | 本地配置                              | 当前 Production 对应的 Ably Standard app/key                                 |
+| TON             | 不启用                                | 不发布 Collection、不启用 Mint 对账 Cron                                     |
+| 藏品图片        | 1024 PNG 只读导入并在 Git 外生成 WebP | 既有 `art-masters` 私有桶 + `pet-runtime` 公开桶                             |
+| 数据            | 非业务本地数据                        | 首次开放前清空重建；开放后作为不可丢失生产数据                               |
+| Battle 验收夹具 | 默认未绑定、未启用                    | 绑定 `production / ebewtjerusxcioegpzjd`，生产身份永久禁止启用               |
 
-每轮 210 张 1024×1024 PNG 设计输入只在受控本地目录保存，导入过程不得修改原图；清单记录输入集合 SHA-256 和 ADR-078 的固定转换参数。210 张 768×768 lossless WebP 正式母版永久保存在各环境的 `art-masters` 私有桶，每张固定生成 256×256 缩略图和 768×768 详情图写入 `pet-runtime` 公开桶。Git 不保存 PNG、母版或运行时二进制，只保存当前 v2 清单和历史发布清单。真实开发与生产只允许公开桶基址、项目 ID、Bot 和项目密钥不同，必须使用同一 Git commit、同一 OpenAPI、同一资源清单结构、同一输入集合 SHA-256、同一生成参数、同一母版/运行时 SHA-256 和同一 migration 序列；生产发布时必须把已在真实开发验收的同一字节上传并原子发布到生产自己的桶，禁止重新转换。公开 v2 对象响应固定为 `public, max-age=31536000, immutable`。Telegram 分享图完成正式替换前，全局 production 资产门禁保持失败；休眠的 TON Connect 图标不阻塞当前 MVP。
+本矩阵由 [ADR-086](../architecture/adr/ADR-086-evomypet-production-cutover.md) 固定。项目不再维护另一套云端开发、测试或未来生产资源；基础设施名称中的 `final-tma` 和 `real-test` 只是不向玩家展示的既有技术标识。
 
-Battle 发布后，真实开发与生产固定启用 Web、API、Supabase、Telegram webhook、Ably subscribe-only、`battle-tick-v1`、两个 Battle integrations、支付对账、幂等清理和不变量监控。TON 配置为空，`reconcile-mints` 不进入 Vercel Cron；Web 不展示钱包或 Mint，不加载 TON Provider，也不执行 Mint 恢复。非 TON API 只解析自身所需配置，不接受任何 TON 占位值。
+每轮 210 张 1024×1024 PNG 设计输入只在受控本地目录保存，导入过程不得修改原图；清单记录输入集合 SHA-256 和 ADR-078 的固定转换参数。210 张 768×768 lossless WebP 正式母版永久保存在现有 `art-masters` 私有桶，每张固定生成 256×256 缩略图和 768×768 详情图写入现有 `pet-runtime` 公开桶。Git 不保存 PNG、母版或运行时二进制，只保存当前 v2 清单和历史发布清单。生产继续使用已验收的同一对象字节，不重新转换、不复制到第二个项目；公开 v2 对象响应固定为 `public, max-age=31536000, immutable`。正式 EvoMyPet Telegram 分享图必须通过 production 资产门禁；休眠的 TON Connect 图标不阻塞当前 MVP。
 
-Supabase Data API 的 Exposed schemas 固定为 `public,graphql_public,api`。Vercel Functions 只以 `service_role` 调用 `api` schema RPC；浏览器不持有 Supabase key，也不直接访问任何 Supabase schema、RPC、Auth 或其他 Data API。唯一例外是浏览器匿名 GET `pet-runtime` 公开桶中由 API 返回的宠物图片完整 URL。业务表 schema 不加入 Exposed schemas。
+生产固定启用 Web、API、Supabase、Telegram webhook、Ably subscribe-only、`battle-tick-v1`、两个 Battle integrations、支付对账、幂等清理、不变量监控和公开对象清理。TON 配置为空，`reconcile-mints` 不进入 Vercel Cron；Web 不展示钱包或 Mint，不加载 TON Provider，也不执行 Mint 恢复。非 TON API 只解析自身所需配置，不接受任何 TON 占位值。
 
-`admin` schema 永不加入 Exposed schemas。Battle 验收夹具的 database identity、环境门禁、reconciliation 和状态读取均只属于数据库 owner 通道，不使用 Vercel/Supabase Sensitive 环境变量、Vault secret 或 `service_role`。
+Supabase Data API 的 Exposed schemas 固定为 `public,graphql_public,api`。Vercel Functions 只以 `service_role` 调用 `api` schema RPC；浏览器不持有 Supabase key，也不直接访问任何 Supabase schema、RPC、Auth 或其他 Data API。唯一例外是浏览器匿名 GET `pet-runtime` 公开桶中由 API 返回的宠物图片完整 URL。业务表和 `admin` schema 永不加入 Exposed schemas。
 
-Web 公开构建当前不需要 `VITE_*`。API 机密配置以根 `.env.example` 为唯一名称清单，真实值只进入对应 Vercel Project Secret。`SUPABASE_SERVICE_ROLE_KEY` 可以承载目标环境的 legacy `service_role` JWT 或新式 Supabase secret key；服务端 HTTP 工具始终发送 `apikey`，只有 legacy JWT 同时发送 Bearer，新式 secret key 禁止作为 Bearer token。真实开发与生产必须分别配置至少 32 字节的 `IDENTITY_SECURITY_SECRET`、`BATTLE_INVITE_SECRET` 和 `BATTLE_OUTBOX_SECRET`，三者及 `REFERRAL_CODE_SECRET` 互不共用。`IDENTITY_SECURITY_SECRET` 同时用于域隔离登录指纹、确定性 session UUID 和访问令牌 HMAC；轮换会立即使最多 15 分钟的现有会话失效，轮换发布必须关闭旧 WebView 并要求从 Telegram 重新进入，不配置双密钥兼容。Vercel 另配置环境隔离的 `ABLY_API_KEY`；Supabase Vault 配置 Battle share callback URL、Battle outbox callback URL 和与对应 Vercel 环境一致的 `BATTLE_OUTBOX_SECRET`。任何 `SUPABASE_SERVICE_ROLE_KEY`、`IDENTITY_SECURITY_SECRET`、`TELEGRAM_BOT_TOKEN`、`CRON_SECRET`、`TELEGRAM_WEBHOOK_SECRET`、`ABLY_API_KEY`、Battle secret、TON API Key 或签名私钥均不得进入浏览器环境。
+Web 公开构建不读取 `VITE_*`。API 配置名称以根 `.env.example` 为唯一清单，真实值只进入 Vercel Production Secret。`SUPABASE_SERVICE_ROLE_KEY` 可以承载 legacy `service_role` JWT 或新式 Supabase secret key；服务端 HTTP 工具始终发送 `apikey`，只有 legacy JWT 同时发送 Bearer，新式 secret key 禁止作为 Bearer token。`IDENTITY_SECURITY_SECRET`、`REFERRAL_CODE_SECRET`、`CRON_SECRET`、`BATTLE_INVITE_SECRET`、`BATTLE_OUTBOX_SECRET` 和 `TELEGRAM_WEBHOOK_SECRET` 必须各自独立；`ABLY_API_KEY` 只用于五分钟 subscribe-only token 与 outbox 发布。任何 Bot token、数据库 key、会话 secret、Battle secret、Ably key、TON key 或私钥均不得进入 Git、聊天、日志、截图或浏览器环境。
 
-`BATTLE_INVITE_SECRET` 只用于按创建 operation 确定性生成 Battle bearer invite；`BATTLE_OUTBOX_SECRET` 只鉴权两个 Battle integration，不得用于玩家 API、Telegram webhook 或邀请签名；`ABLY_API_KEY` 只在服务端签发五分钟 subscribe-only token 和投递 outbox。三项 Battle 变量由 Battle share、outbox、realtime 与 integration 的独立配置边界校验，缺失时只阻断 Battle 路径，不得阻断 Telegram 登录、普通 webhook、钱包或其他非 Battle 路由。API workspace 固定 `ably@2.26.0`，浏览器只接收短期 token，绝不接收这三个服务端变量。
+Supabase 固定安装 `pg_cron`、`pg_net`、Vault 和 `pgcrypto`。三条 migration 提交后由 owner 独立执行 `pg_reload_conf()`；`battle-tick-v1` 每秒执行，`battle.tick_health()` 与 `monitor-invariants` 监控配置、停滞和失败。Supabase Vault 的 Battle share callback URL、Battle outbox callback URL 和 `BATTLE_OUTBOX_SECRET` 必须与当前 Vercel Production 完全一致。运行明细保留 7 天并由既有每日 cleanup 清理。
 
-真实开发与生产 Supabase 都安装 `pg_cron`、`pg_net`、Vault 和 `pgcrypto`。三条 migration 提交后由 owner 独立执行 `pg_reload_conf()`；`battle-tick-v1` 每秒执行，`battle.tick_health()` 与 `monitor-invariants` 监控配置、停滞和失败。运行失败告警保留首次与最近失败、来源 job 和当前 job 证据，在当前 job 健康、最近两个自然完成周期成功、最近五分钟零失败且距最后检测至少五分钟后自动关闭；关闭只追加恢复证据，后续失败创建新历史行。运行明细保留 7 天并由既有每日 cleanup 清理，不增加第二个 Supabase cron job。Data API 仍只暴露 `public,graphql_public,api`，内部 `battle` schema 不暴露。两个环境使用同一 `battle-v1` checksum、OpenAPI、Git commit 和 migration 序列，只允许 Bot、Ably key、callback URL、项目 ID、域名和机密不同。
+Vercel Production 固定配置 `APP_BASE_URL=https://final-tma-pi.vercel.app`、`TELEGRAM_BOT_USERNAME=EvoMyPet_bot` 与 `TELEGRAM_MINI_APP_SHORT_NAME=evomypet`。推荐链接固定为 `https://t.me/EvoMyPet_bot/evomypet?startapp=<当前用户邀请码>`，Battle prepared-share deep link 固定追加 `startapp=BTL_<32位base64url>`；环境变量变更必须由新的 `main` Production deployment 生效。
 
-真实开发 Vercel Production 固定配置 `TELEGRAM_BOT_USERNAME=FinalTMA_bot` 与 `TELEGRAM_MINI_APP_SHORT_NAME=pokepets_dev`。推荐链接固定为 `https://t.me/FinalTMA_bot/pokepets_dev?startapp=<当前用户邀请码>`，Battle prepared-share deep link 固定为同一 Bot 与 named Mini App 路径加 `startapp=BTL_<32位base64url>`；环境变量变更必须由新部署生效。
+生产 webhook URL 固定为 `https://final-tma-pi.vercel.app/api/telegram/webhook`，`secret_token` 与 Vercel Production 的 `TELEGRAM_WEBHOOK_SECRET` 一致，`allowed_updates` 精确为 `['message','pre_checkout_query']`。`message` 承载 `/paysupport`、`successful_payment` 和 `refunded_payment`，`pre_checkout_query` 承载付款前校验。`PAYMENT_SUPPORT_URL` 必须指向独立、有人持续查看的真实人工支持入口；未配置时禁止开放充值。
 
-真实开发与生产 Bot 分别使用自己的 `setWebhook`：URL 唯一指向本环境 HTTPS `/api/telegram/webhook`，`secret_token` 与本环境 `TELEGRAM_WEBHOOK_SECRET` 一致，`allowed_updates` 精确为 `["message", "pre_checkout_query"]`。`message` 承载 `/paysupport`、`successful_payment` 和 `refunded_payment`，`pre_checkout_query` 承载付款前校验；两个环境禁止共用 Bot、token、webhook URL、secret 或上一次隐式保留的 update 订阅。
+Telegram 正常开放态固定为：Bot `@EvoMyPet_bot`；Main Mini App 和 named Mini App 都指向 `https://final-tma-pi.vercel.app/`；short name 为 `evomypet`；公开链接为 `https://t.me/EvoMyPet_bot/evomypet`；默认菜单文字为 `Open EvoMyPet` 并指向该公开链接。发布隔离态按 [ADR-075](../architecture/adr/ADR-075-telegram-named-mini-app-release-isolation.md) 停用 Main、恢复默认菜单行为并把 named Web App URL 改为 `https://final-tma-pi.vercel.app/maintenance.html`，不删除 short name。
 
-真实开发 Telegram 正常开放态固定为同一组配置：Bot 为 `@FinalTMA_bot`；BotFather Main Mini App 已启用并指向 `https://final-tma-pi.vercel.app/`；named Mini App 的 short name 为 `pokepets_dev`，公开链接为 `https://t.me/FinalTMA_bot/pokepets_dev`，Web App URL 为环境根 URL；默认菜单按钮文字为 `Open PokePets`，目标为该 named Mini App 链接。发布隔离态按 [ADR-075](../architecture/adr/ADR-075-telegram-named-mini-app-release-isolation.md) 停用 Main、恢复默认菜单行为并仅把 named Web App URL 改为 `https://final-tma-pi.vercel.app/maintenance.html`，不删除 short name。发布验收必须恢复正常开放态，并同时满足 Bot API `getMe.result.has_main_web_app=true`，以及 `getChatMenuButton.result.web_app.url=https://t.me/FinalTMA_bot/pokepets_dev`。
+生产入口恢复并开始承载用户后，数据库 migration history 立即冻结。此后禁止清库、重建 history、修改既有 migration、启用 Battle 验收夹具或恢复旧 schema，只允许兼容现有数据和已加载客户端的前向应用与追加 migration。

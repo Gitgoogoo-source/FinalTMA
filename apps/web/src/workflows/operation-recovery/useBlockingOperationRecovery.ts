@@ -3,7 +3,7 @@ import {
   parseRecoverableOperationSummary,
   type RecoverableOperationSummary,
   type RouteOutput,
-} from "@pokepets/api-contracts/app-client";
+} from "@evomypet/api-contracts/app-client";
 
 import { useOperationHydrator } from "./context.ts";
 

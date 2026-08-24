@@ -1,4 +1,4 @@
-import type { RouteDefinition } from "@pokepets/api-contracts/common";
+import type { RouteDefinition } from "@evomypet/api-contracts/common";
 
 import type { HandlerResult } from "./handlers.ts";
 import { ApiError } from "./errors.ts";

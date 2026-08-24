@@ -15,7 +15,7 @@ Web 首屏固定为入口、默认 `GachaPage` 和 `client-routes/first-screen` 
 
 顶部充值与 VIP 弹窗使用独立动态模块。用户意图或支付恢复只负责打开相应模块；加载失败保留支付订单和导航意图，重新打开只加载 UI。模块准备期间只显示玩家可理解的通用画面，不展示服务器、请求、operation ID 或后端术语。
 
-浏览器固定导入 `@pokepets/api-contracts/app-client` 及其 `app-client/errors` 子边界。`app-client` 按首屏、市场、库存、任务、Battle、转盘、图鉴等领域缓存动态 route loader，并在输入、成功响应和恢复结果进入 UI 前执行 Zod 校验。错误码集合与错误文案/恢复策略分离：基础 Schema 只加载稳定错误码，领域运行时按需加载错误定义。服务端 `/app` registry 只包含当前活动路由；Wallet 与 Mint 只存在于 `/dormant-app`，活动 App handler map 和 OpenAPI 不含对应端点，直接请求继续得到 `API_ROUTE_NOT_FOUND`。
+浏览器固定导入 `@evomypet/api-contracts/app-client` 及其 `app-client/errors` 子边界。`app-client` 按首屏、市场、库存、任务、Battle、转盘、图鉴等领域缓存动态 route loader，并在输入、成功响应和恢复结果进入 UI 前执行 Zod 校验。错误码集合与错误文案/恢复策略分离：基础 Schema 只加载稳定错误码，领域运行时按需加载错误定义。服务端 `/app` registry 只包含当前活动路由；Wallet 与 Mint 只存在于 `/dormant-app`，活动 App handler map 和 OpenAPI 不含对应端点，直接请求继续得到 `API_ROUTE_NOT_FOUND`。
 
 原 `global.css` 永久删除。reset、设计变量、共享按钮/卡片/基础弹窗、Startup、应用壳、顶部资产栏、底部导航、通用处理层和默认开盒页分别形成首屏 CSS；市场、Battle、藏品、任务、图鉴、充值/VIP 弹窗和六类结果舞台由所属异步模块导入 CSS。保持现有选择器、特异性和块内顺序，不引入 CSS Modules 或 cascade layer。Vite 默认 CSS code splitting 负责在异步模块执行前加载对应 CSS。构建目标为 `es2023`，当前 Telegram WebView 基线使用原生 module preload，因此 Vite 的 module preload polyfill 固定关闭。
 

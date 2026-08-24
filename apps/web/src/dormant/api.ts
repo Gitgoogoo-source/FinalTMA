@@ -4,8 +4,8 @@ import type {
   DormantRouteId,
   DormantRouteInput,
   DormantRouteOutput,
-} from "@pokepets/api-contracts/dormant-app";
-import type { RecoverableRouteId } from "@pokepets/api-contracts/app-client";
+} from "@evomypet/api-contracts/dormant-app";
+import type { RecoverableRouteId } from "@evomypet/api-contracts/app-client";
 
 import { apiRequest, type ApiResult } from "../platform/api/client.ts";
 import {

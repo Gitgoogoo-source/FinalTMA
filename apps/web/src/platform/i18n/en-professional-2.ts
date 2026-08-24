@@ -13,9 +13,9 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
   "Mint 上链": "Mint NFT",
   "TON 主钱包": "Primary TON Wallet",
   "Telegram 登录凭证时间无效，请重新进入应用":
-    "Your Telegram session is no longer valid. Reopen PokePets from Telegram.",
+    "Your Telegram session is no longer valid. Reopen EvoMyPet from Telegram.",
   "Telegram 登录校验失败，请重新进入应用":
-    "We couldn't verify your Telegram session. Reopen PokePets from Telegram.",
+    "We couldn't verify your Telegram session. Reopen EvoMyPet from Telegram.",
   "UTC+0 有效期": "Resets at 00:00 UTC",
   "VIP 专属": "VIP Exclusive",
   "VIP 已生效": "VIP Active",
@@ -113,7 +113,7 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
   免费稀有: "Free Rare Box",
   免费稀有资格: "Free Rare Mystery Box",
   "入口参数无效，请重新从 Telegram 进入应用":
-    "This entry link isn't valid. Reopen PokePets from Telegram.",
+    "This entry link isn't valid. Reopen EvoMyPet from Telegram.",
   入场费: "Entry Fee",
   全部价格: "All Prices",
   全部链型: "All Lineage Types",
@@ -187,7 +187,7 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
   官方单价: "Unit Price",
   实际手续费和返还按后续每次真实成交明细计算:
     "Fees and VIP rebates are calculated for each completed sale.",
-  宠物: "PokePet",
+  宠物: "Pet",
   对战双方: "Battle Players",
   "将下架“{{0}}”结算时仍未成交的全部数量。当前显示出售中 {{1}} 个，确认后以最新结果为准。":
     "Delist all unsold {{0}}. Currently listed: {{1}}. Recent sales may change the final quantity.",
@@ -274,7 +274,7 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
   状态加载中: "Loading Status…",
   "画面无法打开，重试": "This screen couldn't open. Try again.",
   "登录凭证已过期，请重新进入应用":
-    "Your session expired. Reopen PokePets from Telegram.",
+    "Your session expired. Reopen EvoMyPet from Telegram.",
   "登录失败，请稍后重试": "Login failed. Try again in a moment.",
   目标藏品不存在: "This collectible no longer exists.",
   目标藏品定位失败: "Couldn't Find Collectible",
@@ -302,7 +302,7 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
   第: "No. ",
   "第 {{0}} 次，{{1}}": "Spin {{0}}: {{1}}",
   "第 {{0}} 阶": "Stage {{0}}",
-  "第一步：选择存活宠物": "Step 1: Choose an Active PokePet",
+  "第一步：选择存活宠物": "Step 1: Choose an Active Pet",
   "第二步：选择 {{0}} 的反击技能": "Step 2: Choose {{0}}'s Counter Skill",
   等待双方进入房间: "Waiting for Both Players",
   "等待对手在其 15 秒行动窗口内操作":
@@ -330,8 +330,8 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
     "This collectible changed. Refresh and try again.",
   藏品详情: "Collectible Details",
   藏品进化: "Evolve Collectible",
-  "请从 Telegram Mini App 打开应用": "Open PokePets from Telegram.",
-  "请从 Telegram Mini App 重新打开应用": "Reopen PokePets from Telegram.",
+  "请从 Telegram Mini App 打开应用": "Open EvoMyPet from Telegram.",
+  "请从 Telegram Mini App 重新打开应用": "Reopen EvoMyPet from Telegram.",
   请在钱包中确认: "Confirm in Your Wallet",
   请让这束晶辉继续完成变化: "Let the evolution finish.",
   "请选择正好 3 个当前可用的藏品单位。":
@@ -373,7 +373,7 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
     "Reconnecting. Checking both players' status…",
   连接并验证钱包: "Connect & Verify Wallet",
   "连接钱包后必须完成 TON Proof；钱包地址不能替代 Telegram 登录。":
-    "Complete TON Proof after connecting. Your Telegram account remains your PokePets identity.",
+    "Complete TON Proof after connecting. Your Telegram account remains your EvoMyPet identity.",
   "选择{{0}}远征藏品": "Choose a Collectible for {{0}} Expedition",
   "选择{{0}}，{{1}}，第 {{2}} 阶，可用 {{3}} 个{{4}}":
     "Choose {{0}} · {{1}} · Stage {{2}} · {{3}} available{{4}}",
@@ -385,7 +385,7 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
   选择队伍: "Choose Team",
   "选择队伍 · {{0}}": "Choose Team · {{0}}",
   "邀请交接状态无效，请重新从 Telegram 进入应用":
-    "This invite is no longer valid. Reopen PokePets from Telegram.",
+    "This invite is no longer valid. Reopen EvoMyPet from Telegram.",
   邀请关系已经绑定: "Referral Linked",
   "邀请绑定暂未完成，请稍后重试":
     "Referral couldn't be linked yet. Try again soon.",
@@ -395,7 +395,7 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
   "邀请链接已失效，请重新通过原邀请链接进入":
     "This invite link expired. Reopen the original link in Telegram.",
   邀请链接无效或已失效: "This invite link is invalid or expired.",
-  重新选宠: "Choose Another PokePet",
+  重新选宠: "Choose Another Pet",
   重试: "Try Again",
   "钱包未返回 TON Proof，请重新连接":
     "TON Proof wasn't received. Reconnect your wallet.",

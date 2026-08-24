@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import type { RouteOutput } from "@pokepets/api-contracts/app-client";
+import type { RouteOutput } from "@evomypet/api-contracts/app-client";
 
 import { haptic, selectionHaptic } from "../../platform/telegram/index.ts";
 import { Button } from "../../shared/ui/Button.tsx";

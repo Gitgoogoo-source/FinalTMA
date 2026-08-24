@@ -55,16 +55,16 @@ export async function createStarsOrder(
       title:
         details.kind === "vip"
           ? english
-            ? "PokePets VIP Pass"
-            : "PokePets VIP 月卡"
+            ? "EvoMyPet VIP Pass"
+            : "EvoMyPet VIP 月卡"
           : english
             ? `Get ${details.stars_amount} Stars`
             : `充值 ${details.stars_amount} Stars`,
       description:
         details.kind === "vip"
           ? english
-            ? "30 days of PokePets VIP benefits (UTC)"
-            : "30 个 UTC 自然日的 PokePets VIP 权益"
+            ? "30 days of EvoMyPet VIP benefits (UTC)"
+            : "30 个 UTC 自然日的 EvoMyPet VIP 权益"
           : english
             ? `Use ${details.stars_amount} Telegram Stars to get ${details.stars_amount} Stars`
             : `使用 ${details.stars_amount} Telegram Stars 获得 ${details.stars_amount} Stars`,

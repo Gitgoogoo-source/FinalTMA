@@ -37,7 +37,7 @@ export function TopAssetBar({
   const displayName = [user?.first_name, user?.last_name]
     .filter(Boolean)
     .join(" ");
-  const userLabel = displayName || user?.username || "PokePets";
+  const userLabel = displayName || user?.username || "EvoMyPet";
   return (
     <header className="topbar">
       <button
@@ -54,7 +54,7 @@ export function TopAssetBar({
         <Avatar name={userLabel} />
         <div>
           <strong>{userLabel}</strong>
-          <small>{user?.username ? `@${user.username}` : "PokePets"}</small>
+          <small>{user?.username ? `@${user.username}` : "EvoMyPet"}</small>
         </div>
       </button>
       <VipDailyBenefits />

@@ -58,7 +58,7 @@ export function VipDialog({ close }: { close(): void }): ReactNode {
         <Badge>
           {vipDetailStatus(data, Boolean(activeOrder), identityConflict)}
         </Badge>
-        <h2 id="vip-dialog-title">{t("PokePets VIP 月卡")}</h2>
+        <h2 id="vip-dialog-title">{t("EvoMyPet VIP 月卡")}</h2>
         {query.isLoading ? (
           <p>{t("正在加载 VIP 权益")}</p>
         ) : query.error ? (

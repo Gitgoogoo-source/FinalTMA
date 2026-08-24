@@ -3,7 +3,7 @@ import type {
   EvolutionRejectedResult,
   RouteInput,
   RouteOutput,
-} from "@pokepets/api-contracts/app-client";
+} from "@evomypet/api-contracts/app-client";
 import { X } from "lucide-react";
 
 import { evolutionRoute } from "../../domains/evolution/config.ts";

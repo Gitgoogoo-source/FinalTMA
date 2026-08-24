@@ -1,4 +1,4 @@
-import type { RouteId } from "@pokepets/api-contracts/jobs";
+import type { RouteId } from "@evomypet/api-contracts/jobs";
 
 import type { RouteHandler } from "../../http/handlers.ts";
 import { runScheduledJob } from "../../workflows/scheduled-jobs/index.ts";

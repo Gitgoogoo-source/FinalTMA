@@ -5,7 +5,7 @@ import {
   parseRecoveredOperation,
   type RecoverableRouteId,
   type TypedOperationSummary,
-} from "@pokepets/api-contracts/app-client";
+} from "@evomypet/api-contracts/app-client";
 
 import { apiRequest } from "../../platform/api/client.ts";
 import { refreshScopes } from "../../platform/query/index.ts";

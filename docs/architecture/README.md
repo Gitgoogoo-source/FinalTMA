@@ -1,4 +1,4 @@
-# PokePets 系统总览
+# EvoMyPet 系统总览
 
 ## 事实来源
 
@@ -21,14 +21,14 @@ ec8d89aec0a700bfb504285401bf6327ed2a4c48c94d4d8bb92559bdae2ee61e
 - Catalog Delivery：`catalog.current` 以 `no-store` 返回当前 checksum、release key 与 revision；`catalog.release` 按 checksum + release key 返回一年不可变缓存的完整目录，Web 只通过 `useCatalogQuery()` 合并为目录快照。
 - Realtime：Ably Standard 只发送 Battle 状态失效通知；REST 与数据库 `state_version` 回正权威状态。
 - Blockchain：TON Connect、钱包验证与 Tact NFT Mint 实现保留休眠；当前 App/Jobs 运行时注册表与 OpenAPI 均不发布相关端点，MVP 不提供入口、恢复或定时对账。
-- Deployment：Vercel Pro；开发阶段的 Production Project 保持启用，`main` 只通过 Git Integration 自动部署，不使用项目暂停、空触发提交或手动部署；真实开发环境与未来生产环境使用相同 Git commit 和 migration 序列。
+- Deployment：既有 Vercel Pro Project `final-tma` 是唯一生产项目；`main` 只通过 Git Integration 自动部署，不使用项目暂停、空触发提交或手动部署；既有 Supabase `final-tma-real-test / ebewtjerusxcioegpzjd` 是唯一生产数据库，完整裁决见 [ADR-086](adr/ADR-086-evomypet-production-cutover.md)。
 
 仓库继续保留唯一的 TON Connect 静态身份与 manifest，供休眠实现保持确定性；当前 Web 不引用该 manifest、不初始化 TON Connect，也不把其图标是否正式替换作为 MVP 发布阻塞。
 
 ## 依赖方向
 
 ```text
-apps/web -> @pokepets/api-contracts/app-client[/errors]
+apps/web -> @evomypet/api-contracts/app-client[/errors]
 api -> apps/api/entrypoints
 apps/api/entrypoints -> gateway-specific contracts + http
 apps/api/http -> injected route registry + handler map
@@ -56,7 +56,7 @@ Battle 队伍选择与有效邀请接受页按 [ADR-058](adr/ADR-058-battle-team
 
 游戏资源命名按 [ADR-083](adr/ADR-083-game-stars-display-name.md) 固定为 `Stars`，真实付款资产始终写作 `Telegram Stars`；绿色切面宝石资源按 [ADR-085](adr/ADR-085-gems-display-name.md) 固定为 `Gems`。数据库与契约继续保留 `KCOIN/kcoin` 与 `FGEMS/fgems` 稳定内部标识；内部标识不得直接显示给玩家，Gems、游戏 Stars 与 Telegram Stars 不得合并或互相替代。
 
-Telegram 发布隔离按 [ADR-075](adr/ADR-075-telegram-named-mini-app-release-isolation.md) 固定使用同一部署的独立 `/maintenance.html`。Main Mini App、默认菜单按钮和 named Mini App 是三个独立入口；named Mini App 不删除 `pokepets_dev`，只在隔离期间把 Web App URL 切到无缓存、无认证、无 API 的双语静态页，完整验收后再改回环境根 URL。
+Telegram 发布隔离按 [ADR-075](adr/ADR-075-telegram-named-mini-app-release-isolation.md) 固定使用同一部署的独立 `/maintenance.html`。Main Mini App、默认菜单按钮和 named Mini App 是三个独立入口；named Mini App 不删除 `evomypet`，只在隔离期间把 Web App URL 切到无缓存、无认证、无 API 的双语静态页，完整验收后再改回环境根 URL。
 
 目录交付按 [ADR-042](adr/ADR-042-catalog-pointer-immutable-release.md) 分成动态小指针与不可变完整内容。资源切换只改变 `catalog.current`；checksum + release key URL 永不原地改写或清除缓存。`useCatalogQuery()` 在新内容读取期间保留上一份成功快照，只有全新 WebView 没有快照时才进入原有初始错误状态。空库 migration 不恢复 Storage 对象登记或当前指针；数据库重建后必须按 [ADR-050](adr/ADR-050-catalog-post-rebuild-readiness-gate.md) 先发布历史 v1、再发布当前 v2，并由失效即失败的 `assets:release status` 与无运行中变更租约共同放行。
 
@@ -72,7 +72,7 @@ Telegram 发布隔离按 [ADR-075](adr/ADR-075-telegram-named-mini-app-release-i
 
 内部 schema 对 `public`、`anon`、`authenticated` 和 `service_role` 撤销 schema、表、视图、序列和函数权限。内部库存读模型使用 `security_invoker` 且不进入 Exposed schemas。`service_role` 只获得 `api` schema 的使用权和显式 allowlist 函数的执行权，不能执行内部登录限流 helper。玩家 RPC 使用 `session_id` 最终验证会话存在、撤销、绝对过期、账号、入口交接和资源归属；常规认证没有独立会话解析 RPC。
 
-`admin` 是数据库所有者专用的非 Data API 管理边界。受控 Battle 验收夹具只从该 schema 执行，默认没有项目身份或 enable 记录，不向 `service_role` 或任何应用角色授权；真实开发绑定、短期门禁、幂等 reconciliation、fixture-owned provenance 与只读状态遵循 [ADR-016](adr/ADR-016-controlled-battle-acceptance-fixture.md)。
+`admin` 是数据库所有者专用的非 Data API 管理边界。受控 Battle 验收夹具只从该 schema 执行，默认没有项目身份或 enable 记录，不向 `service_role` 或任何应用角色授权；最终重建将项目绑定为 `production / ebewtjerusxcioegpzjd`，生产身份永久禁止启用夹具，其他边界遵循 [ADR-016](adr/ADR-016-controlled-battle-acceptance-fixture.md)。
 
 ## 操作恢复
 

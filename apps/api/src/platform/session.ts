@@ -20,7 +20,7 @@ export function issueToken(operationId: string): {
   sessionId: string;
 } {
   const sessionBytes = createHmac("sha256", getEnv().IDENTITY_SECURITY_SECRET)
-    .update(`pokepets-session-id-v1:${operationId}`)
+    .update(`evomypet-session-id-v1:${operationId}`)
     .digest()
     .subarray(0, SESSION_ID_BYTES);
   sessionBytes[6] = (sessionBytes[6]! & 0x0f) | 0x80;
@@ -40,7 +40,7 @@ export function issueToken(operationId: string): {
 
 export function identityFingerprint(domain: string, value: string): string {
   return createHmac("sha256", getEnv().IDENTITY_SECURITY_SECRET)
-    .update(`pokepets-identity-v1:${domain}:${value}`)
+    .update(`evomypet-identity-v1:${domain}:${value}`)
     .digest("hex");
 }
 
@@ -50,7 +50,7 @@ export function hashToken(token: string): string {
 
 export function referralCode(telegramId: number): string {
   const signature = createHmac("sha256", getEnv().REFERRAL_CODE_SECRET)
-    .update(`pokepets-referral-v1:${telegramId}`)
+    .update(`evomypet-referral-v1:${telegramId}`)
     .digest("hex")
     .slice(0, 20);
   return `TMA${signature.toUpperCase()}`;
@@ -85,7 +85,7 @@ export function authenticateSessionCredential(
 
 function signSessionPayload(payload: Uint8Array): Buffer {
   return createHmac("sha256", getEnv().IDENTITY_SECURITY_SECRET)
-    .update("pokepets-session-proof-v1:")
+    .update("evomypet-session-proof-v1:")
     .update(payload)
     .digest();
 }

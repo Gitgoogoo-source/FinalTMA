@@ -11,7 +11,7 @@ Vercel 将根目录三个 Function 入口编译为 JavaScript，但不会把 wor
 
 ## 决策
 
-`@pokepets/api` 与 `@pokepets/api-contracts` 增加独立 TypeScript 构建配置。类型条件固定指向 `src/*.ts`，运行时条件固定指向 `dist/*.js`；构建阶段必须先生成两个 workspace 的 `dist`，再构建 Web 和打包 Vercel Functions。根目录三个 Function 入口仍只依赖 `@pokepets/api/entrypoints`，并以 Vercel 支持的 `export default { fetch }` Web Standard 签名返回 `Response`，不绕过模块边界。
+`@evomypet/api` 与 `@evomypet/api-contracts` 增加独立 TypeScript 构建配置。类型条件固定指向 `src/*.ts`，运行时条件固定指向 `dist/*.js`；构建阶段必须先生成两个 workspace 的 `dist`，再构建 Web 和打包 Vercel Functions。根目录三个 Function 入口仍只依赖 `@evomypet/api/entrypoints`，并以 Vercel 支持的 `export default { fetch }` Web Standard 签名返回 `Response`，不绕过模块边界。
 
 Contracts 构建固定同时产出活动服务端 `/app`、浏览器 `/app-client`、浏览器按需错误定义、休眠 `/dormant-app` 和 `/server`。Vercel App Function 只能跟随活动 `/app` registry 与 handler map，Wallet/Mint 休眠边界不得进入 Function 依赖图。Web 使用 Vite 默认 JS/CSS code splitting；生产构建必须遍历入口、默认开盒页和首屏契约的同步 chunk 图，四项首屏体积或结构门禁任一失败即终止整次构建，不允许通过人工 vendor chunk、提高大包阈值或关闭统计绕过。
 

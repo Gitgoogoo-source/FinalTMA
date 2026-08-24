@@ -19,7 +19,7 @@ import { paymentSchema } from "../topup/models.ts";
 const healthOutput = z
   .object({
     status: z.literal("ok"),
-    service: z.literal("pokepets"),
+    service: z.literal("evomypet"),
     time: timestampSchema,
   })
   .strict();

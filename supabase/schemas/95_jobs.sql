@@ -47,7 +47,7 @@ declare
 begin
   if p_job_name not in ('reconcile-payments', 'reconcile-mints', 'cleanup-idempotency', 'monitor-invariants') then perform api.raise_business_error('JOB_NOT_FOUND', '后台任务不存在'); end if;
   select max(finished_at) into v_scan_from from operations.job_runs where job_name = p_job_name and status = 'succeeded';
-  if not pg_try_advisory_xact_lock(hashtextextended('pokepets:job:' || p_job_name, 0)) then
+  if not pg_try_advisory_xact_lock(hashtextextended('evomypet:job:' || p_job_name, 0)) then
     insert into operations.job_runs (job_name, status, details, scan_from, scan_to, finished_at)
     values (p_job_name, 'skipped', jsonb_build_object('reason', 'already_running'), v_scan_from, v_scan_to, now())
     returning id into v_run;

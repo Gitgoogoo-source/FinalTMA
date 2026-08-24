@@ -1,6 +1,6 @@
-# PokePets TON NFT
+# EvoMyPet TON NFT
 
-本目录是 PokePets 唯一 TON 合约来源：`PokePetsNftCollection`、`PokePetsNftItem`、部署/验收命令与公开 metadata JSON Schema。
+本目录是 EvoMyPet 唯一 TON 合约来源：`EvoMyPetNftCollection`、`EvoMyPetNftItem`、部署/验收命令与公开 metadata JSON Schema。
 
 ## 固定链上规则
 
@@ -13,11 +13,11 @@
 ## 命令
 
 ```sh
-pnpm --filter @pokepets/ton typecheck
-pnpm --filter @pokepets/ton build
-pnpm --filter @pokepets/ton deploy:testnet
-pnpm --filter @pokepets/ton verify
-pnpm --filter @pokepets/ton deploy:mainnet
+pnpm --filter @evomypet/ton typecheck
+pnpm --filter @evomypet/ton build
+pnpm --filter @evomypet/ton deploy:testnet
+pnpm --filter @evomypet/ton verify
+pnpm --filter @evomypet/ton deploy:mainnet
 ```
 
 `typecheck` 会先使用锁定版本的 Tact 编译器和 `tact.config.json` 生成 `build/` 绑定，再检查部署与验收命令；全新副本不需要人工预生成。`build/` 是可重复生成的编译产物，保持 Git 忽略，不得手写或作为源码提交。

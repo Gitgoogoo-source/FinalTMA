@@ -2,7 +2,7 @@ import { Address } from "@ton/core";
 import { mnemonicToPrivateKey } from "@ton/crypto";
 import { TonClient, WalletContractV4 } from "@ton/ton";
 
-import { PokePetsNftCollection } from "../build/PokePetsNftCollection_PokePetsNftCollection.ts";
+import { EvoMyPetNftCollection } from "../build/EvoMyPetNftCollection_EvoMyPetNftCollection.ts";
 
 const network = process.argv[2];
 if (network !== "testnet" && network !== "mainnet")
@@ -37,7 +37,7 @@ if (!wallet.address.equals(owner))
 const royaltyDestination = Address.parse(required("TON_ROYALTY_DESTINATION"));
 const mintPublicKey = BigInt(`0x${required("TON_MINT_AUTH_PUBLIC_KEY_HEX")}`);
 const collection = client.open(
-  await PokePetsNftCollection.fromInit(
+  await EvoMyPetNftCollection.fromInit(
     owner,
     mintPublicKey,
     royaltyDestination,

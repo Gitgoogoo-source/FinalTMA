@@ -1,10 +1,10 @@
 {
   "$schema": "https://json.schemastore.org/package",
-  "name": "pokepets",
+  "name": "evomypet",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "PokePets Telegram Mini App",
+  "description": "EvoMyPet Telegram Mini App",
   "license": "UNLICENSED",
   "packageManager": "pnpm@11.1.3",
   "engines": {
@@ -12,18 +12,18 @@
     "pnpm": "11.1.3"
   },
   "scripts": {
-    "predev": "pnpm --filter @pokepets/api-contracts build && pnpm --filter @pokepets/api build",
+    "predev": "pnpm --filter @evomypet/api-contracts build && pnpm --filter @evomypet/api build",
     "dev": "vercel dev",
-    "predev:web": "pnpm --filter @pokepets/api-contracts build",
-    "dev:web": "pnpm --filter @pokepets/web dev",
-    "build": "pnpm --filter @pokepets/api-contracts build && pnpm --filter @pokepets/api build && pnpm --filter @pokepets/web build && pnpm typecheck:api && pnpm assets:check && pnpm manifest:check:build",
-    "build:web": "pnpm --filter @pokepets/web build",
-    "typecheck": "pnpm --filter @pokepets/api-contracts typecheck && pnpm --filter @pokepets/api typecheck && pnpm --filter @pokepets/web typecheck && pnpm --filter @pokepets/ton typecheck && pnpm typecheck:api",
+    "predev:web": "pnpm --filter @evomypet/api-contracts build",
+    "dev:web": "pnpm --filter @evomypet/web dev",
+    "build": "pnpm --filter @evomypet/api-contracts build && pnpm --filter @evomypet/api build && pnpm --filter @evomypet/web build && pnpm typecheck:api && pnpm assets:check && pnpm manifest:check:build",
+    "build:web": "pnpm --filter @evomypet/web build",
+    "typecheck": "pnpm --filter @evomypet/api-contracts typecheck && pnpm --filter @evomypet/api typecheck && pnpm --filter @evomypet/web typecheck && pnpm --filter @evomypet/ton typecheck && pnpm typecheck:api",
     "typecheck:api": "tsc --noEmit -p tsconfig.api.json",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "contracts:openapi": "pnpm --filter @pokepets/api-contracts openapi",
+    "contracts:openapi": "pnpm --filter @evomypet/api-contracts openapi",
     "contracts:check": "python3 tools/contracts/check_openapi.py",
     "i18n:check": "node --experimental-strip-types tools/i18n/check.ts",
     "db:lint": "supabase db lint --local --schema api,identity,catalog,operations,economy,inventory,gacha,evolution,expedition,wheel,battle,market,payments,vip,tasks,referral,album,onchain,risk,admin --level warning --fail-on error",
@@ -46,13 +46,13 @@
     "manifest:check:development": "python3 tools/web/check_manifest.py development",
     "manifest:check:production": "python3 tools/web/check_manifest.py production",
     "architecture:check": "python3 tools/architecture/check.py",
-    "chain:build": "pnpm --filter @pokepets/ton build",
+    "chain:build": "pnpm --filter @evomypet/ton build",
     "validate:static": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm contracts:check && pnpm i18n:check && pnpm catalog:check && pnpm db:migrations:check && pnpm db:lint && pnpm db:diff:check && pnpm architecture:check && pnpm manifest:check && APP_ENV=development pnpm build",
     "deploy:preview": "vercel deploy",
     "deploy:production": "vercel deploy --prod"
   },
   "dependencies": {
-    "@pokepets/api": "workspace:*"
+    "@evomypet/api": "workspace:*"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

@@ -5,7 +5,7 @@ import {
   type RouteId,
   type RouteInput,
   type RouteOutput,
-} from "@pokepets/api-contracts/app-client";
+} from "@evomypet/api-contracts/app-client";
 
 import {
   clearSensitiveState,

@@ -239,17 +239,17 @@ def verify_web_boundaries() -> None:
     violations: list[str] = []
     for source in typescript_files(WEB_ROOT):
         for specifier in imports(source):
-            if specifier.startswith("@pokepets/api-contracts"):
-                allowed = specifier == "@pokepets/api-contracts/app-client" or specifier.startswith(
-                    "@pokepets/api-contracts/app-client/"
+            if specifier.startswith("@evomypet/api-contracts"):
+                allowed = specifier == "@evomypet/api-contracts/app-client" or specifier.startswith(
+                    "@evomypet/api-contracts/app-client/"
                 )
                 allowed = allowed or (
                     source == WEB_ROOT / "platform/i18n/catalog.ts"
-                    and specifier == "@pokepets/api-contracts/localization"
+                    and specifier == "@evomypet/api-contracts/localization"
                 )
                 if not allowed and not (
                     source.is_relative_to(WEB_ROOT / "dormant")
-                    and specifier == "@pokepets/api-contracts/dormant-app"
+                    and specifier == "@evomypet/api-contracts/dormant-app"
                 ):
                     violations.append(
                         f"{relative(source)} imports forbidden contract {specifier}"
@@ -429,9 +429,9 @@ def verify_telegram_release_isolation() -> None:
     required_copy = (
         '<html lang="en">',
         'name="robots" content="noindex,nofollow"',
-        "PokePets is temporarily unavailable. Please check back a little later.",
+        "EvoMyPet is temporarily unavailable. Please check back a little later.",
         'lang="zh-CN"',
-        "PokePets 暂时无法进入，请稍后再来。",
+        "EvoMyPet 暂时无法进入，请稍后再来。",
         "No action is required · 无需进行任何操作",
         "env(safe-area-inset-top)",
         "env(safe-area-inset-bottom)",
@@ -557,7 +557,7 @@ def verify_persistent_page_route_leaves() -> None:
     )
     navigation_terms = (
         "useSyncExternalStore",
-        'const NAVIGATION_HISTORY_KEY = "__pokepets_navigation_v1__"',
+        'const NAVIGATION_HISTORY_KEY = "__evomypet_navigation_v1__"',
         "const navigationSessionId = window.crypto.randomUUID()",
         "initializeNavigationHistory();",
         'window.addEventListener("popstate", publishNavigation)',
@@ -708,7 +708,7 @@ def verify_first_screen_runtime_boundaries() -> None:
         if source.is_relative_to(WEB_ROOT / "dormant"):
             continue
         for specifier in imports(source):
-            if specifier == "@pokepets/api-contracts/dormant-app":
+            if specifier == "@evomypet/api-contracts/dormant-app":
                 active_dormant_imports.append(relative(source))
     if active_dormant_imports:
         raise SystemExit(
@@ -2661,10 +2661,10 @@ def verify_api_boundaries() -> None:
                 violations.append(f"{relative(source)} imports Web code")
     for gateway in ("app", "integrations", "jobs"):
         directory = API_ROOT / "entrypoints" / gateway
-        allowed_contracts = {f"@pokepets/api-contracts/{gateway}", "@pokepets/api-contracts/common"}
+        allowed_contracts = {f"@evomypet/api-contracts/{gateway}", "@evomypet/api-contracts/common"}
         for source in typescript_files(directory):
             for specifier in imports(source):
-                if specifier.startswith("@pokepets/api-contracts/") and specifier not in allowed_contracts:
+                if specifier.startswith("@evomypet/api-contracts/") and specifier not in allowed_contracts:
                     violations.append(f"{relative(source)} imports another gateway contract {specifier}")
                 target = resolve_relative(source, specifier)
                 target_gateway = child_after(target, API_ROOT / "entrypoints") if target else None
@@ -2698,8 +2698,8 @@ def verify_session_credential_boundary() -> None:
         "export type SessionCredential",
         "SESSION_TOKEN_VERSION = 1",
         "SESSION_TOKEN_PATTERN",
-        "pokepets-session-id-v1:",
-        "pokepets-session-proof-v1:",
+        "evomypet-session-id-v1:",
+        "evomypet-session-proof-v1:",
         "timingSafeEqual(suppliedMac, expectedMac)",
         "decoded.toString(\"base64url\") !== token",
     )

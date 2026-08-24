@@ -177,7 +177,7 @@ begin
   then
     raise exception using errcode = '22023', message = 'asset mutation metadata is invalid';
   end if;
-  perform pg_advisory_xact_lock(hashtextextended('pokepets:catalog-asset-mutation', 0));
+  perform pg_advisory_xact_lock(hashtextextended('evomypet:catalog-asset-mutation', 0));
   update catalog.asset_mutation_runs
   set status = 'expired', finished_at = now(),
       details = details || jsonb_build_object('reason', 'lease_expired')

@@ -71,7 +71,7 @@ type ViteChunk = OutputChunk & {
 
 export function firstScreenBudgetPlugin(): Plugin {
   return {
-    name: "pokepets-first-screen-budget",
+    name: "evomypet-first-screen-budget",
     apply: "build",
     generateBundle(_options, bundle) {
       if (

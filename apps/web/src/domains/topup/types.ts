@@ -1,3 +1,3 @@
-import type { RouteOutput } from "@pokepets/api-contracts/app-client";
+import type { RouteOutput } from "@evomypet/api-contracts/app-client";
 
 export type PaymentOrder = RouteOutput<"topup.bootstrap">["orders"][number];

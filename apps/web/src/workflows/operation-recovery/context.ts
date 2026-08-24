@@ -9,7 +9,7 @@ import type {
   RecoverableRouteId,
   RouteInput,
   RouteOutput,
-} from "@pokepets/api-contracts/app-client";
+} from "@evomypet/api-contracts/app-client";
 
 export type OperationPhase =
   | "confirming"

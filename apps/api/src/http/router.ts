@@ -1,4 +1,4 @@
-import type { Gateway, RouteDefinition } from "@pokepets/api-contracts/common";
+import type { Gateway, RouteDefinition } from "@evomypet/api-contracts/common";
 
 import { ApiError } from "./errors.ts";
 

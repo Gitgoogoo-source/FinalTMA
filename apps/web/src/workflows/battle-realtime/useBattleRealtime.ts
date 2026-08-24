@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { parseBattleRealtimeInvalidation } from "@pokepets/api-contracts/app-client";
+import { parseBattleRealtimeInvalidation } from "@evomypet/api-contracts/app-client";
 
 import { apiRequest } from "../../platform/api/client.ts";
 import { loadBattleRealtimeRuntime } from "./battleRealtimeRuntimeLoader.ts";

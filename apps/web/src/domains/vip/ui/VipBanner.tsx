@@ -58,7 +58,7 @@ export function VipBanner({ open }: { open(): void }): ReactNode {
           />
         </span>
         <span>
-          <small>POKEPETS MEMBERSHIP</small>
+          <small>EVOMYPET MEMBERSHIP</small>
           <strong>VIP MONTHLY PASS</strong>
         </span>
       </button>

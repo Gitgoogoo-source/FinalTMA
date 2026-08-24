@@ -41,12 +41,12 @@ export const englishCopy: Readonly<Record<string, string>> = {
   重新加载: "Reload",
   加载中: "Loading",
   正在准备冒险: "Getting Your Adventure Ready",
-  正在进入游戏: "Entering PokePets",
+  正在进入游戏: "Entering EvoMyPet",
   "请稍候，冒险正在苏醒": "Your adventure is waking up.",
   冒险准备失败: "Adventure Setup Failed",
-  暂时无法进入游戏: "PokePets Is Temporarily Unavailable",
+  暂时无法进入游戏: "EvoMyPet Is Temporarily Unavailable",
   登录状态已失效: "Session Expired",
-  "请重新从 Telegram 打开游戏": "Please reopen PokePets from Telegram.",
+  "请重新从 Telegram 打开游戏": "Please reopen EvoMyPet from Telegram.",
   "暂时没能准备好，请重新尝试。":
     "We couldn't get everything ready. Please try again.",
   "功能资源暂时无法加载，请重试":

@@ -284,7 +284,7 @@ export function GachaView(): ReactNode {
     <main className="page gacha-page">
       <header className="page-heading gacha-heading">
         <div>
-          <span>POKEPETS LAB</span>
+          <span>EVOMYPET LAB</span>
           <h1>{t("选择你的盲盒")}</h1>
         </div>
         <Sparkles aria-hidden="true" />

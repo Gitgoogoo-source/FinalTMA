@@ -6,7 +6,7 @@ import {
   X,
 } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
-import type { RouteOutput } from "@pokepets/api-contracts/app-client";
+import type { RouteOutput } from "@evomypet/api-contracts/app-client";
 
 import { Button } from "../../../shared/ui/Button.tsx";
 import { CatalogImage } from "../../../shared/ui/CatalogImage.tsx";

@@ -7,7 +7,7 @@ type LoadedEnglishCatalog =
   (typeof import("./catalog.ts"))["loadedEnglishCatalog"];
 
 const DEFAULT_LANGUAGE: AppLanguage = "en";
-const STORAGE_PREFIX = "pokepets.language.v1";
+const STORAGE_PREFIX = "evomypet.language.v1";
 
 let currentLanguage: AppLanguage = DEFAULT_LANGUAGE;
 let currentTelegramId: string | null = null;
@@ -88,7 +88,7 @@ export function contentName(id: string, source: string): string {
   return (
     englishCatalog?.gameContentById(id) ??
     englishCatalog?.gameContent(source) ??
-    englishFallback(source, "PokePet")
+    englishFallback(source, "Pet")
   );
 }
 

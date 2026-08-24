@@ -1,6 +1,6 @@
 import { ShieldAlert } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import type { RouteOutput } from "@pokepets/api-contracts/app-client";
+import type { RouteOutput } from "@evomypet/api-contracts/app-client";
 
 import { Badge } from "../../../shared/ui/Badge.tsx";
 import { AppModal } from "../../../shared/ui/AppModal.tsx";

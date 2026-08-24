@@ -83,7 +83,7 @@ for (const route of routes) {
 
 const document = {
   openapi: "3.1.0",
-  info: { title: "PokePets API", version: "1.0.0" },
+  info: { title: "EvoMyPet API", version: "1.0.0" },
   servers: [{ url: "/" }],
   paths,
   components: {

@@ -2,7 +2,7 @@ import {
   findRoute,
   findRouteByPath,
   type AppRoute,
-} from "@pokepets/api-contracts/jobs";
+} from "@evomypet/api-contracts/jobs";
 
 import { createGateway } from "../../http/gateway.ts";
 import { jobHandlers } from "./handlers.ts";

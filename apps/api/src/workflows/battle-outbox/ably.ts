@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import * as Ably from "ably";
 import { z } from "zod";
-import type { BattleRealtimeInvalidation } from "@pokepets/api-contracts/app";
+import type { BattleRealtimeInvalidation } from "@evomypet/api-contracts/app";
 
 import { ApiError } from "../../http/errors.ts";
 import { rpc } from "../../platform/db/index.ts";

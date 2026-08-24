@@ -104,7 +104,7 @@ export function savePreparedBattleMessage(input: {
   const english = input.language === "en";
   const message = english
     ? [
-        `⚔️ ${input.creatorDisplayName} challenged you to a PokePets Battle`,
+        `⚔️ ${input.creatorDisplayName} challenged you to an EvoMyPet Battle`,
         `Entry fee: ${input.entryFee} Stars`,
         `Team rarity: ${input.raritySummary}`,
         "This challenge is valid for 30 minutes.",
@@ -122,7 +122,7 @@ export function savePreparedBattleMessage(input: {
       result: {
         type: "article",
         id: input.resultId,
-        title: english ? "PokePets Battle Challenge" : "PokePets Battle 挑战",
+        title: english ? "EvoMyPet Battle Challenge" : "EvoMyPet Battle 挑战",
         description: `${input.entryFee} Stars · ${input.raritySummary}`,
         input_message_content: {
           message_text: message,

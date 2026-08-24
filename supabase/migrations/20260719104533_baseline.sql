@@ -775,7 +775,7 @@ begin
   then
     raise exception using errcode = '22023', message = 'asset mutation metadata is invalid';
   end if;
-  perform pg_advisory_xact_lock(hashtextextended('pokepets:catalog-asset-mutation', 0));
+  perform pg_advisory_xact_lock(hashtextextended('evomypet:catalog-asset-mutation', 0));
   update catalog.asset_mutation_runs
   set status = 'expired', finished_at = now(),
       details = details || jsonb_build_object('reason', 'lease_expired')
@@ -8108,7 +8108,7 @@ declare
   v_error_detail text;
 begin
   if not pg_try_advisory_xact_lock(
-    hashtextextended('pokepets:battle:process_due:v1', 0)
+    hashtextextended('evomypet:battle:process_due:v1', 0)
   ) then
     return 0;
   end if;
@@ -10356,7 +10356,7 @@ begin
   if v_replay is not null then return v_replay; end if;
   v_user_id := v_operation.user_id;
   begin
-    perform pg_advisory_xact_lock(hashtextextended('pokepets:payment:' || v_user_id::text || ':kcoin_topup', 0));
+    perform pg_advisory_xact_lock(hashtextextended('evomypet:payment:' || v_user_id::text || ':kcoin_topup', 0));
     for v_stale in
       select * from payments.orders
       where user_id = v_user_id and kind = 'kcoin_topup' and status = 'pending' and checkout_started_at is null
@@ -10548,7 +10548,7 @@ begin
       perform api.raise_business_error('TOPUP_AMOUNT_INVALID', '充值模式无效');
     end if;
     insert into payments.orders (user_id, operation_id, kind, stars_amount, kcoin_amount, invoice_payload, intent, expires_at)
-    values (v_user_id, p_operation_id, 'kcoin_topup', v_required, v_required, 'pokepets:' || extensions.gen_random_uuid(), v_normalized_intent, now() + interval '15 minutes')
+    values (v_user_id, p_operation_id, 'kcoin_topup', v_required, v_required, 'evomypet:' || extensions.gen_random_uuid(), v_normalized_intent, now() + interval '15 minutes')
     returning * into v_order;
     v_result := payments.order_json(v_order);
     return operations.pending_command(p_operation_id, v_result);
@@ -10588,12 +10588,12 @@ begin
   if v_replay is not null then return v_replay; end if;
   v_user_id := v_operation.user_id;
   begin
-    perform pg_advisory_xact_lock(hashtextextended('pokepets:payment:' || v_user_id::text || ':vip', 0));
+    perform pg_advisory_xact_lock(hashtextextended('evomypet:payment:' || v_user_id::text || ':vip', 0));
     v_status := vip.status_json(v_user_id);
     if not coalesce((v_status->>'can_purchase')::boolean, false) and not coalesce((v_status->>'can_renew')::boolean, false) then perform api.raise_business_error('VIP_RENEWAL_LIMIT', '月卡续费次数已达上限'); end if;
     if exists (select 1 from payments.orders where user_id = v_user_id and kind = 'vip' and status in ('pending', 'processing', 'paid')) then perform api.raise_business_error('PAYMENT_ALREADY_PENDING', '已有待处理月卡订单'); end if;
     insert into payments.orders (user_id, operation_id, kind, stars_amount, invoice_payload, expires_at)
-    values (v_user_id, p_operation_id, 'vip', payments.vip_stars_price(), 'pokepets:' || extensions.gen_random_uuid(), now() + interval '15 minutes') returning * into v_order;
+    values (v_user_id, p_operation_id, 'vip', payments.vip_stars_price(), 'evomypet:' || extensions.gen_random_uuid(), now() + interval '15 minutes') returning * into v_order;
     v_result := payments.order_json(v_order);
     return operations.pending_command(p_operation_id, v_result);
   exception when others then
@@ -10656,7 +10656,7 @@ begin
   if v_replay is not null then return v_replay; end if;
   v_user_id := v_operation.user_id;
   begin
-    perform pg_advisory_xact_lock(hashtextextended('pokepets:payment:' || v_user_id::text || ':kcoin_topup', 0));
+    perform pg_advisory_xact_lock(hashtextextended('evomypet:payment:' || v_user_id::text || ':kcoin_topup', 0));
     select * into v_order from payments.orders
     where id = p_order_id and user_id = v_user_id and kind = 'kcoin_topup'
     for update;
@@ -10695,7 +10695,7 @@ begin
   if v_replay is not null then return v_replay; end if;
   v_user_id := v_operation.user_id;
   begin
-    perform pg_advisory_xact_lock(hashtextextended('pokepets:payment:' || v_user_id::text || ':vip', 0));
+    perform pg_advisory_xact_lock(hashtextextended('evomypet:payment:' || v_user_id::text || ':vip', 0));
     select * into v_order from payments.orders
     where id = p_order_id and user_id = v_user_id and kind = 'vip'
     for update;
@@ -10734,7 +10734,7 @@ begin
   if v_replay is not null then return v_replay; end if;
   v_user_id := v_operation.user_id;
   begin
-    perform pg_advisory_xact_lock(hashtextextended('pokepets:payment:' || v_user_id::text || ':kcoin_topup', 0));
+    perform pg_advisory_xact_lock(hashtextextended('evomypet:payment:' || v_user_id::text || ':kcoin_topup', 0));
     select * into v_order from payments.orders
     where id = p_order_id and user_id = v_user_id and kind = 'kcoin_topup'
     for update;
@@ -11798,7 +11798,7 @@ begin
   begin
     select * into v_wallet from onchain.wallets where user_id = v_user_id and status = 'verified' for share;
     if v_wallet.id is null then perform api.raise_business_error('WALLET_NOT_VERIFIED', '钱包尚未验证'); end if;
-    perform pg_advisory_xact_lock(hashtextextended('pokepets:mint:' || v_user_id::text || ':' || p_template_id, 0));
+    perform pg_advisory_xact_lock(hashtextextended('evomypet:mint:' || v_user_id::text || ':' || p_template_id, 0));
     if exists (select 1 from onchain.mints where user_id = v_user_id and template_id = p_template_id and status in ('reserved', 'submitted', 'unknown')) then perform api.raise_business_error('MINT_ALREADY_ACTIVE', '该藏品已有进行中的 Mint'); end if;
     if inventory.available_quantity(v_user_id, p_template_id) < 1 then perform api.raise_business_error('INSUFFICIENT_INVENTORY', '没有可 Mint 的藏品'); end if;
     insert into onchain.mints (user_id, wallet_id, template_id, operation_id, permit_expires_at)
@@ -11923,7 +11923,7 @@ declare
 begin
   select * into v_referral from referral.relationships where invitee_id = p_user_id for update;
   if v_referral.invitee_id is null or v_referral.first_recharge_at is not null then return; end if;
-  perform pg_advisory_xact_lock(hashtextextended('pokepets:referral-reward:' || v_referral.inviter_id::text, 0));
+  perform pg_advisory_xact_lock(hashtextextended('evomypet:referral-reward:' || v_referral.inviter_id::text, 0));
   update referral.relationships set first_recharge_at = now() where invitee_id = p_user_id;
   select count(*) into v_daily from referral.relationships where inviter_id = v_referral.inviter_id and (first_recharge_at at time zone 'utc')::date = identity.utc_day() and reward_fgems = 500;
   select count(*) into v_lifetime from referral.relationships where inviter_id = v_referral.inviter_id and reward_fgems = 500;
@@ -12328,7 +12328,7 @@ declare
 begin
   if p_job_name not in ('reconcile-payments', 'reconcile-mints', 'cleanup-idempotency', 'monitor-invariants') then perform api.raise_business_error('JOB_NOT_FOUND', '后台任务不存在'); end if;
   select max(finished_at) into v_scan_from from operations.job_runs where job_name = p_job_name and status = 'succeeded';
-  if not pg_try_advisory_xact_lock(hashtextextended('pokepets:job:' || p_job_name, 0)) then
+  if not pg_try_advisory_xact_lock(hashtextextended('evomypet:job:' || p_job_name, 0)) then
     insert into operations.job_runs (job_name, status, details, scan_from, scan_to, finished_at)
     values (p_job_name, 'skipped', jsonb_build_object('reason', 'already_running'), v_scan_from, v_scan_to, now())
     returning id into v_run;

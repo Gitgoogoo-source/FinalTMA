@@ -1007,7 +1007,7 @@ def main() -> None:
     verify_battle_contract()
     verify_admin_fixture_contract()
 
-    with tempfile.TemporaryDirectory(prefix="pokepets-db-check-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="evomypet-db-check-") as temporary:
         output = Path(temporary)
         generated_product_data = output / product_data.name
         subprocess.run(

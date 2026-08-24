@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { errorDefinition, isErrorCode } from "@pokepets/api-contracts/common";
+import { errorDefinition, isErrorCode } from "@evomypet/api-contracts/common";
 
 import { ApiError } from "../../http/errors.ts";
 import { getDatabaseEnv } from "../env/index.ts";
@@ -19,7 +19,7 @@ function db(): SupabaseClient {
         autoRefreshToken: false,
         detectSessionInUrl: false,
       },
-      global: { headers: { "X-Client-Info": "pokepets-server/1.0" } },
+      global: { headers: { "X-Client-Info": "evomypet-server/1.0" } },
     });
   }
   return client;

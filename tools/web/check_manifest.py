@@ -12,14 +12,14 @@ MANIFEST = ROOT / "apps/web/public/tonconnect-manifest.json"
 BUILT_MANIFEST = ROOT / "apps/web/dist/tonconnect-manifest.json"
 EXPECTED = {
     "url": "https://final-tma-pi.vercel.app",
-    "name": "PokePets",
+    "name": "EvoMyPet",
     "iconUrl": "https://final-tma-pi.vercel.app/assets/ton/tonconnect-icon.png",
 }
 
 
 def assert_manifest(document: object, label: str) -> None:
     if document != EXPECTED:
-        raise SystemExit(f"{label} TON Connect manifest must use the single PokePets production identity")
+        raise SystemExit(f"{label} TON Connect manifest must use the single EvoMyPet production identity")
 
 
 def main() -> None:
@@ -32,7 +32,7 @@ def main() -> None:
         if not BUILT_MANIFEST.is_file() or BUILT_MANIFEST.read_bytes() != source_bytes:
             raise SystemExit("Built TON Connect manifest is missing or differs from the repository manifest")
         assert_manifest(json.loads(BUILT_MANIFEST.read_bytes()), "Built")
-    print(f"{args.mode} TON Connect manifest uses the single PokePets production identity")
+    print(f"{args.mode} TON Connect manifest uses the single EvoMyPet production identity")
 
 
 if __name__ == "__main__":

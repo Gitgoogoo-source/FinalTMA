@@ -1,4 +1,4 @@
-import type { RouteOutput } from "@pokepets/api-contracts/app-client";
+import type { RouteOutput } from "@evomypet/api-contracts/app-client";
 import {
   useEffect,
   useMemo,
@@ -39,7 +39,7 @@ type SoldInboxStore = {
 };
 
 const STORAGE_VERSION = 2;
-const STORAGE_PREFIX = "pokepets.market.sold-inbox.v2";
+const STORAGE_PREFIX = "evomypet.market.sold-inbox.v2";
 const MAX_SEQUENCE = 9_223_372_036_854_775_807n;
 
 export function useMarketSoldInbox(

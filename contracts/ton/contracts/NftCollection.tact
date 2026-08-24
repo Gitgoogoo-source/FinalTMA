@@ -2,7 +2,7 @@ import "@stdlib/content";
 import "./messages";
 import "./NftItem";
 
-contract PokePetsNftCollection {
+contract EvoMyPetNftCollection {
     owner: Address;
     mintPublicKey: Int as uint256;
     royaltyDestination: Address;
@@ -41,7 +41,7 @@ contract PokePetsNftCollection {
         self.usedNonces.set(msg.nonce, true);
         self.mintedItems.set(msg.nftId, true);
         self.nextItemIndex += 1;
-        let item = initOf PokePetsNftItem(myAddress(), msg.nftId);
+        let item = initOf EvoMyPetNftItem(myAddress(), msg.nftId);
         send(SendParameters {
             to: contractAddress(item),
             value: 0,
@@ -68,7 +68,7 @@ contract PokePetsNftCollection {
     }
 
     get fun get_nft_address_by_index(index: Int): Address {
-        return contractAddress(initOf PokePetsNftItem(myAddress(), index));
+        return contractAddress(initOf EvoMyPetNftItem(myAddress(), index));
     }
 
     get fun get_nft_content(_index: Int, individualContent: Cell): Cell {

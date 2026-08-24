@@ -1,6 +1,6 @@
 import { Address } from "@ton/core";
 import { TonClient } from "@ton/ton";
-import { englishGameContentById } from "@pokepets/api-contracts/localization";
+import { englishGameContentById } from "@evomypet/api-contracts/localization";
 
 import { rpc } from "../../platform/db/index.ts";
 import { getTonEnv } from "../../platform/env/index.ts";
@@ -67,7 +67,7 @@ export async function reconcileSubmittedMints(): Promise<{
         englishGameContentById(candidate.template_id) ?? candidate.name;
       const metadata = {
         name: englishName,
-        description: `${englishName} · PokePets Collectible`,
+        description: `${englishName} · EvoMyPet Collectible`,
         image: candidate.image_detail_url,
         attributes: [
           { trait_type: "Template", value: candidate.template_id },

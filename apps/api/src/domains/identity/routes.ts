@@ -1,10 +1,10 @@
 import { rpc } from "../../platform/db/index.ts";
 import { getEnv } from "../../platform/env/index.ts";
-import { errorDefinition } from "@pokepets/api-contracts/common";
+import { errorDefinition } from "@evomypet/api-contracts/common";
 import {
   parseRouteOutput,
   type RouteOutput,
-} from "@pokepets/api-contracts/app";
+} from "@evomypet/api-contracts/app";
 import {
   hashToken,
   identityFingerprint,

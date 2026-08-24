@@ -1,6 +1,6 @@
-# PokePets Telegram Mini App
+# EvoMyPet Telegram Mini App
 
-PokePets 是盲盒类 Telegram Mini App。产品唯一事实来源是 [功能说明文档](docs/product/功能说明文档.md)，技术边界从 [系统总览](docs/architecture/README.md) 开始，发布与验收从 [发布手册](docs/operations/release.md) 开始。
+EvoMyPet 是盲盒类 Telegram Mini App。产品唯一事实来源是 [功能说明文档](docs/product/功能说明文档.md)，技术边界从 [系统总览](docs/architecture/README.md) 开始，发布与验收从 [发布手册](docs/operations/release.md) 开始。
 
 ## 项目结构
 
@@ -32,6 +32,6 @@ pnpm assets:check:catalog
 pnpm assets:check:development
 ```
 
-`pnpm build` 不编译 TON 合约，并依据 `APP_ENV` 在 Web 构建后执行对应资产门禁；真实开发与未来生产使用同一组 210 张正式母版生成的 420 张运行时藏品图。Telegram 分享图和 TON Connect 图标仍由全局 production 门禁独立检查，完整规则见[发布手册](docs/operations/release.md)。项目不包含本地功能测试；功能验收只在独立真实开发环境按[验收清单](docs/operations/acceptance.md)执行。
+`pnpm build` 不编译 TON 合约，并依据 `APP_ENV` 在 Web 构建后执行对应资产门禁；既有生产 Storage 使用同一组 210 张正式母版生成的 420 张运行时藏品图。Telegram 分享图由全局 production 门禁检查，休眠的 TON Connect 图标不阻塞当前 MVP，完整规则见[发布手册](docs/operations/release.md)。项目不包含本地功能测试；最终功能验收只在 `@EvoMyPet_bot` 的真实 Telegram Mini App 按[验收清单](docs/operations/acceptance.md)执行。生产品牌与既有云环境切换由 [ADR-086](docs/architecture/adr/ADR-086-evomypet-production-cutover.md) 固定。
 
 身份启动与日常资产读取分别使用 `identity.initial` 和 `identity.summary`；前者只形成当前 session generation 的入口恢复快照，后者是普通刷新唯一使用的身份摘要。完整边界见 [ADR-049](docs/architecture/adr/ADR-049-identity-initial-state-and-summary-read-model.md)。

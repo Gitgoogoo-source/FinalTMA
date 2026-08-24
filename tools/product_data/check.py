@@ -41,7 +41,7 @@ def main() -> None:
     )
     source_checksum = hashlib.sha256(product_data_source.encode()).hexdigest()
     migration_source = product_data_migration()
-    with tempfile.TemporaryDirectory(prefix="pokepets-product-data-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="evomypet-product-data-") as temporary:
         directory = Path(temporary)
         migration = directory / migration_source.name
         manifest = directory / "catalog-v1.json"

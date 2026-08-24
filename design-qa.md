@@ -147,7 +147,7 @@ final result: passed
 - 三张素材均使用与现有主图一致的奶油白、香槟金、琥珀橙和少量蜜桃色，没有引入紫色主调。
 - 权益文字、手续费返还说明、真实价格、购买／续费／确认中状态及按钮交互保持原实现；未修改 API、后端、数据库或支付代码。
 - 线上三个新资源均返回 HTTP `200`；关闭并重新打开 Telegram Mini App 后，真实 iPhone 页面已加载当前部署素材。
-- `pnpm exec prettier --check`、`pnpm --filter @pokepets/web typecheck`、`pnpm --filter @pokepets/web build` 与 `pnpm assets:check:development` 均通过。
+- `pnpm exec prettier --check`、`pnpm --filter @evomypet/web typecheck`、`pnpm --filter @evomypet/web build` 与 `pnpm assets:check:development` 均通过。
 
 ## Findings
 
@@ -186,7 +186,7 @@ final result: passed
 - 部署已确认对应 Git commit `e29a40ba89bd45cca17fe532637d0d6bd41a921c` 且状态为 `READY`。
 - 生产资源返回 HTTP `200`。
 - 已在部署提交中核对组件：主标题唯一实现为 `<strong>VIP 月卡</strong>`；“付款确认中”“已生效”“已过期”只存在于副标题分支。
-- `pnpm --filter @pokepets/web typecheck`、`pnpm --filter @pokepets/web build`、`pnpm assets:check:development` 与针对性 Prettier 检查通过。
+- `pnpm --filter @evomypet/web typecheck`、`pnpm --filter @evomypet/web build`、`pnpm assets:check:development` 与针对性 Prettier 检查通过。
 - 该提交只包含 Web 主视觉资源、购买页样式与 `VipBanner.tsx`，没有修改 API、后端、数据库或支付代码。
 
 ## Findings
@@ -258,7 +258,7 @@ final result: blocked
 - [x] 首次进入默认选中 100 K-coin，点击其他卡片即时切换前端状态。
 - [x] 删除平台费标签和具体金额，只保留双方奖池与胜者到账。
 - [x] 使用一个统一选择队伍按钮，并保证其在固定底部导航上方可滚动到达。
-- [x] `pnpm exec prettier --check apps/web/src/domains/battle/ui/battle.css`、`pnpm --filter @pokepets/web build` 与 `pnpm assets:check:development` 通过。
+- [x] `pnpm exec prettier --check apps/web/src/domains/battle/ui/battle.css`、`pnpm --filter @evomypet/web build` 与 `pnpm assets:check:development` 通过。
 
 ## Follow-up Polish
 
@@ -324,8 +324,8 @@ final result: passed
 
 - [x] 只修改 Web 前端主视觉资源、VIP 组件资源引用和购买页样式。
 - [x] 未修改 `apps/api`、API contract、数据库、支付或 VIP 后端逻辑。
-- [x] `pnpm --filter @pokepets/web typecheck` 通过。
-- [x] `pnpm --filter @pokepets/web build` 通过。
+- [x] `pnpm --filter @evomypet/web typecheck` 通过。
+- [x] `pnpm --filter @evomypet/web build` 通过。
 - [x] `pnpm assets:check:development` 通过。
 - [x] Vercel Production 已确认部署 Git commit `d4928f82d43cd3b69bf287705cd05c821c57033e` 且别名已指向 READY 部署。
 - [x] Telegram iOS 真机验证购买页渲染、VIP 详情打开和关闭；没有执行真实付款。
@@ -416,7 +416,7 @@ final result: passed
 - 源图已实际打开：三只原创宠物分别为琥珀叶饰白狐、少量青绿点缀的小龙与花饰白兔；画面以奶油白、琥珀橙和金色为主，无紫色主调。
 - 组件仍将主标题硬编码为 `<strong>VIP 月卡</strong>`；付款、有效期及过期状态仍只出现在副标题和原有按钮逻辑中。
 - 卡片继续保持 `245px` 高度、左侧信息区与短购买按钮布局；仅将卡片遮罩、文字、权益块和图标颜色切换为暖色令牌。
-- `pnpm --filter @pokepets/web typecheck`、`pnpm --filter @pokepets/web build`、`pnpm assets:check:development` 和针对性 Prettier 检查通过。
+- `pnpm --filter @evomypet/web typecheck`、`pnpm --filter @evomypet/web build`、`pnpm assets:check:development` 和针对性 Prettier 检查通过。
 - 本次提交只修改 Web 主视觉资源、资源引用和购买页 CSS；没有修改 API、后端、数据库或支付代码。
 
 ## Findings
@@ -452,7 +452,7 @@ final result: blocked
 - 两张奖励卡分别使用蛋图标的“每日免费 / 稀有盲盒”和宝石图标的“每日 / 100 Gems”；交易手续费返还单独作为次级说明，不被表述为每日奖励。
 - 购买入口保留原来的禁用、重新加载与打开 VIP 详情交互；按钮主文案随真实状态显示购买、确认中、续费或重新加载，副文案显示真实价格、剩余天数或加载错误。
 - 未修改 API、后端、支付、数据库或主视觉资源。
-- `pnpm exec prettier --check apps/web/src/domains/vip/ui/VipBanner.tsx apps/web/src/domains/market/ui/market-density.css`、`pnpm --filter @pokepets/web typecheck`、`pnpm --filter @pokepets/web build` 与 `pnpm assets:check:development` 均通过。
+- `pnpm exec prettier --check apps/web/src/domains/vip/ui/VipBanner.tsx apps/web/src/domains/market/ui/market-density.css`、`pnpm --filter @evomypet/web typecheck`、`pnpm --filter @evomypet/web build` 与 `pnpm assets:check:development` 均通过。
 
 ## 对照状态
 
@@ -500,7 +500,7 @@ final result: blocked
 - 手续费返还维持次级说明，不伪装为每日奖励。
 - 购买按钮宽度改为内容列的 `90%`，保留“开 10 次”同款暖橙双行层级以及原有真实价格、续费、确认中和重新加载逻辑。
 - 本次仅修改 `VipBanner.tsx` 与购买页 CSS；未修改主图、API、后端、支付或数据库。
-- `pnpm exec prettier --check apps/web/src/domains/vip/ui/VipBanner.tsx apps/web/src/domains/market/ui/market-density.css`、`pnpm --filter @pokepets/web typecheck`、`pnpm --filter @pokepets/web build` 与 `pnpm assets:check:development` 均通过。
+- `pnpm exec prettier --check apps/web/src/domains/vip/ui/VipBanner.tsx apps/web/src/domains/market/ui/market-density.css`、`pnpm --filter @evomypet/web typecheck`、`pnpm --filter @evomypet/web build` 与 `pnpm assets:check:development` 均通过。
 
 ## 对照状态
 
@@ -513,7 +513,7 @@ final result: blocked
   - 位置：交易 → 购买 → VIP 月卡横幅。
   - 证据：源视觉、修正前真机截图、前端改动和生产构建均已检查；自动部署已由 GitHub 推送触发，但修正后截图未取得。
   - 影响：无法确认新的主图裁切、奖励主体、标题间距和购买按钮是否在真实 iPhone 视口达到设计卡比例。
-  - 修复：用户回到 PokePets 的交易 → 购买页并刷新后，捕获同一未开通状态的全页与横幅聚焦截图，再与设计卡同屏比较。
+  - 修复：用户回到 EvoMyPet 的交易 → 购买页并刷新后，捕获同一未开通状态的全页与横幅聚焦截图，再与设计卡同屏比较。
 
 ## 比较历史
 
@@ -586,7 +586,7 @@ final result: blocked
 - [x] 三档盲盒替换为圆润、宽底、透明背景的 WebP 素材，并保持原有档次映射。
 - [x] 删除月卡领取入口皇冠，只保留 Gems 和免费稀有盲盒两张磨砂领取卡。
 - [x] “可能获得”收敛为星标标题、查看全部入口和整齐候选物网格。
-- [x] 生产构建通过：`pnpm --filter @pokepets/web typecheck`、Prettier、`pnpm --filter @pokepets/web build`；资产锁定检查通过。
+- [x] 生产构建通过：`pnpm --filter @evomypet/web typecheck`、Prettier、`pnpm --filter @evomypet/web build`；资产锁定检查通过。
 
 ## Follow-up Polish
 
@@ -676,7 +676,7 @@ final result: blocked
 ## 验证证据
 
 - `pnpm exec prettier --check apps/web/src/domains/vip/ui/VipBanner.tsx apps/web/src/domains/market/ui/market-density.css` 通过。
-- `pnpm --filter @pokepets/web build` 通过。
+- `pnpm --filter @evomypet/web build` 通过。
 - `pnpm assets:check:development` 通过：425 个开发发布资产全部路径有效、格式有效、哈希锁定且已进入构建。
 - `APP_ENV=development pnpm build` 通过：API contracts、API、Web、API 类型、资产和构建 TON Connect manifest 能连续产出。
 - 提交 `37d091c` 已推送到 `origin/main` 并触发自动部署；线上两张 PNG 的 SHA-256 与本地成品完全一致。
@@ -714,7 +714,7 @@ final result: passed
 
 ## 验证证据
 
-- `pnpm --filter @pokepets/web build` 通过。
+- `pnpm --filter @evomypet/web build` 通过。
 - Web 构建刷新发布目录后，`pnpm assets:check:development` 通过：425 个开发发布资产全部路径有效、格式有效、哈希锁定且已进入构建。
 - 未执行本地功能测试，未触发开盒、领取、支付或资产变更。
 

@@ -7,7 +7,7 @@ import {
 import {
   type BattleRoomSnapshotDto,
   type RouteId,
-} from "@pokepets/api-contracts/app-client";
+} from "@evomypet/api-contracts/app-client";
 
 import {
   cancelApiQueryOwner,

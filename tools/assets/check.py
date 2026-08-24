@@ -152,7 +152,7 @@ def placeholder_fingerprints() -> dict[str, str]:
 
 def assert_brand_manifest(source_hashes: dict[str, str]) -> None:
     document = json.loads(BRAND_MANIFEST.read_text(encoding="utf-8"))
-    if document.get("schema_version") != 1 or document.get("brand") != "PokePets":
+    if document.get("schema_version") != 1 or document.get("brand") != "EvoMyPet":
         raise SystemExit("Formal brand asset provenance identity is invalid")
     if document.get("palette") != {
         "source": "apps/web/src/shared/styles/global.css",
@@ -169,10 +169,11 @@ def assert_brand_manifest(source_hashes: dict[str, str]) -> None:
         not isinstance(generation, dict)
         or generation.get("mode") != "built-in imagegen"
         or generation.get("generated_on") != "2026-07-30"
+        or generation.get("share_edited_on") != "2026-08-24"
         or generation.get("third_party_inputs") != []
         or not isinstance(generation.get("prompts"), dict)
         or set(generation["prompts"]) != {"icon", "share"}
-        or rights != {"usage": "PokePets project-owned", "third_party_licenses": [], "license_source": None}
+        or rights != {"usage": "EvoMyPet project-owned", "third_party_licenses": [], "license_source": None}
         or not isinstance(assets, dict)
         or set(assets) != set(BRAND_ASSETS)
     ):

@@ -43,7 +43,7 @@ type AppNavigate = (
 
 const NavigationContext = createContext(false);
 const subscribers = new Set<() => void>();
-const NAVIGATION_HISTORY_KEY = "__pokepets_navigation_v1__" as const;
+const NAVIGATION_HISTORY_KEY = "__evomypet_navigation_v1__" as const;
 const navigationSessionId = window.crypto.randomUUID();
 let popstateListening = false;
 let cachedHref = "";

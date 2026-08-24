@@ -12,7 +12,7 @@ declare
 begin
   select * into v_referral from referral.relationships where invitee_id = p_user_id for update;
   if v_referral.invitee_id is null or v_referral.first_recharge_at is not null then return; end if;
-  perform pg_advisory_xact_lock(hashtextextended('pokepets:referral-reward:' || v_referral.inviter_id::text, 0));
+  perform pg_advisory_xact_lock(hashtextextended('evomypet:referral-reward:' || v_referral.inviter_id::text, 0));
   update referral.relationships set first_recharge_at = now() where invitee_id = p_user_id;
   select count(*) into v_daily from referral.relationships where inviter_id = v_referral.inviter_id and (first_recharge_at at time zone 'utc')::date = identity.utc_day() and reward_fgems = 500;
   select count(*) into v_lifetime from referral.relationships where inviter_id = v_referral.inviter_id and reward_fgems = 500;

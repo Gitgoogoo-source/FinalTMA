@@ -4,7 +4,7 @@ import type {
   BattleActionEventDto,
   BattleRoomSnapshotDto,
   BattleSelfTeamDto,
-} from "@pokepets/api-contracts/app-client";
+} from "@evomypet/api-contracts/app-client";
 
 import { Button } from "../../../shared/ui/Button.tsx";
 import { CatalogImage } from "../../../shared/ui/CatalogImage.tsx";

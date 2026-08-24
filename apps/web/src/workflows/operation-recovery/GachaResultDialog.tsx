@@ -8,7 +8,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
-import type { RouteOutput } from "@pokepets/api-contracts/app-client";
+import type { RouteOutput } from "@evomypet/api-contracts/app-client";
 
 import { selectionHaptic } from "../../platform/telegram/index.ts";
 import { Button } from "../../shared/ui/Button.tsx";

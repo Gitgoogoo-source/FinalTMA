@@ -4,7 +4,7 @@ import type {
   ErrorCode,
   Gateway,
   RouteDefinition,
-} from "@pokepets/api-contracts/common";
+} from "@evomypet/api-contracts/common";
 
 import { writeLog } from "../platform/logging/index.ts";
 import {
