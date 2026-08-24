@@ -20,7 +20,7 @@ const labels: Partial<Record<RecoverableRouteId, string>> = localized({
   "vip.claim_fgems": "正在领取 VIP F-gems",
   "vip.claim_free_box": "正在领取 VIP 盲盒",
   "vip.cancel_order": "正在取消未付款月卡订单",
-  "vip.create_order": "正在创建 VIP Stars 订单",
+  "vip.create_order": "正在创建 VIP 付款订单",
   "wheel.spin": "正在转动幸运转盘",
 });
 

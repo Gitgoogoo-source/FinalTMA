@@ -458,7 +458,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
                   {priceOptions.map((price) => (
                     <FilterOption
                       key={price}
-                      label={`${price} K-coin`}
+                      label={`${price} Stars`}
                       selected={priceFilter === price}
                       onClick={() => {
                         setPriceFilter(price);
@@ -907,7 +907,7 @@ function MarketListingCard({
         <p>
           {t("官方单价")}
           <strong>
-            {formatKCoin(item.unit_price)} <small>K-coin</small>
+            {formatKCoin(item.unit_price)} <small>Stars</small>
           </strong>
         </p>
       </div>
@@ -971,7 +971,7 @@ function MarketSoldCard({
         <p>
           {t("成交单价")}
           <strong>
-            {formatKCoin(event.unit_price)} <small>K-coin</small>
+            {formatKCoin(event.unit_price)} <small>Stars</small>
           </strong>
         </p>
       </div>
@@ -1143,11 +1143,11 @@ function MarketSellWorkbench({
         <div className="market-sell-settlement">
           <span>
             {t("预计基础到账")}
-            <strong>{net} K-coin</strong>
+            <strong>{net} Stars</strong>
           </span>
           <span>
             {t("月卡预计返还")}
-            <strong>{vipActive ? `${vipRebate} K-coin` : t("未开通")}</strong>
+            <strong>{vipActive ? `${vipRebate} Stars` : t("未开通")}</strong>
           </span>
           <small>{t("实际手续费和返还按后续每次真实成交明细计算")}</small>
         </div>
@@ -1359,7 +1359,7 @@ function MarketCard({
             </div>
             <div className="market-purchase-price">
               <span>{t("官方单价")}</span>
-              <strong>{price} K-coin</strong>
+              <strong>{price} Stars</strong>
             </div>
             <div className="market-purchase-quantity">
               <span>{t("购买数量")}</span>
@@ -1386,18 +1386,18 @@ function MarketCard({
             <div className="market-purchase-totals">
               <span>
                 {t("预计总价")}
-                <strong>{price * quantity} K-coin</strong>
+                <strong>{price * quantity} Stars</strong>
               </span>
               <span>
                 {t("当前余额")}
                 <strong>
-                  {balance === undefined ? t("正在加载") : `${balance} K-coin`}
+                  {balance === undefined ? t("正在加载") : `${balance} Stars`}
                 </strong>
               </span>
             </div>
             {balance !== undefined && balance < price * quantity && (
               <p className="market-purchase-warning">
-                {t("K-coin 余额不足，确认后将进入充值流程。")}
+                {t("Stars 余额不足，确认后将进入充值流程。")}
               </p>
             )}
             <Button

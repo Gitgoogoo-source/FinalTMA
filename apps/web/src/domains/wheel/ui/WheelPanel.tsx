@@ -85,7 +85,7 @@ const WHEEL_SLOTS: readonly WheelSlot[] = localized([
     kind: "kcoin",
     amount: 10,
     primary: "10",
-    secondary: "K-coin",
+    secondary: "Stars",
     Icon: Coins,
   },
   {
@@ -93,7 +93,7 @@ const WHEEL_SLOTS: readonly WheelSlot[] = localized([
     kind: "kcoin",
     amount: 20,
     primary: "20",
-    secondary: "K-coin",
+    secondary: "Stars",
     Icon: Coins,
   },
   {
@@ -101,7 +101,7 @@ const WHEEL_SLOTS: readonly WheelSlot[] = localized([
     kind: "kcoin",
     amount: 30,
     primary: "30",
-    secondary: "K-coin",
+    secondary: "Stars",
     Icon: Coins,
   },
   {
@@ -109,7 +109,7 @@ const WHEEL_SLOTS: readonly WheelSlot[] = localized([
     kind: "kcoin",
     amount: 50,
     primary: "50",
-    secondary: "K-coin",
+    secondary: "Stars",
     Icon: Coins,
   },
   {
@@ -117,7 +117,7 @@ const WHEEL_SLOTS: readonly WheelSlot[] = localized([
     kind: "kcoin",
     amount: 100,
     primary: "100",
-    secondary: "K-coin",
+    secondary: "Stars",
     Icon: Coins,
   },
   {
@@ -375,12 +375,11 @@ function WheelPanelRuntime({
           <div className="wheel-price-line" aria-hidden="true">
             <Coins />
             <span>
-              {t("单次")}{" "}
-              <strong>{query.data?.single_cost ?? 20} K-coin</strong>
+              {t("单次")} <strong>{query.data?.single_cost ?? 20} Stars</strong>
             </span>
             <i />
             <span>
-              {t("十次")} <strong>{query.data?.ten_cost ?? 180} K-coin</strong>
+              {t("十次")} <strong>{query.data?.ten_cost ?? 180} Stars</strong>
             </span>
           </div>
 
@@ -395,7 +394,7 @@ function WheelPanelRuntime({
                 ? t("转动中...")
                 : remaining < 1
                   ? t("今日次数已用完")
-                  : tp("转动 1 次 · {{0}} K-coin", [
+                  : tp("转动 1 次 · {{0}} Stars", [
                       query.data?.single_cost ?? 20,
                     ])}
             </Button>
@@ -410,7 +409,7 @@ function WheelPanelRuntime({
                 ? t("转动中...")
                 : remaining < 10
                   ? t("剩余次数不足")
-                  : tp("转动 10 次 · {{0}} K-coin", [
+                  : tp("转动 10 次 · {{0}} Stars", [
                       query.data?.ten_cost ?? 180,
                     ])}
             </Button>
@@ -436,19 +435,19 @@ function WheelPanelRuntime({
                 100 Fgems <strong>1.5%</strong>
               </span>
               <span>
-                10 K-coin <strong>21%</strong>
+                10 Stars <strong>21%</strong>
               </span>
               <span>
-                20 K-coin <strong>12%</strong>
+                20 Stars <strong>12%</strong>
               </span>
               <span>
-                30 K-coin <strong>7%</strong>
+                30 Stars <strong>7%</strong>
               </span>
               <span>
-                50 K-coin <strong>4%</strong>
+                50 Stars <strong>4%</strong>
               </span>
               <span>
-                100 K-coin <strong>2%</strong>
+                100 Stars <strong>2%</strong>
               </span>
               <span>
                 {t("免费普通资格")} <strong>4.3%</strong>

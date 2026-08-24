@@ -81,7 +81,7 @@ export function TopAssetBar({
           type="button"
           className="asset-pill kcoin"
           data-kcoin-target
-          aria-label={`K-coin: ${kcoin?.available ?? tr("Loading", "加载中")}. ${tr("Open top-up", "打开充值")}`}
+          aria-label={`Stars: ${kcoin?.available ?? tr("Loading", "加载中")}. ${tr("Open top-up", "打开充值")}`}
           onPointerDown={() => prepareGlobalDialog("topup")}
           onFocus={() => prepareGlobalDialog("topup")}
           onClick={() => openDialog("topup")}

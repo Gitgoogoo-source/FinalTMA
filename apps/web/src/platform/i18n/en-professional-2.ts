@@ -8,8 +8,8 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
   "5 / 10 阶梯资格": "5 / 10 Spin Milestones",
   "7 日签到": "7-Day Check-In",
   "Battle 单战场": "Battle Arena",
-  "K-coin 余额不足": "Not Enough K-coin",
-  "K-coin 已到账": "K-coin Added",
+  "Stars 余额不足": "Not Enough Stars",
+  "Stars 已到账": "Stars Added",
   "Mint 上链": "Mint NFT",
   "TON 主钱包": "Primary TON Wallet",
   "Telegram 登录凭证时间无效，请重新进入应用":
@@ -36,7 +36,7 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
   "{{0}} 发起挑战": "Challenge from {{0}}",
   "{{0}} 号位": "Slot {{0}}",
   "{{0}} 已售出 {{1}} 个，点击播放金币特效并隐藏这条成交提醒":
-    "{{0}} sold ×{{1}}. Tap to collect your K-coin and dismiss.",
+    "{{0}} sold ×{{1}}. Tap to collect your Stars and dismiss.",
   "{{0}} 枚稀有度星印": "{{0}} Rarity Stars",
   "{{0}} 次": "{{0}}",
   "{{0}} 次 · 成功 {{1}} · 失败 {{2}}":
@@ -59,8 +59,8 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
   "{{0}}进化操作": "Evolve {{0}}",
   "{{0}}队伍": "{{0}} Team",
   "{{0}}，增加 {{1}}": "{{0}} · Increase by {{1}}",
-  "{{0}}，稀有度{{1}}，奖池 {{2}} K-coin，门票 {{3}} K-coin":
-    "{{0}} · {{1}} · Prize Pool: {{2}} K-coin · Entry: {{3}} K-coin",
+  "{{0}}，稀有度{{1}}，奖池 {{2}} Stars，门票 {{3}} Stars":
+    "{{0}} · {{1}} · Prize Pool: {{2}} Stars · Entry: {{3}} Stars",
   "{{0}}，第 {{1}} 阶，{{2}}，{{3}}": "{{0}} · Stage {{1}} · {{2}} · {{3}}",
   "· 第 {{0}} 阶": "· Stage {{0}}",
   七日签到奖励: "7-Day Check-In Rewards",
@@ -77,8 +77,8 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
     "Transaction submitted. Waiting for confirmation…",
   交易市场页签: "Marketplace Tabs",
   交易手续费返还: "Marketplace Fee Rebate",
-  "仅匹配 {{0}} K-coin 档位；找到对手后自动进入开战倒计时。":
-    "Match with players in the {{0}} K-coin tier. Battle countdown begins as soon as an opponent joins.",
+  "仅匹配 {{0}} Stars 档位；找到对手后自动进入开战倒计时。":
+    "Match with players in the {{0}} Stars tier. Battle countdown begins as soon as an opponent joins.",
   今日上架次数已用完: "No Listings Remaining Today",
   今日剩余: "Remaining Today",
   今日已使用: "Used Today",
@@ -99,8 +99,8 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
     "Discovered, but none are currently owned.",
   "你的 15 秒行动窗口已经开放": "Your 15-second turn has begun.",
   "使用 3 个{{0}}进化为{{1}}": "Evolve 3 {{0}} into {{1}}",
-  "使用 {{0}} Stars 续费": "Renew for {{0}} Stars",
-  "使用 {{0}} Stars 购买": "Buy for {{0}} Stars",
+  "使用 {{0}} Telegram Stars 续费": "Renew for {{0}} Telegram Stars",
+  "使用 {{0}} Telegram Stars 购买": "Buy for {{0}} Telegram Stars",
   保底进度加载中: "Loading Pity Progress…",
   倒计时已锁定: "Battle Countdown Locked",
   "倒计时开始后，离开不会取消战斗；退款和藏品占用将按战斗规则处理。本页不提供取消、分享或重新选队。":
@@ -143,7 +143,7 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
   "动作正在依次播放；操作区保持可用":
     "Battle moves are playing in order. Controls remain available.",
   "包含 11 个奖励格的幸运转盘": "Prize Wheel with 11 Reward Slots",
-  "十连 · 消耗 {{0}} K-coin": "10 Spins · {{0}} K-coin",
+  "十连 · 消耗 {{0}} Stars": "10 Spins · {{0}} Stars",
   半透明橙色礼盒: "Glowing Orange Gift Box",
   "单抽 · 本次免费": "Single Pull · Free",
   单次: "1 Spin",
@@ -167,10 +167,10 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
     "The available quantity changed. Review your selection.",
   可领取: "Ready to Claim",
   史诗级橙紫飞龙收藏徽章: "Epic Emberwing Dragon Badge",
-  "固定入场费 {{0}} K-coin。接受前不会公开创建者模板、属性、四维或技能。":
-    "Entry Fee: {{0}} K-coin. The challenger's team and stats stay hidden until you accept.",
-  "固定入场费 {{0}} K-coin，第 1 位自动首发。":
-    "Entry Fee: {{0}} K-coin. Slot 1 starts the battle.",
+  "固定入场费 {{0}} Stars。接受前不会公开创建者模板、属性、四维或技能。":
+    "Entry Fee: {{0}} Stars. The challenger's team and stats stay hidden until you accept.",
+  "固定入场费 {{0}} Stars，第 1 位自动首发。":
+    "Entry Fee: {{0}} Stars. Slot 1 starts the battle.",
   图鉴状态: "Codex Status",
   图鉴筛选: "Codex Filters",
   土系: "Earth",
@@ -252,7 +252,7 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
   未完成: "Incomplete",
   "未点亮，查看获取方式": "Undiscovered · View Sources",
   本次到账: "Amount Received",
-  "本次操作还差 {{0}} K-coin": "Need {{0}} More K-coin",
+  "本次操作还差 {{0}} Stars": "Need {{0}} More Stars",
   本次没有产生结算: "No Result",
   材料: "Materials",
   材料不足: "Not Enough Materials",
@@ -267,7 +267,7 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
   没有符合条件的可用藏品: "No eligible collectibles available.",
   没有符合条件的藏品: "No matching collectibles.",
   没有符合筛选的藏品: "No collectibles match these filters.",
-  "消耗 {{0}} K-coin": "Cost: {{0}} K-coin",
+  "消耗 {{0}} Stars": "Cost: {{0}} Stars",
   火焰: "Fire",
   灵契黑洞汇聚: "Astral Vortex Gathering",
   熔岩遗迹: "Lavafall Ruins",
@@ -347,8 +347,8 @@ export const professionalEnglishCopy2: Readonly<Record<string, string>> = {
   购买成功: "Purchase Complete",
   购买月卡后可领取: "Available with an Active VIP Pass",
   购买状态正在同步: "Updating Purchase…",
-  "转动 1 次 · {{0}} K-coin": "1 Spin · {{0}} K-coin",
-  "转动 10 次 · {{0}} K-coin": "10 Spins · {{0}} K-coin",
+  "转动 1 次 · {{0}} Stars": "1 Spin · {{0}} Stars",
+  "转动 10 次 · {{0}} Stars": "10 Spins · {{0}} Stars",
   "转动中...": "Spinning…",
   转盘暂时没有准备好: "The Prize Wheel isn't ready yet.",
   "转盘格子大小不代表概率。免费资格达到当日上限后，将按规则替换为 Fgems，并在结果中说明。":

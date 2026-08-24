@@ -71,8 +71,8 @@ export const englishCopy3: Readonly<Record<string, string>> = {
   预计总价: "Estimated total price",
   当前余额: "Current balance",
   正在读取: "Reading",
-  "K-coin 余额不足，确认后将进入充值流程。":
-    "The K-coin balance is insufficient. After confirmation, the recharge process will be entered.",
+  "Stars 余额不足，确认后将进入充值流程。":
+    "The Stars balance is insufficient. After confirmation, the recharge process will be entered.",
   确认购买: "Confirm purchase",
   进化仪式进行中: "Evolution ceremony in progress",
   "进化：": "evolution:",
@@ -149,7 +149,7 @@ export const englishCopy3: Readonly<Record<string, string>> = {
   "本次未到账 · /paysupport":
     "The account did not arrive this time · /paysupport",
   天: "sky",
-  "Stars · 30 天": "Stars · 30 days",
+  "Telegram Stars · 30 天": "Telegram Stars · 30 days",
   "查看 VIP MONTHLY PASS 详情": "View VIP MONTHLY PASS details",
   "VIP 月卡权益": "VIP monthly card benefits",
   每日免费盲盒: "Daily free blind box",
@@ -228,8 +228,8 @@ export const englishCopy3: Readonly<Record<string, string>> = {
   刷新结果: "refresh results",
   处理中: "Processing",
   使用: "use",
-  "Stars 续费": "Stars renewal",
-  "Stars 购买": "Stars buy",
+  "Telegram Stars 续费": "Telegram Stars renewal",
+  "Telegram Stars 购买": "Telegram Stars buy",
   "VIP 已生效": "VIP is in effect",
   "VIP 已过期": "VIP has expired",
   "VIP 未开通": "VIP is not activated",

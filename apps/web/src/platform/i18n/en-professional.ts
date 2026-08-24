@@ -22,13 +22,13 @@ export const professionalEnglishCopy: Readonly<Record<string, string>> = {
   正在确认邀请关系: "Confirming Referral",
   正在领取签到奖励: "Claiming Check-In Reward",
   正在领取任务奖励: "Claiming Task Reward",
-  "正在创建 Telegram Stars 订单": "Preparing Stars Payment",
+  "正在创建 Telegram Stars 订单": "Preparing Telegram Stars Payment",
   正在取消未付款订单: "Canceling Unpaid Order",
   正在确认充值失败结果: "Reviewing Top-Up Result",
   "正在领取 VIP F-gems": "Claiming VIP Fgems",
   "正在领取 VIP 盲盒": "Claiming VIP Mystery Box",
   正在取消未付款月卡订单: "Canceling Unpaid VIP Order",
-  "正在创建 VIP Stars 订单": "Preparing VIP Payment",
+  "正在创建 VIP 付款订单": "Preparing VIP Payment",
   正在转动幸运转盘: "Spinning Prize Wheel",
   今日签到可领取: "Daily Check-In Ready",
   任务奖励待领取: "Task Reward Ready",
@@ -145,13 +145,13 @@ export const professionalEnglishCopy: Readonly<Record<string, string>> = {
     "This collectible couldn't load. Reopen it from the Codex and try again.",
   筛选宠物藏品: "Filter Collectibles",
   "暂时无法创建支付订单，请立即重试": "The payment couldn't start. Try again.",
-  "本次操作还差 {{0}} K-coin，请返回重新选择或前往获取。":
-    "You need {{0}} more K-coin. Go back or top up to continue.",
-  "K-coin 充值": "K-coin Top-Up",
-  "原操作预计还差 {{0}} K-coin；最新差额与可用档位将重新确认。":
-    "You previously needed about {{0}} more K-coin. We'll recalculate the exact amount.",
-  "选择充值档位。Stars 金额和 K-coin 到账值以支付结果为准。":
-    "Choose a top-up. Telegram will confirm the Stars price and K-coin amount.",
+  "本次操作还差 {{0}} Stars，请返回重新选择或前往获取。":
+    "You need {{0}} more Stars. Go back or top up to continue.",
+  "Stars 充值": "Stars Top-Up",
+  "原操作预计还差 {{0}} Stars；最新差额与可用档位将重新确认。":
+    "You previously needed about {{0}} more Stars. We'll recalculate the exact amount.",
+  "选择充值档位。Telegram 将确认支付的 Telegram Stars 数量和到账的 Stars 数量。":
+    "Choose a top-up. Telegram will confirm the Telegram Stars price and the Stars you receive.",
   "网络异常，正在重新确认":
     "Connection interrupted. Checking your payment again.",
   正在确认充值结果: "Confirming Top-Up",
@@ -186,8 +186,8 @@ export const professionalEnglishCopy: Readonly<Record<string, string>> = {
   购买数量: "Purchase Quantity",
   减少购买数量: "Decrease purchase quantity",
   增加购买数量: "Increase purchase quantity",
-  "K-coin 余额不足，确认后将进入充值流程。":
-    "Not enough K-coin. Continue to top up.",
+  "Stars 余额不足，确认后将进入充值流程。":
+    "Not enough Stars. Continue to top up.",
   材料数量必须是3的正整数倍:
     "Material quantity must be a positive multiple of 3.",
   "已恢复原转盘选择，将按当前余额与今日次数重新确认，不会自动转动。":

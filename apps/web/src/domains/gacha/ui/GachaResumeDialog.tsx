@@ -69,10 +69,10 @@ export function GachaResumeDialog({
             <Coins aria-hidden="true" />
             <span>
               {drawCount === 10
-                ? tp("十连 · 消耗 {{0}} K-coin", [cost])
+                ? tp("十连 · 消耗 {{0}} Stars", [cost])
                 : freeSingle
                   ? t("单抽 · 本次免费")
-                  : tp("消耗 {{0}} K-coin", [cost])}
+                  : tp("消耗 {{0}} Stars", [cost])}
             </span>
           </p>
         </header>

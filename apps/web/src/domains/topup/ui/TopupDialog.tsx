@@ -306,9 +306,9 @@ export function TopupDialog({
           <span className="topup-shortage-mark" aria-hidden="true">
             <Coins />
           </span>
-          <h2 id="topup-shortage-title">{t("K-coin 余额不足")}</h2>
+          <h2 id="topup-shortage-title">{t("Stars 余额不足")}</h2>
           <p>
-            {tp("本次操作还差 {{0}} K-coin，请返回重新选择或前往获取。", [
+            {tp("本次操作还差 {{0}} Stars，请返回重新选择或前往获取。", [
               request.estimatedGap,
             ])}
           </p>
@@ -339,16 +339,17 @@ export function TopupDialog({
         <Minus className="topup-sheet-handle" aria-hidden="true" />
         <header className="topup-sheet-heading">
           <Sparkles aria-hidden="true" />
-          <h2 id="topup-dialog-title">{t("K-coin 充值")}</h2>
+          <h2 id="topup-dialog-title">{t("Stars 充值")}</h2>
           <Sparkles aria-hidden="true" />
         </header>
         <p className="topup-sheet-description">
           {request
-            ? tp(
-                "原操作预计还差 {{0}} K-coin；最新差额与可用档位将重新确认。",
-                [request.estimatedGap],
-              )
-            : t("选择充值档位。Stars 金额和 K-coin 到账值以支付结果为准。")}
+            ? tp("原操作预计还差 {{0}} Stars；最新差额与可用档位将重新确认。", [
+                request.estimatedGap,
+              ])
+            : t(
+                "选择充值档位。Telegram 将确认支付的 Telegram Stars 数量和到账的 Stars 数量。",
+              )}
         </p>
         {locked ? (
           <div className="payment-recovery">
@@ -359,8 +360,8 @@ export function TopupDialog({
           </div>
         ) : succeeded ? (
           <div className="payment-recovery">
-            <strong>{t("K-coin 已到账")}</strong>
-            <small>{order?.kcoin_amount} K-coin</small>
+            <strong>{t("Stars 已到账")}</strong>
+            <small>{order?.kcoin_amount} Stars</small>
           </div>
         ) : identityConflict ? (
           <div className="payment-recovery">
@@ -370,7 +371,7 @@ export function TopupDialog({
         ) : failed ? (
           <div className="payment-recovery">
             <strong>{t("充值失败")}</strong>
-            <small>{t("本次订单未增加 K-coin")}</small>
+            <small>{t("本次订单未增加 Stars")}</small>
           </div>
         ) : status.isLoading ? (
           <p>{t("正在加载充值选项")}</p>
@@ -386,7 +387,7 @@ export function TopupDialog({
                   setCreateError(null);
                 }}
               >
-                {request.estimatedGap} K-coin
+                {request.estimatedGap} Stars
               </button>
             )}
             {amounts.map((value) => (
@@ -424,7 +425,7 @@ export function TopupDialog({
           ) : order?.status === "pending" && order.invoice_url ? (
             <Button onClick={() => openInvoice(order)}>
               <ExternalLink />
-              {t("打开 Stars 支付")}
+              {t("打开 Telegram Stars 支付")}
             </Button>
           ) : (
             <Button
@@ -435,7 +436,7 @@ export function TopupDialog({
               onClick={() => void create()}
             >
               <ExternalLink />
-              {creating ? t("正在创建充值订单") : t("打开 Stars 支付")}
+              {creating ? t("正在创建充值订单") : t("打开 Telegram Stars 支付")}
             </Button>
           )}
         </div>

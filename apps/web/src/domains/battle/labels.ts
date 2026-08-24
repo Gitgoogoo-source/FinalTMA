@@ -70,7 +70,7 @@ export const battleResultLabels: Record<
 });
 
 export function tierTitle(tier: BattleEntryTier): string {
-  return `${tier.entry_fee} K-coin`;
+  return `${tier.entry_fee} Stars`;
 }
 
 export function formatBattleTime(seconds: number | null): string {

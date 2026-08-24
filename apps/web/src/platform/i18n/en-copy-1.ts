@@ -149,7 +149,7 @@ export const englishCopy1: Readonly<Record<string, string>> = {
   "正在领取 VIP F-gems": "Receiving VIP F-gems",
   "正在领取 VIP 盲盒": "Receiving VIP blind box",
   正在取消未付款月卡订单: "Canceling unpaid monthly card order",
-  "正在创建 VIP Stars 订单": "Creating VIP Stars order",
+  "正在创建 VIP 付款订单": "Creating VIP payment order",
   正在转动幸运转盘: "Spin the wheel of fortune",
   正在确认操作: "Confirming operation",
   "藏品状态已经变化，请重新选择":

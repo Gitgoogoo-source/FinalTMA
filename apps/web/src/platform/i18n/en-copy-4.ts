@@ -129,15 +129,15 @@ export const englishCopy4: Readonly<Record<string, string>> = {
   选择战场: "Choose your battlefield",
   "，稀有度": ", rarity",
   "，奖池": ", prize pool",
-  "K-coin，门票": "K-coin, ticket",
+  "Stars，门票": "Stars, ticket",
   奖池: "Prize pool",
   门票: "Tickets",
   "选择队伍 ·": "Choose a team ·",
   选择队伍: "Select a team",
   排列三宠队伍: "Arrange three pet teams",
   固定入场费: "Fixed admission fee",
-  "K-coin，第 1 位自动首发。": "K-coin, No. 1 automatic starter.",
-  "当前可用 K-coin": "Currently available K-coins",
+  "Stars，第 1 位自动首发。": "Stars, No. 1 automatic starter.",
+  "当前可用 Stars": "Currently available Stars",
   正在确认匹配: "Confirming match",
   正在确认原操作: "Confirming original operation",
   随机匹配: "random match",
@@ -151,8 +151,8 @@ export const englishCopy4: Readonly<Record<string, string>> = {
   正在匹配同档对手: "Matching with same level opponent",
   挑战卡已准备: "Challenge card is ready",
   仅匹配: "Match only",
-  "K-coin 档位；找到对手后自动进入开战倒计时。":
-    "K-coin gear; automatically enter the countdown to start the battle after finding the opponent.",
+  "Stars 档位；找到对手后自动进入开战倒计时。":
+    "Stars gear; automatically enter the countdown to start the battle after finding the opponent.",
   "挑战有效期内始终可被首位合格对手接受；在线状态只作展示。":
     "The challenge is always accepted by the first qualified opponent during the validity period; online status is for display only.",
   "120 秒匹配期": "120 seconds matching period",
@@ -210,8 +210,8 @@ export const englishCopy4: Readonly<Record<string, string>> = {
   返回首页: "Return to homepage",
   重新刷新: "Refresh",
   发起挑战: "Challenge",
-  "K-coin。接受前不会公开创建者模板、属性、四维或技能。":
-    "K-coin. Creator templates, attributes, dimensions, or skills will not be disclosed until accepted.",
+  "Stars。接受前不会公开创建者模板、属性、四维或技能。":
+    "Stars. Creator templates, attributes, dimensions, or skills will not be disclosed until accepted.",
   入场费: "Admission fee",
   创建者: "Creator",
   在线: "online",

@@ -60,7 +60,7 @@ export const englishCopy5: Readonly<Record<string, string>> = {
   "已定位：{{0}} {{1}}": "Targeted: {{0}} {{1}}",
   "已定位：{{0}}": "Targeted: {{0}}",
   "已成功购买 {{0}} 个{{1}}": "Successfully purchased {{0}} {{1}}",
-  "已锁定入场费 {{0}} K-coin": "Admission fee {{0}} K-coin locked",
+  "已锁定入场费 {{0}} Stars": "Admission fee {{0}} Stars locked",
   "开启{{0}}？": "Turn on {{0}}?",
   "当前可买 {{0}} 个": "Currently {{0}} available for purchase",
   "当前可用 {{0}}": "Currently available {{0}}",
@@ -69,8 +69,8 @@ export const englishCopy5: Readonly<Record<string, string>> = {
   "当前显示 {{0}} 条链": "Currently showing {{0}} chains",
   "总数量 {{0}} · 可用 {{1}}": "Total quantity {{0}} · Available {{1}}",
   "所属链条：{{0}}": "Chain to which it belongs: {{0}}",
-  "本次操作还差 {{0}} K-coin，请返回重新选择或前往获取。":
-    "This operation is still short of {{0}} K-coins, please go back and re-select or go to get it.",
+  "本次操作还差 {{0}} Stars，请返回重新选择或前往获取。":
+    "This operation is still short of {{0}} Stars, please go back and re-select or go to get it.",
   "材料藏品 {{0}}": "Material Collection {{0}}",
   "第 {{0}} 天": "Day {{0}}",
   "第 {{0}} 阶": "Level {{0}}",
@@ -85,7 +85,7 @@ export const englishCopy5: Readonly<Record<string, string>> = {
     "100 Fgems, manually collected every UTC+0 day, {{0}}",
   "Fgems 不足，本次至少需要 {{0}} Fgems":
     "Insufficient Fgems. At least {{0}} Fgems are required this time.",
-  "{{0}} Stars · 30 天": "{{0}} Stars · 30 days",
+  "{{0}} Telegram Stars · 30 天": "{{0}} Telegram Stars · 30 days",
   "{{0}} 份藏品": "{{0}} collections",
   "{{0}} 发起挑战": "{{0}} Challenge",
   "{{0}} 已售出 {{1}} 个，点击播放金币特效并隐藏这条成交提醒":
@@ -109,15 +109,15 @@ export const englishCopy5: Readonly<Record<string, string>> = {
   "{{0}}队伍": "{{0}}Team",
   "{{0}}，伤害 {{1}}": "{{0}}, damage {{1}}",
   "{{0}}，增加 {{1}}": "{{0}}, add {{1}}",
-  "{{0}}，稀有度{{1}}，奖池 {{2}} K-coin，门票 {{3}} K-coin":
-    "{{0}}, rarity {{1}}, prize pool {{2}} K-coin, ticket {{3}} K-coin",
+  "{{0}}，稀有度{{1}}，奖池 {{2}} Stars，门票 {{3}} Stars":
+    "{{0}}, rarity {{1}}, prize pool {{2}} Stars, ticket {{3}} Stars",
   "{{0}}，第 {{1}} 阶，{{2}}，{{3}}": "{{0}}, level {{1}}, {{2}}, {{3}}",
   "· 第 {{0}} 阶": "· Level {{0}}",
-  "仅匹配 {{0}} K-coin 档位；找到对手后自动进入开战倒计时。":
-    "Only matches the {{0}} K-coin level; automatically enters the countdown to the start of the battle after finding the opponent.",
+  "仅匹配 {{0}} Stars 档位；找到对手后自动进入开战倒计时。":
+    "Only matches the {{0}} Stars level; automatically enters the countdown to the start of the battle after finding the opponent.",
   "使用 3 个{{0}}进化为{{1}}": "Use 3 {{0}} to evolve into {{1}}",
-  "使用 {{0}} Stars 续费": "Renew with {{0}} Stars",
-  "使用 {{0}} Stars 购买": "Purchase using {{0}} Stars",
+  "使用 {{0}} Telegram Stars 续费": "Renew with {{0}} Telegram Stars",
+  "使用 {{0}} Telegram Stars 购买": "Purchase using {{0}} Telegram Stars",
   "免费 · 剩余 {{0}} 次": "Free · {{0}} times remaining",
   "免费普通盲盒资格 {{0}} 次":
     "Free ordinary blind box qualification {{0}} times",
@@ -129,13 +129,13 @@ export const englishCopy5: Readonly<Record<string, string>> = {
   "减少{{0}}": "Reduce {{0}}",
   "前往{{0}}": "Go to {{0}}",
   "剩余 {{0}} 天": "{{0}} days remaining",
-  "十连 · 消耗 {{0}} K-coin": "Ten consecutive rounds · Consume {{0}} K-coin",
-  "原操作预计还差 {{0}} K-coin；最新差额与可用档位将重新确认。":
-    "The original operation is expected to be short of {{0}} K-coin; the latest difference and available slots will be reconfirmed.",
-  "固定入场费 {{0}} K-coin。接受前不会公开创建者模板、属性、四维或技能。":
-    "Fixed admission fee {{0}} K-coin. Creator templates, attributes, dimensions, or skills will not be disclosed until accepted.",
-  "固定入场费 {{0}} K-coin，第 1 位自动首发。":
-    "Fixed admission fee {{0}} K-coin, 1st place automatically starts.",
+  "十连 · 消耗 {{0}} Stars": "Ten consecutive rounds · Consume {{0}} Stars",
+  "原操作预计还差 {{0}} Stars；最新差额与可用档位将重新确认。":
+    "The original operation is expected to be short of {{0}} Stars; the latest difference and available slots will be reconfirmed.",
+  "固定入场费 {{0}} Stars。接受前不会公开创建者模板、属性、四维或技能。":
+    "Fixed admission fee {{0}} Stars. Creator templates, attributes, dimensions, or skills will not be disclosed until accepted.",
+  "固定入场费 {{0}} Stars，第 1 位自动首发。":
+    "Fixed admission fee {{0}} Stars, 1st place automatically starts.",
   "增加{{0}}": "Add {{0}}",
   "已下架，已释放 {{0}} 个未成交藏品":
     "Delisted, {{0}} unsold collections released",
@@ -155,15 +155,15 @@ export const englishCopy5: Readonly<Record<string, string>> = {
   "有效期至 {{0}} · 剩余 {{1}} 个权益日":
     "Valid until {{0}} · {{1}} equity days remaining",
   "材料藏品 {{0}}：{{1}}": "Material Collection {{0}}: {{1}}",
-  "消耗 {{0}} K-coin": "Consume {{0}} K-coin",
+  "消耗 {{0}} Stars": "Consume {{0}} Stars",
   "确认接受 · {{0}}": "Confirm acceptance · {{0}}",
   "移除{{0}}": "Remove {{0}}",
   "第 {{0}} 天，{{1}} {{2}}，{{3}}": "Day {{0}}, {{1}} {{2}}, {{3}}",
   "第 {{0}} 次，{{1}}": "{{0}} time, {{1}}",
   "藏品选择第 {{0}} 页，共 {{1}} 页":
     "Collection selection page {{0}} of {{1}}",
-  "转动 1 次 · {{0}} K-coin": "Spin 1 time · {{0}} K-coin",
-  "转动 10 次 · {{0}} K-coin": "Spin 10 times · {{0}} K-coin",
+  "转动 1 次 · {{0}} Stars": "Spin 1 time · {{0}} Stars",
+  "转动 10 次 · {{0}} Stars": "Spin 10 times · {{0}} Stars",
   "还缺 {{0}} 个相同藏品，集齐 3 个后即可开始":
     "There are still {{0}} identical collections missing. You can start after collecting 3.",
   "还需 {{0}} 次，必得{{1}}": "It takes {{0}} more times to get {{1}}",

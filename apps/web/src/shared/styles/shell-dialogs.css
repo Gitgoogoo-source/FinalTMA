@@ -111,7 +111,7 @@
   min-height: 44px;
 }
 
-/* K-coin recharge sheet --------------------------------------------------- */
+/* Stars recharge sheet --------------------------------------------------- */
 .app-shell.topup-sheet-backdrop {
   place-items: end center;
   padding: max(var(--safe-top), 10px) 0 0;

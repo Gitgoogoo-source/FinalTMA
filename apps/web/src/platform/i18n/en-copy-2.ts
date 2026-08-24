@@ -201,30 +201,30 @@ export const englishCopy2: Readonly<Record<string, string>> = {
   "开 10 次": "Open 10 times",
   "暂时无法创建支付订单，请立即重试":
     "Unable to create payment order at the moment, please try again now",
-  "K-coin 余额不足": "Insufficient K-coin balance",
+  "Stars 余额不足": "Insufficient Stars balance",
   本次操作还差: "This operation is still bad",
-  "K-coin，请返回重新选择或前往获取。":
-    "K-coin, please go back and re-select or go to get it.",
+  "Stars，请返回重新选择或前往获取。":
+    "Stars, please go back and re-select or go to get it.",
   去获取: "to get",
-  "K-coin 充值": "K-coin recharge",
+  "Stars 充值": "Stars recharge",
   原操作预计还差: "The original operation is expected to be worse",
-  "K-coin；最新差额与可用档位将重新确认。":
-    "K-coin; the latest balance and available tiers will be reconfirmed.",
-  "选择充值档位。Stars 金额和 K-coin 到账值以支付结果为准。":
-    "Select the recharge level. The amount of Stars and the value of K-coin received are subject to the payment result.",
+  "Stars；最新差额与可用档位将重新确认。":
+    "Stars; the latest balance and available tiers will be reconfirmed.",
+  "选择充值档位。Telegram 将确认支付的 Telegram Stars 数量和到账的 Stars 数量。":
+    "Choose a top-up. Telegram will confirm the Telegram Stars price and the Stars you receive.",
   支付已提交: "Payment submitted",
   "网络异常，正在重新确认": "Network abnormality, re-confirming",
   正在确认充值结果: "Confirming recharge result",
-  "K-coin 已到账": "K-coin has arrived",
+  "Stars 已到账": "Stars received",
   支付身份校验异常: "Payment identity verification exception",
   "本次未到账，请前往支付助手发送 /paysupport":
     "The account did not arrive this time, please go to the payment assistant to send /paysupport",
   充值失败: "Recharge failed",
-  "本次订单未增加 K-coin": "No K-coin was added to this order",
+  "本次订单未增加 Stars": "This order did not add any Stars",
   正在读取充值档位: "Reading recharge level",
   立即重新查询: "Query again now",
   重新充值: "Recharge",
-  "打开 Stars 支付": "Open Stars payment",
+  "打开 Telegram Stars 支付": "Open Telegram Stars payment",
   正在创建充值订单: "Recharge order is being created",
   购买: "Buy",
   管理: "manage",

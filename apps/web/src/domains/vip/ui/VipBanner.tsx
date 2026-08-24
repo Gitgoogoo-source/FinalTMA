@@ -35,7 +35,7 @@ export function VipBanner({ open }: { open(): void }): ReactNode {
         ? t("本次未到账 · /paysupport")
         : vip.data?.active
           ? tp("剩余 {{0}} 天", [vip.data.remaining_days])
-          : tp("{{0}} Stars · 30 天", [vip.data?.stars_price ?? "—"]);
+          : tp("{{0}} Telegram Stars · 30 天", [vip.data?.stars_price ?? "—"]);
   return (
     <Card className="vip-banner vip-market-hero">
       <img

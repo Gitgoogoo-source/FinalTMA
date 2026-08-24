@@ -36,7 +36,7 @@ export const professionalEnglishCopy3: Readonly<Record<string, string>> = {
   "本次未到账 · /paysupport": "Top-Up Not Received · /paysupport",
   "本次未到账，请前往支付助手发送 /paysupport":
     "Top-up not received. Open payment support and send /paysupport.",
-  "本次订单未增加 K-coin": "This order did not add any K-coin.",
+  "本次订单未增加 Stars": "This order did not add any Stars.",
   槽位顺序决定首发与超时换入顺序:
     "Slot order determines your lead and automatic switch order.",
   "正在创建 VIP 月卡订单": "Preparing VIP Payment",

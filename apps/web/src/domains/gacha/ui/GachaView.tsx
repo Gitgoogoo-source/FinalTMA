@@ -574,7 +574,7 @@ export function GachaView(): ReactNode {
                         <small>
                           {freeSingle
                             ? tp("免费 · 剩余 {{0}} 次", [freeSingleCount])
-                            : `${selectedBox.single_price} K-coin`}
+                            : `${selectedBox.single_price} Stars`}
                         </small>
                       )}
                     </span>
@@ -602,7 +602,7 @@ export function GachaView(): ReactNode {
                     <span>
                       {rulesComplete ? t("开 10 次") : t("加载失败")}
                       {rulesComplete && (
-                        <small>{selectedBox.ten_price} K-coin</small>
+                        <small>{selectedBox.ten_price} Stars</small>
                       )}
                     </span>
                   </>

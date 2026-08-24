@@ -89,13 +89,13 @@ const wheelSpinOutputSchema = z
       if (net_kcoin_change !== kcoin_returned - cost_kcoin)
         context.addIssue({
           code: "custom",
-          message: "Net K-coin change must equal returned rewards minus cost",
+          message: "Net Stars change must equal returned rewards minus cost",
           path: ["net_kcoin_change"],
         });
       if (cost_kcoin !== (count === 10 ? 180 : 20))
         context.addIssue({
           code: "custom",
-          message: "K-coin cost must match spin count",
+          message: "Stars cost must match spin count",
           path: ["cost_kcoin"],
         });
       if (remaining !== WHEEL_DAILY_LIMIT - spin_count)

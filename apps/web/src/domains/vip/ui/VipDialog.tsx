@@ -68,7 +68,7 @@ export function VipDialog({ close }: { close(): void }): ReactNode {
             <div className="vip-detail-list">
               <span>
                 {t("价格")}
-                <strong>{data?.stars_price} Stars</strong>
+                <strong>{data?.stars_price} Telegram Stars</strong>
               </span>
               <span>
                 {t("UTC+0 有效期")}
@@ -125,7 +125,7 @@ export function VipDialog({ close }: { close(): void }): ReactNode {
                     ? t("月卡付款确认中")
                     : t("等待月卡付款确认")}
                 </strong>
-                <small>{activeOrder.stars_amount} Stars</small>
+                <small>{activeOrder.stars_amount} Telegram Stars</small>
                 <Button onClick={() => void query.refetch()}>
                   {t("刷新结果")}
                 </Button>
@@ -142,9 +142,9 @@ export function VipDialog({ close }: { close(): void }): ReactNode {
                   ? t("处理中")
                   : data?.active
                     ? data.can_renew
-                      ? tp("使用 {{0}} Stars 续费", [data.stars_price])
+                      ? tp("使用 {{0}} Telegram Stars 续费", [data.stars_price])
                       : t("已达续费上限")
-                    : tp("使用 {{0}} Stars 购买", [data?.stars_price])}
+                    : tp("使用 {{0}} Telegram Stars 购买", [data?.stars_price])}
               </Button>
             )}
           </>

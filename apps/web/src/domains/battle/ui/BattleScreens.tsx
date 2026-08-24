@@ -82,7 +82,7 @@ export function BattleHome({
             <Radio />
             <span>
               <strong>{battleStatusLabels[participation.status]}</strong>
-              {t("当前入场费")} {participation.entry_fee} K-coin
+              {t("当前入场费")} {participation.entry_fee} Stars
             </span>
           </div>
           <Button onClick={onRefresh}>
@@ -110,7 +110,7 @@ export function BattleHome({
                 data-entry-fee={tier.entry_fee}
                 disabled={selectionDisabled}
                 aria-label={tp(
-                  "{{0}}，稀有度{{1}}，奖池 {{2}} K-coin，门票 {{3}} K-coin",
+                  "{{0}}，稀有度{{1}}，奖池 {{2}} Stars，门票 {{3}} Stars",
                   [t(arena.name), arena.rarity, tier.pool, tier.entry_fee],
                 )}
                 aria-pressed={selected}
@@ -252,7 +252,7 @@ export function BattleTeamSelect({
       <BattleScreenHeader
         kicker="CREATE CHALLENGE"
         title={t("排列三宠队伍")}
-        description={tp("固定入场费 {{0}} K-coin，第 1 位自动首发。", [
+        description={tp("固定入场费 {{0}} Stars，第 1 位自动首发。", [
           tier.entry_fee,
         ])}
         back={onBack}
@@ -267,7 +267,7 @@ export function BattleTeamSelect({
       />
       <div className="battle-confirm-bar">
         <span>
-          {t("当前可用 K-coin")} <strong>{balance ?? "—"}</strong>
+          {t("当前可用 Stars")} <strong>{balance ?? "—"}</strong>
         </span>
         <div className="battle-confirm-actions">
           <Button
@@ -373,7 +373,7 @@ export function BattleWaiting({
         title={publicMatch ? t("正在匹配同档对手") : t("挑战卡已准备")}
         description={
           publicMatch
-            ? tp("仅匹配 {{0}} K-coin 档位；找到对手后自动进入开战倒计时。", [
+            ? tp("仅匹配 {{0}} Stars 档位；找到对手后自动进入开战倒计时。", [
                 entryFee,
               ])
             : t("挑战有效期内始终可被首位合格对手接受；在线状态只作展示。")
@@ -384,7 +384,7 @@ export function BattleWaiting({
           <Clock3 />
           <strong>{formatBattleTime(remainingSeconds)}</strong>
           <span>{publicMatch ? t("120 秒匹配期") : t("30 分钟等待期")}</span>
-          <small>{tp("已锁定入场费 {{0}} K-coin", [entryFee])}</small>
+          <small>{tp("已锁定入场费 {{0}} Stars", [entryFee])}</small>
         </div>
         <div className="battle-online-line">
           <i className={onlineState} aria-hidden="true" />
@@ -715,7 +715,7 @@ export function BattleAccept({
         kicker="INVITED BATTLE"
         title={tp("{{0}} 发起挑战", [invite.creator_display_name])}
         description={tp(
-          "固定入场费 {{0}} K-coin。接受前不会公开创建者模板、属性、四维或技能。",
+          "固定入场费 {{0}} Stars。接受前不会公开创建者模板、属性、四维或技能。",
           [invite.entry_fee],
         )}
         back={onHome}
@@ -788,7 +788,7 @@ export function BattleAccept({
           />
           <div className="battle-confirm-bar">
             <span>
-              {t("当前可用 K-coin")} <strong>{balance ?? "—"}</strong>
+              {t("当前可用 Stars")} <strong>{balance ?? "—"}</strong>
             </span>
             <Button
               disabled={disabled || loading || !complete}
@@ -828,22 +828,22 @@ export function BattleResult({
       <dl>
         <div>
           <dt>{t("本人入场费")}</dt>
-          <dd>{result.entry_fee} K-coin</dd>
+          <dd>{result.entry_fee} Stars</dd>
         </div>
         <div>
           <dt>{refund ? t("已退款") : t("本次到账")}</dt>
-          <dd>{result.payout} K-coin</dd>
+          <dd>{result.payout} Stars</dd>
         </div>
         <div>
           <dt>{t("净变化")}</dt>
           <dd>
             {result.net_change > 0 ? "+" : ""}
-            {result.net_change} K-coin
+            {result.net_change} Stars
           </dd>
         </div>
         <div>
           <dt>{t("平台手续费")}</dt>
-          <dd>{result.fee} K-coin</dd>
+          <dd>{result.fee} Stars</dd>
         </div>
       </dl>
       <small>{tp("结算原因：{{0}}", [result.reason])}</small>

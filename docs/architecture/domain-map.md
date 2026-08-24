@@ -8,7 +8,7 @@
 | 2 盲盒保底         | gacha                                  | gacha                                    | gacha                                    | 三档独立、仅付费推进、逐抽重置                                                                |
 | 3 远征             | expedition（当前隐藏）                 | expedition                               | expedition、inventory、economy           | 前端无入口，保留事务与存量数据边界                                                            |
 | 4 幸运转盘         | wheel、operation-recovery              | wheel                                    | wheel、economy、operations               | 1/10 次原子结算、当前运行期结果展示、未决原操作恢复                                           |
-| 5 K-coin 充值      | topup、payment-recovery                | topup、stars-payment workflow            | payments、economy                        | 订单本人付款、提交后锁定、身份冲突冻结交付、幂等到账                                          |
+| 5 Stars 充值       | topup、payment-recovery                | topup、stars-payment workflow            | payments、economy                        | 订单本人付款、提交后锁定、身份冲突冻结交付、幂等到账                                          |
 | 6 TON 钱包         | wallet（休眠）                         | wallet（休眠）                           | onchain、identity                        | 当前 Web 无入口、摘要请求或 Provider 初始化                                                   |
 | 7 Mint             | mint（休眠）                           | mint、jobs（休眠）                       | onchain、inventory、operations           | 当前 Web 无路由、恢复、任务或 Cron                                                            |
 | 8 市场             | market                                 | market                                   | market、inventory、economy、vip          | 成功上架 UTC 日/生命周期配额、事务供给读模型、FIFO 整笔购买、逐卖家结算、成交游标与设备收件箱 |

@@ -13,7 +13,7 @@ const rewardVisuals: Record<
   { image: string; name: string }
 > = localized({
   fgems: { image: "/assets/wheel/fgems.webp", name: "Fgems" },
-  kcoin: { image: "/assets/wheel/kcoin.webp", name: "K-coin" },
+  kcoin: { image: "/assets/wheel/kcoin.webp", name: "Stars" },
   free_normal_box: {
     image: "/assets/wheel/free-normal.webp",
     name: "免费普通",

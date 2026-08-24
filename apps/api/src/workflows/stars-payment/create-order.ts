@@ -58,16 +58,16 @@ export async function createStarsOrder(
             ? "PokePets VIP Pass"
             : "PokePets VIP 月卡"
           : english
-            ? `Top Up ${details.stars_amount} K-coin`
-            : `充值 ${details.stars_amount} K-coin`,
+            ? `Get ${details.stars_amount} Stars`
+            : `充值 ${details.stars_amount} Stars`,
       description:
         details.kind === "vip"
           ? english
             ? "30 days of PokePets VIP benefits (UTC)"
             : "30 个 UTC 自然日的 PokePets VIP 权益"
           : english
-            ? `Exchange ${details.stars_amount} Telegram Stars for ${details.stars_amount} K-coin`
-            : `${details.stars_amount} Telegram Stars 兑换 ${details.stars_amount} K-coin`,
+            ? `Use ${details.stars_amount} Telegram Stars to get ${details.stars_amount} Stars`
+            : `使用 ${details.stars_amount} Telegram Stars 获得 ${details.stars_amount} Stars`,
       payload: details.invoice_payload,
       stars: details.stars_amount,
     });

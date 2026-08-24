@@ -809,7 +809,7 @@ def verify_admin_fixture_contract() -> None:
     if "ebewtjerusxcioegpzjd" in admin_sql:
         raise SystemExit("The real-development project ref cannot be hard-coded in migrations")
     if "ledger_battle_fixture_reference_unique_idx" not in economy_sql:
-        raise SystemExit("Controlled Battle fixture KCoin ledger references must be unique")
+        raise SystemExit("Controlled Battle fixture Stars ledger references must be unique")
     security_required = (
         "'admin'",
         "risk, admin, api from public, anon, authenticated",

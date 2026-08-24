@@ -21,11 +21,11 @@ Battle 一次性完整上线，不发布只有界面、只有房间、只有人�
 ### 2.1 包含
 
 - 玩家使用自己真实拥有且当前可用的藏品组建三宠队伍。
-- 创建固定 K-coin 档位的持卡挑战房。
+- 创建固定 Stars 档位的持卡挑战房。
 - 通过 Telegram 原生分享把挑战卡发送到用户私聊、好友或群组。
 - 挑战卡被转发后继续有效，第一个原子接受成功的正常账号成为对手。
 - 固定首发速度先手、单行动者轮流操作、主动换宠、倒下换宠反击、超时托管、断线托管和 20 个完整回合裁决。
-- K-coin 锁定、获胜结算、平台手续费、平局退款和异常退款。
+- Stars 锁定、获胜结算、平台手续费、平局退款和异常退款。
 - Battle 占用藏品与出售、分解、进化、远征、Mint 的统一库存互斥。
 - 永久私有审计包与不向用户开放的精简对战摘要。
 
@@ -71,16 +71,16 @@ Battle 的唯一经济结果是双方等额入场费形成的奖池、胜者结�
 
 | 每人入场费 | 奖池 | 胜者到账 | 平台手续费 | 胜者净变化 | 败者净变化 |
 | ---------: | ---: | -------: | ---------: | ---------: | ---------: |
-|  20 K-coin |   40 |       36 |          4 |        +16 |        -20 |
-| 100 K-coin |  200 |      180 |         20 |        +80 |       -100 |
-| 500 K-coin | 1000 |      900 |        100 |       +400 |       -500 |
+|   20 Stars |   40 |       36 |          4 |        +16 |        -20 |
+|  100 Stars |  200 |      180 |         20 |        +80 |       -100 |
+|  500 Stars | 1000 |      900 |        100 |       +400 |       -500 |
 
 - 创建者在创建房间的数据库事务内锁定入场费。
 - 接受者在接受房间的数据库事务内锁定相同入场费。
 - 胜者获得奖池的 90%，平台取得奖池的 10%。
 - 平局时双方各自原额退款，平台手续费为 0。
 - 系统永久性不变量错误导致房间作废时双方原额退款，平台手续费为 0。
-- K-coin 不能提现，Battle 不提供玩家间自由转账。
+- Stars 不能提现，Battle 不提供玩家间自由转账。
 
 ### 4.3 房间、在线、分享与公开匹配
 
@@ -103,7 +103,7 @@ Battle 的唯一经济结果是双方等额入场费形成的奖池、胜者结�
 
 17. 公开匹配只使用 `public_match` 房间，好友分享只使用 `friend_invite` 房间；两类房间在等待阶段双向隔离。
 18. 公开匹配池按 `ruleset_id + entry_tier_id` 完全隔离，20、100、500 三档禁止跨档。每档使用独立事务 advisory lock 串行“查找或创建”。
-19. `api.battle_matchmake` 先以同一 operation 原子校验并冻结当前玩家的 K-coin 与三宠；同档匹配请求由档位事务锁串行，同档存在公开 waiting 候选时通过 `ORDER BY random() LIMIT 1 FOR UPDATE` 等待并锁定一个后调用统一对手加入函数，不存在候选时创建公开 waiting 房。
+19. `api.battle_matchmake` 先以同一 operation 原子校验并冻结当前玩家的 Stars 与三宠；同档匹配请求由档位事务锁串行，同档存在公开 waiting 候选时通过 `ORDER BY random() LIMIT 1 FOR UPDATE` 等待并锁定一个后调用统一对手加入函数，不存在候选时创建公开 waiting 房。
 20. 公开 waiting 从创建事务提交起固定 120 秒；创建者可主动取消。取消或超时调用统一未开战终结函数，原额退款、释放三宠、零 settlement。
 21. 点击“随机匹配”即代表同意对战。匹配成功事务固定直接写入不可撤销的 `lobby_countdown` 与 3 秒 deadline，不以创建者当前 presence 作为前置条件；双方不再确认、取消、分享或重新选队，页面离开或离线也不能退出本场。
 22. 公开房的 `invite_token_hash`、`prepare_deadline` 与 prepared share 固定为空；好友房不进入匹配候选索引，公开房不进入 invite preview/accept 路径。
@@ -166,7 +166,7 @@ Battle 的唯一经济结果是双方等额入场费形成的奖池、胜者结�
 4. ordinal 2 完成后才算一个完整回合；未到 20 回合时增加回合号并重新从固定先手开始。
 5. 第 20 回合 ordinal 2 完成后，先比较存活宠物数量，再比较三只宠物精确剩余生命百分比之和；仍相同则平局。
 
-剩余生命百分比使用 PostgreSQL `numeric` 比较 `Σ(current_hp / max_hp)`，不按页面显示值取整。终局动作事务立即完成 stake、K-coin、reservation、ledger、summary、settlement、审计和 outbox；数据库结算与资产释放不等待动画。客户端收到终局快照后立即刷新资产与库存，但结果覆盖层必须等待当前客户端动作队列清空。
+剩余生命百分比使用 PostgreSQL `numeric` 比较 `Σ(current_hp / max_hp)`，不按页面显示值取整。终局动作事务立即完成 stake、Stars、reservation、ledger、summary、settlement、审计和 outbox；数据库结算与资产释放不等待动画。客户端收到终局快照后立即刷新资产与库存，但结果覆盖层必须等待当前客户端动作队列清空。
 
 开战后不提供认输、取消或退出结算。退出和断线只停止玩家输入，系统继续按 deadline 托管。
 
@@ -483,7 +483,7 @@ total = available + listed + trading + minting + expedition + battling
 
 `inventory.item_json` 返回 `battling`。市场、分解、进化、远征和 Mint 继续只读取 `inventory.available_quantity`，因此无需在前端互相调用领域逻辑也能阻止重复使用。
 
-### 7.4 K-coin 锁定与账本
+### 7.4 Stars 锁定与账本
 
 锁定、退款和结算都在对应 Battle RPC 的同一事务内完成。
 
@@ -506,7 +506,7 @@ total = available + listed + trading + minting + expedition + battling
 | `api.battle_activate_share`                        | 保存 prepared message ID，开始 30 分钟等待并完成创建操作                                                                                          |
 | `api.battle_abort_share`                           | 分享准备明确失败或 60 秒超时；退款、释放并终结创建操作                                                                                            |
 | `api.battle_cancel_room`                           | 只允许创建者在接受成功前取消；退款、释放并终结                                                                                                    |
-| `api.battle_matchmake`                             | 按规则版本与档位串行随机查找公开 waiting 房；原子加入，或创建 120 秒公开房并冻结当前玩家 K-coin 与三宠                                            |
+| `api.battle_matchmake`                             | 按规则版本与档位串行随机查找公开 waiting 房；原子加入，或创建 120 秒公开房并冻结当前玩家 Stars 与三宠                                             |
 | `battle.attach_opponent_and_start_lobby`           | 好友接受与公开匹配共用；原子锁定加入者资源、创建对手快照与私有种子并进入既有双人 lobby                                                            |
 | `api.battle_accept_room`                           | 首位成功者锁币占宠，创建对手快照、私有种子及双人 lobby，不提前创建回合                                                                            |
 | `api.battle_submit_action`                         | 重新验证当前行动方、round、ordinal、deadline、active 宠物、替补和技能归属；写入唯一动作，调用 `battle.resolve_active_action` 并立即返回新权威快照 |
@@ -746,16 +746,16 @@ lobby countdown 继续使用全稳定视口 3 秒锁定页，明确显示“倒�
 - 页面持续可见时按 cursor 补齐网络/Ably 中断期间的动作。初次进入、刷新、重新认证或重新可见时直接把游标设为最新序号并展示当前快照，不补播历史动作。
 - 页面不生成伤害或胜负预测，不提供历史、回放、认输、观战或再次挑战按钮。
 
-### 11.4 K-coin 不足
+### 11.4 Stars 不足
 
-创建、随机匹配或接受前端预检查到 K-coin 不足时立即打开现有充值弹窗：
+创建、随机匹配或接受前端预检查到 Stars 不足时立即打开现有充值弹窗：
 
 - 创建场景保存档位与本人三个槽位。
 - 随机匹配场景以 `battle_matchmaking` 保存档位与本人三个槽位。
 - 接受场景保存当前 invite 上下文与本人三个槽位。
 - 充值到账后返回原确认界面，重新读取房间仍为 waiting、未过期、未接受、本人资格、余额、库存和唯一参与状态；创建者在线只作展示。
 - 充值成功绝不自动创建、自动进入匹配队列或自动接受。
-- 返回时房间已取消、过期或被接受，则停止原动作，已充值 K-coin 保留。
+- 返回时房间已取消、过期或被接受，则停止原动作，已充值 Stars 保留。
 - `battle_create` 与 `battle_matchmaking` 补差意图都由数据库再次拒绝已有 `preparing_share/waiting/lobby/active` 参与记录，统一返回 `BATTLE_ALREADY_PARTICIPATING`。
 
 ## 12. 安全、并发与恢复
@@ -980,11 +980,11 @@ git diff --check
 
 正式入口固定为 owner-only 的 `admin.reconcile_battle_fixture`，只接受 fixture version、request UUID 与四个有序内部 UUID。`admin` 不进入 Data API，不增加 HTTP/REST/GraphQL/Vercel 测试接口，也不授予 `PUBLIC`、`anon`、`authenticated` 或 `service_role`。迁移不写环境身份或启用记录；真实开发库从空重建后由数据库所有者一次性绑定 `environment = real_development` 与当前 project ref，再写入同一 project ref、明确启用且不超过 24 小时的门禁。未来生产库默认没有绑定和 enable 记录，`production` 身份不能启用该能力。
 
-函数在单一事务内锁定相关业务表，重新校验四用户存在、状态正常、两两不同，且 Battle、locked KCoin、reservation、outbox、violation、市场、远征、Mint、支付和 `pending/unknown` operation 全部空闲；同时核对 Catalog v1 与 `battle-v1` checksum、十二个模板、五属性和十个技能槽位。任何失败整笔回滚。资产以 fixture-owned provenance 管理，余额和 holding 的正常消耗同步减少该来源；重新对齐只修改仍属于夹具的数量，不删除或覆盖用户的其他资产。KCoin ledger、宠物变更审计、管理 command、不可逆 run key、payload hash、前后聚合与执行结果在同一事务落库。
+函数在单一事务内锁定相关业务表，重新校验四用户存在、状态正常、两两不同，且 Battle、locked Stars、reservation、outbox、violation、市场、远征、Mint、支付和 `pending/unknown` operation 全部空闲；同时核对 Catalog v1 与 `battle-v1` checksum、十二个模板、五属性和十个技能槽位。任何失败整笔回滚。资产以 fixture-owned provenance 管理，余额和 holding 的正常消耗同步减少该来源；重新对齐只修改仍属于夹具的数量，不删除或覆盖用户的其他资产。Stars ledger、宠物变更审计、管理 command、不可逆 run key、payload hash、前后聚合与执行结果在同一事务落库。
 
 固定矩阵为：
 
-| 角色 | fixture-owned KCoin | 模板与数量                                           |
+| 角色 | fixture-owned Stars | 模板与数量                                           |
 | ---- | ------------------: | ---------------------------------------------------- |
 | A    |                 500 | `PET-N-001-1 ×2`、`PET-N-033-2 ×1`、`PET-A-020-3 ×1` |
 | B    |                 500 | `PET-N-003-2 ×2`、`PET-N-039-3 ×1`、`PET-A-018-1 ×1` |
@@ -1025,7 +1025,7 @@ git diff --check
 
 - 210 个模板拥有唯一、版本化、经过 checksum 校验的固定 Battle 配置。
 - 高稀有度四维与预算严格更高，每次进化四维严格上升。
-- 三宠占用、双方 K-coin 锁定、接受竞争、结算和退款全部由数据库原子裁决。
+- 三宠占用、双方 Stars 锁定、接受竞争、结算和退款全部由数据库原子裁决。
 - 首位接受成功只进入双人 lobby；数据库在双方在线满 3 秒后才原子创建第 1 回合。
 - 挑战卡和接受页只公开创建者稀有度组合。
 - 固定首发速度先手、双方独立 15 秒、每回合两个行动、换宠反击、技能 1 托管、20 个完整回合和所有终局规则完全生效。

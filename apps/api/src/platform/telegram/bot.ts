@@ -105,13 +105,13 @@ export function savePreparedBattleMessage(input: {
   const message = english
     ? [
         `⚔️ ${input.creatorDisplayName} challenged you to a PokePets Battle`,
-        `Entry fee: ${input.entryFee} K-coin`,
+        `Entry fee: ${input.entryFee} Stars`,
         `Team rarity: ${input.raritySummary}`,
         "This challenge is valid for 30 minutes.",
       ].join("\n")
     : [
         `⚔️ ${input.creatorDisplayName} 向你发起宠物 Battle`,
-        `入场费：${input.entryFee} K-coin`,
+        `入场费：${input.entryFee} Stars`,
         `阵容稀有度：${input.raritySummary}`,
         "挑战卡 30 分钟内有效",
       ].join("\n");
@@ -123,7 +123,7 @@ export function savePreparedBattleMessage(input: {
         type: "article",
         id: input.resultId,
         title: english ? "PokePets Battle Challenge" : "PokePets Battle 挑战",
-        description: `${input.entryFee} K-coins · ${input.raritySummary}`,
+        description: `${input.entryFee} Stars · ${input.raritySummary}`,
         input_message_content: {
           message_text: message,
           link_preview_options: { is_disabled: true },
