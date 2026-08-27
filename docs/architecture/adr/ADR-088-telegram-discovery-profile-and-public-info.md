@@ -9,9 +9,11 @@
 
 ADR-086 曾把金龙图限定为 Bot 头像。用户于 2026-08-27 最新裁决改为：本次 Telegram 发现页视觉统一使用独立金龙头像风格，运营主体固定为 `EvoMyPet Team`，公开支持入口固定为 `@EvoMyPetSupport`，支付验收使用普通盲盒单抽的 9 个游戏 Stars 入口。该最新裁决取代 ADR-086 的金龙使用范围限制，不改变游戏内 UI、经济规则或 Telegram Stars 商品档位。
 
+用户于 2026-08-28 提供四张新的真实 iPhone Telegram 页面截图，并裁决以黑色 Rare Mystery Box、Market、Collection、Tasks 取代旧的黑色 Rare Mystery Box、Battle、Market、Tasks 预览组合。黑色 Rare Mystery Box 仍固定为 BotFather 首张展示图。
+
 ## 唯一结论
 
-Telegram 发现页使用现有生产 Bot 金龙头像作为唯一品牌来源。仓库保存可追溯的头像副本、一个恰好只含单个 `<path>` 的金龙 Launch Screen SVG、横向 Welcome/Description Picture，以及四张由真实 iPhone Telegram Mini App 页面构成的竖向预览：黑色 Rare Mystery Box、Battle、Market 和 Tasks。预览只允许缩放、圆角、色彩框架和文字标题，不得生成、替换或伪造游戏界面、资产余额、概率、藏品或交易状态。金龙素材只扩展至 Telegram 发现页、公开 Privacy/Terms 页面和对应上传母版，不替换启动页、分享图、TON manifest、游戏内顶部或导航资源。黑色 Rare Mystery Box 只属于展示素材，不改变付款验收继续使用白色 Standard Mystery Box 9 游戏 Stars 单抽的裁决。
+Telegram 发现页使用现有生产 Bot 金龙头像作为唯一品牌来源。仓库保存可追溯的头像副本、一个恰好只含单个 `<path>` 的金龙 Launch Screen SVG、横向 Welcome/Description Picture，以及四张由真实 iPhone Telegram Mini App 页面构成的竖向预览，上传顺序固定为黑色 Rare Mystery Box、Market、Collection、Tasks。预览只允许按原始比例缩放、裁除截图外的桌面背景、增加圆角、色彩框架和文字标题，不得拉伸、生成、替换或伪造游戏界面、资产余额、概率、藏品或交易状态。金龙素材只扩展至 Telegram 发现页、公开 Privacy/Terms 页面和对应上传母版，不替换启动页、分享图、TON manifest、游戏内顶部或导航资源。黑色 Rare Mystery Box 只属于展示素材，不改变付款验收继续使用白色 Standard Mystery Box 9 游戏 Stars 单抽的裁决。
 
 公开页面固定为同一生产域名的 `/privacy.html` 与 `/terms.html`，无需 Telegram 身份、会话、API 或数据库访问。两页以英语发布，运营主体为 `EvoMyPet Team`，支持入口为 `https://t.me/EvoMyPetSupport`，明确区分游戏 Stars 与 Telegram Stars，不声明不存在的自助删除、现金价值、退款权利或支付凭证收集。
 
@@ -32,7 +34,7 @@ BotFather 的 Custom Privacy Policy URL 固定为 `https://final-tma-pi.vercel.a
 
 ## 验收
 
-代码与素材先通过 Prettier、ESLint、API/Web TypeScript、OpenAPI 漂移、架构检查和生产构建，再由 `main` Git Integration 自动部署。相同部署 SHA 必须确认两个公开页面返回 HTML、互链正确、无需会话且不调用 API；真实 Bot 私聊逐项验证四个命令；BotFather 重新打开确认 Custom Privacy URL、命令列表、Welcome Picture、Launch Screen 图标和黑色 Rare Mystery Box、Battle、Market、Tasks 四张 Main Mini App 预览均已保存；生产 Bot 资料页显示预览且 Main、named 与菜单入口仍能打开应用。支付只以真实 iPhone Telegram 验证到用户亲自确认的原生付款边界，随后再验证游戏 Stars 到账和白色 Standard Mystery Box 9-Star 单抽；不得以静态代码、BotFather Enabled 或本地页面替代真机证据。
+代码与素材先通过 Prettier、ESLint、API/Web TypeScript、OpenAPI 漂移、架构检查和生产构建，再由 `main` Git Integration 自动部署。相同部署 SHA 必须确认两个公开页面返回 HTML、互链正确、无需会话且不调用 API；真实 Bot 私聊逐项验证四个命令；BotFather 重新打开确认 Custom Privacy URL、命令列表、Welcome Picture、Launch Screen 图标和黑色 Rare Mystery Box、Market、Collection、Tasks 四张 Main Mini App 预览已按固定顺序保存；生产 Bot 资料页显示预览且 Main、named 与菜单入口仍能打开应用。支付只以真实 iPhone Telegram 验证到用户亲自确认的原生付款边界，随后再验证游戏 Stars 到账和白色 Standard Mystery Box 9-Star 单抽；不得以静态代码、BotFather Enabled 或本地页面替代真机证据。
 
 ## 关联裁决
 
