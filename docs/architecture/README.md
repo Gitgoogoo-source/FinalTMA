@@ -60,6 +60,8 @@ Telegram 发布隔离按 [ADR-075](adr/ADR-075-telegram-named-mini-app-release-i
 
 Telegram 聊天列表引导按 [ADR-087](adr/ADR-087-telegram-chat-list-onboarding.md) 使用官方 `requestWriteAccess()`。正常账号首个可操作页面准备后，每个新 WebView 至多请求一次；用户拒绝后下次完整进入再次请求。经 secret 校验的 `write_access_allowed` 私聊服务消息由 `telegram-webhook` workflow 交给数据库原子领取，欢迎消息按账号语言至多尝试一次，浏览器不新增 API 或 Supabase 访问。
 
+Telegram 发现页和公开信息按 [ADR-088](adr/ADR-088-telegram-discovery-profile-and-public-info.md) 使用生产 Bot 的金龙头像方向、真实 iPhone 游戏截图、同源 Privacy/Terms 静态页及 `/start`、`/paysupport`、`/privacy`、`/terms` 四个全局命令。发现页素材不替换游戏内 UI；公开页面不进行 Telegram 登录、API 或数据库访问；9 个游戏 Stars 的普通盲盒入口不得与 Telegram Stars 付款金额合并。
+
 目录交付按 [ADR-042](adr/ADR-042-catalog-pointer-immutable-release.md) 分成动态小指针与不可变完整内容。资源切换只改变 `catalog.current`；checksum + release key URL 永不原地改写或清除缓存。`useCatalogQuery()` 在新内容读取期间保留上一份成功快照，只有全新 WebView 没有快照时才进入原有初始错误状态。空库 migration 不恢复 Storage 对象登记或当前指针；数据库重建后必须按 [ADR-050](adr/ADR-050-catalog-post-rebuild-readiness-gate.md) 先发布历史 v1、再发布当前 v2，并由失效即失败的 `assets:release status` 与无运行中变更租约共同放行。
 
 ## 可信边界
@@ -185,3 +187,4 @@ operation 准入与保留按 [ADR-059](adr/ADR-059-bounded-operation-admission-a
 - [Gems 对外名称与内部 FGEMS 标识隔离](adr/ADR-085-gems-display-name.md)
 - [EvoMyPet 品牌与既有云环境生产切换](adr/ADR-086-evomypet-production-cutover.md)
 - [Telegram 聊天列表授权与首次欢迎消息](adr/ADR-087-telegram-chat-list-onboarding.md)
+- [Telegram 发现页品牌素材与公开信息闭环](adr/ADR-088-telegram-discovery-profile-and-public-info.md)

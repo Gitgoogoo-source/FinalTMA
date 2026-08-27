@@ -4,6 +4,7 @@ import {
   answerPreCheckout,
   sendTelegramMessage,
 } from "../../platform/telegram/bot.ts";
+import { publicBotCommandReply } from "../bot-command/public-info.ts";
 import { applyTelegramRefund } from "../refund-risk/apply-refund.ts";
 import {
   isPaymentSupportCommand,
@@ -43,6 +44,16 @@ export const telegramWebhookHandlers = {
       return { data: { ok: true } };
     const message = update.message as Record<string, unknown> | undefined;
     const chat = message?.chat as Record<string, unknown> | undefined;
+    const publicReply =
+      chat?.type === "private" &&
+      typeof chat.id === "number" &&
+      typeof message?.text === "string"
+        ? publicBotCommandReply(message.text)
+        : null;
+    if (publicReply && typeof chat?.id === "number") {
+      await sendTelegramMessage({ chatId: chat.id, ...publicReply });
+      return { data: { ok: true } };
+    }
     if (
       chat?.type === "private" &&
       typeof chat.id === "number" &&
