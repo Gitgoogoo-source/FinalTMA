@@ -83,11 +83,21 @@ export function answerPreCheckout(
 export function sendTelegramMessage(input: {
   chatId: number;
   text: string;
+  button?: { text: string; url: string } | undefined;
 }): Promise<{ message_id: number }> {
   return callTelegram("sendMessage", {
     chat_id: input.chatId,
     text: input.text,
     link_preview_options: { is_disabled: true },
+    ...(input.button
+      ? {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: input.button.text, url: input.button.url }],
+            ],
+          },
+        }
+      : {}),
   });
 }
 

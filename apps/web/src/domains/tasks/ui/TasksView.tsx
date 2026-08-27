@@ -42,6 +42,8 @@ import {
   getAppScrollTop,
   scrollAppTo,
 } from "../../../shared/navigation/appScroll.ts";
+import { markFirstPlayablePageReady } from "../../../shared/navigation/firstPlayablePageReadiness.ts";
+import { usePageActive } from "../../../shared/navigation/pageActivity.tsx";
 import { usePageModulePreparation } from "../../../shared/navigation/pageModulePreparation.ts";
 import {
   boxArtUrl,
@@ -179,6 +181,7 @@ export function TasksView({
   const navigate = useAppNavigate();
   const preparePage = usePageModulePreparation();
   const session = useSession();
+  const pageActive = usePageActive();
   const remembered = session ? viewStates.get(session.userId) : undefined;
   const [category, setCategory] = useState<TaskFilter>(
     remembered?.category ?? "all",
@@ -221,6 +224,10 @@ export function TasksView({
     7,
     claimedToday ? Math.max(1, cycleProgress) : cycleProgress + 1,
   );
+  useEffect(() => {
+    if (pageActive && session && tasks.data !== undefined && !tasks.error)
+      markFirstPlayablePageReady(session.generation, "/tasks");
+  }, [pageActive, session, tasks.data, tasks.error]);
   useEffect(() => {
     categoryRef.current = category;
   }, [category]);

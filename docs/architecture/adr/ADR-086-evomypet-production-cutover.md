@@ -11,6 +11,8 @@
 
 玩家可见品牌固定为 `EvoMyPet`。生产 Bot 显示名称固定为 `EvoMyPet`，用户名固定为 `@EvoMyPet_bot`；named Mini App short name 固定为 `evomypet`，公开链接固定为 `https://t.me/EvoMyPet_bot/evomypet`，Main Mini App 与 named Mini App 的正常开放 URL 固定为 `https://final-tma-pi.vercel.app/`，默认菜单按钮固定显示 `Open EvoMyPet` 并指向 named Mini App 链接。Webhook 固定为 `https://final-tma-pi.vercel.app/api/telegram/webhook`。
 
+生产入口恢复后，正常账号首次进入并完成首个可操作页面准备时按 [ADR-087](ADR-087-telegram-chat-list-onboarding.md) 请求一次 Telegram 原生写入私聊授权。用户授权后，Bot 私聊通过 Telegram 服务消息进入聊天列表，并由服务端按账号语言至多尝试一次欢迎消息；拒绝只在下一个新 WebView 再次自动请求，不改变 Main、named 或菜单入口配置。
+
 Bot 头像固定使用用户确认的金龙图。金龙图只属于 Telegram Bot 头像，不进入 Git、Web、分享图、TON Connect manifest、启动页或游戏内 UI。Web、分享图和休眠 TON Connect manifest 继续使用项目自有的橙绿孵化舱与爪印通用标识；品牌切换只更新文字、文件名、引用和资源来源记录，不把金龙扩展为应用品牌资产。
 
 既有 Vercel Project `final-tma`、稳定域名 `https://final-tma-pi.vercel.app/` 与 Supabase Project `final-tma-real-test`（ref `ebewtjerusxcioegpzjd`）固定作为正式生产资源，不新建第二套 Vercel、Supabase、Storage 或生产域名。`final-tma`、`final-tma-real-test` 和 project ref 只是不可见的基础设施标识，不属于玩家品牌，也不因本次改名而迁移或重命名。

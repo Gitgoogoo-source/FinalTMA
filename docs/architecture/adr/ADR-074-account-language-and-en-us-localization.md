@@ -27,6 +27,8 @@ EvoMyPet 的现有界面、目录名称、任务、Battle 技能和 Telegram 外
 
 Stars invoice、pre-checkout 失败提示和 Battle prepared share 在服务端读取发起账号的 `preferred_language` 后生成对应语言；无法建立账号上下文的公开支付支持入口固定使用默认英语。任何 Telegram Stars 支付仍只能由玩家本人在 Telegram 原生支付界面确认，本 ADR 不授权或触发实际支付。
 
+Telegram 写入私聊授权成功后的首次欢迎消息同样读取账号 `preferred_language`，固定使用 [ADR-087](ADR-087-telegram-chat-list-onboarding.md) 裁定的英语或简体中文正文与按钮。客户端 `language_code`、授权 update 中的显示信息和前端本地提示都不能覆盖数据库账号偏好；无法匹配正常内部账号时不发送欢迎消息。
+
 `pnpm i18n:check` 固定检查：活动 Web 源码中的简体中文必须位于 `t/tp/tr/localized` 边界内，插值值不得夹带未本地化中文；每个中文键必须存在英语文案；英语值不得残留汉字；冻结内容数量必须保持 `210/70/50/34/3`。该检查进入 `validate:static`，但不能替代真实 Telegram 验收。
 
 ## 兼容与迁移

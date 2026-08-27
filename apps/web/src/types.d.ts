@@ -1,9 +1,15 @@
 interface TelegramWebApp {
   initData: string;
+  version: string;
   platform: string;
   initDataUnsafe: {
     start_param?: string;
-    user?: { id?: number; first_name?: string; username?: string };
+    user?: {
+      id?: number;
+      first_name?: string;
+      username?: string;
+      allows_write_to_pm?: boolean;
+    };
   };
   colorScheme: "light" | "dark";
   themeParams: Record<string, string>;
@@ -29,9 +35,11 @@ interface TelegramWebApp {
     selectionChanged?(): void;
   };
   ready(): void;
+  isVersionAtLeast?(version: string): boolean;
   expand(): void;
   disableVerticalSwipes?(): void;
   requestFullscreen?(): void;
+  requestWriteAccess?(callback?: (allowed: boolean) => void): void;
   close(): void;
   openInvoice(
     url: string,

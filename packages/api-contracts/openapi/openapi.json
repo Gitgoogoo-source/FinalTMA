@@ -36596,6 +36596,15 @@
                         "additionalProperties": false
                       },
                       "text": { "type": "string" },
+                      "write_access_allowed": {
+                        "type": "object",
+                        "properties": {
+                          "from_request": { "type": "boolean" },
+                          "web_app_name": { "type": "string", "minLength": 1 },
+                          "from_attachment_menu": { "type": "boolean" }
+                        },
+                        "additionalProperties": false
+                      },
                       "successful_payment": {
                         "type": "object",
                         "properties": {

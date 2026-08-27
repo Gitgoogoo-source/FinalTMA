@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 
 import { retryRecoveredInitialState } from "../platform/api/client.ts";
 import {
@@ -14,6 +14,11 @@ import { AccountGate } from "./guards/AccountGate.tsx";
 import { AuthenticatedRuntimeProviders } from "./providers/AuthenticatedRuntimeProviders.tsx";
 import { AppRouter } from "./router/AppRouter.tsx";
 import { StartupScreen } from "./StartupScreen.tsx";
+
+const TelegramChatOnboarding = lazy(
+  () =>
+    import("../workflows/telegram-chat-onboarding/TelegramChatOnboarding.tsx"),
+);
 
 export function App(): ReactNode {
   useAppLanguage();
@@ -109,6 +114,9 @@ function LocalizedApp(): ReactNode {
     <AccountGate restricted={false}>
       <AuthenticatedRuntimeProviders>
         <AppRouter />
+        <Suspense fallback={null}>
+          <TelegramChatOnboarding />
+        </Suspense>
         {bootstrap.notice ? (
           <EntryNotice key={bootstrap.notice} message={bootstrap.notice} />
         ) : null}

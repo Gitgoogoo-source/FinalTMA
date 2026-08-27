@@ -8,7 +8,8 @@ import { applyTelegramRefund } from "../refund-risk/apply-refund.ts";
 import {
   isPaymentSupportCommand,
   paymentSupportText,
-} from "./payment-support.ts";
+} from "../stars-payment/payment-support.ts";
+import { processTelegramChatOnboarding } from "../telegram-chat-onboarding/process.ts";
 
 export const telegramWebhookHandlers = {
   "telegram.webhook": async (context) => {
@@ -38,6 +39,8 @@ export const telegramWebhookHandlers = {
       );
       return { data: { ok: true } };
     }
+    if (await processTelegramChatOnboarding(update))
+      return { data: { ok: true } };
     const message = update.message as Record<string, unknown> | undefined;
     const chat = message?.chat as Record<string, unknown> | undefined;
     if (

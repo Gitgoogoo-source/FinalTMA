@@ -9,3 +9,5 @@
 生产部署固定来自 `main` 的单一 Git commit、同一 migration 序列、OpenAPI、Catalog manifest 与领域 checksum。生产部署、既有云环境复用及首次清库重建已经由用户明确授权；目标 project、ref、域名与 Bot 由 ADR-086 固定。
 
 生产入口首次开放前发生应用契约与数据库定义双向不兼容变更时，Git commit、按文件名排序的三份 migration、OpenAPI、Catalog manifest 与领域规则 checksum 构成不可拆分的发布单元。Vercel Production 固定保持启用与可访问；完整提交推送到 `main` 后只通过 Git Integration 自动部署至 `READY`，不得暂停 Vercel Project、等待 `503 DEPLOYMENT_PAUSED`、创建空触发提交、部署后重新暂停或执行手动 Vercel 部署。随后在入口关闭状态从同一提交执行最后一次空库重建，应用、数据库、契约与 checksum 全部核对一致后才能恢复生产入口与调度；短暂不匹配不能作为功能可用或发布通过证据。生产入口恢复并开始承载用户后，历史 migration 立即冻结，只允许兼容现有数据库和已加载客户端的前向应用与追加 migration。
+
+Telegram 聊天列表引导属于同一应用与数据库发布单元：Web 只在认证、入口交接和首个可操作页面准备后请求原生写入私聊权限，Telegram webhook 与数据库原子领取共同保证首次欢迎消息至多尝试一次。完整边界由 [ADR-087](ADR-087-telegram-chat-list-onboarding.md) 固定，不能用前端状态、BotFather 入口或重复 `sendMessage` 代替。

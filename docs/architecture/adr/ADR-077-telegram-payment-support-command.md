@@ -13,6 +13,8 @@ Telegram Update 契约保留 `message.chat.id` 与 `message.chat.type`。通过 
 
 每个环境设置或恢复 webhook 时，`setWebhook` 必须把该环境的 HTTPS `/api/telegram/webhook` 作为唯一 URL，`secret_token` 与同环境 `TELEGRAM_WEBHOOK_SECRET` 一致，`allowed_updates` 精确为 `["message", "pre_checkout_query"]`。`message` 同时承载支付支持命令、支付成功与退款消息；只订阅 `pre_checkout_query` 会让这三类更新都无法进入服务端。不依赖 Telegram 记住上一次 `allowed_updates` 的隐式状态。
 
+同一 `message` 类别还承载 [ADR-087](ADR-087-telegram-chat-list-onboarding.md) 的 `write_access_allowed` 服务消息，不需要也不得增加第三种 `allowed_updates` 值。顶层 Telegram webhook 编排迁移到 `workflows/telegram-webhook` 后，支付支持、预结账、成功支付、退款和聊天列表授权各自保留独立校验与幂等边界。
+
 命中后调用现有 Telegram Bot API 客户端的 `sendMessage`，向经验证 Update 中的私聊 `chat.id` 回复默认英语 `Payment support: <PAYMENT_SUPPORT_URL>`，并关闭链接预览。聊天命令与既有 HTTP 支付支持端点共用唯一文案生成函数，避免命令、文案或环境链接分叉。链接只取自服务端已校验的 `PAYMENT_SUPPORT_URL`，不从用户消息、订单或 URL 参数生成。
 
 `sendMessage` 超时、网络失败或 Telegram API 拒绝时，webhook 不回假成功，统一返回 `TELEGRAM_API_FAILED` 非 2xx 结果，交由 Telegram 重试该 Update。支持链接回复不读写订单、operation、资产、权益或账本；相同 Update 在不确定网络结果后重试可能产生重复链接消息，但不会改变任何业务事实。预结账、支付成功、退款和现有去重与交付规则保持不变。

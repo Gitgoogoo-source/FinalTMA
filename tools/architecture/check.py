@@ -82,6 +82,8 @@ REQUIRED_PATHS = (
     "docs/architecture/adr/ADR-075-telegram-named-mini-app-release-isolation.md",
     "docs/architecture/adr/ADR-084-telegram-session-history-back-button.md",
     "docs/architecture/adr/ADR-085-gems-display-name.md",
+    "docs/architecture/adr/ADR-086-evomypet-production-cutover.md",
+    "docs/architecture/adr/ADR-087-telegram-chat-list-onboarding.md",
     "apps/web/public/maintenance.html",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
@@ -195,6 +197,7 @@ def main() -> None:
     verify_browser_csp_boundaries()
     verify_telegram_release_isolation()
     verify_telegram_payment_support_command()
+    verify_telegram_chat_list_onboarding()
     verify_persistent_page_route_leaves()
     verify_first_screen_runtime_boundaries()
     verify_first_screen_persistent_page_boundaries()
@@ -479,7 +482,7 @@ def verify_telegram_payment_support_command() -> None:
         API_ROOT / "workflows/stars-payment/payment-support.ts"
     ).read_text(encoding="utf-8")
     webhook = (
-        API_ROOT / "workflows/stars-payment/telegram-webhook.ts"
+        API_ROOT / "workflows/telegram-webhook/routes.ts"
     ).read_text(encoding="utf-8")
     adr = (
         ROOT
@@ -532,6 +535,133 @@ def verify_telegram_payment_support_command() -> None:
         raise SystemExit(
             f"Telegram payment support command boundary is incomplete: {missing}"
         )
+
+
+def verify_telegram_chat_list_onboarding() -> None:
+    sources = {
+        "contract": (
+            CONTRACT_ROOT / "domains/integrations/routes.ts"
+        ).read_text(encoding="utf-8"),
+        "telegram types": (WEB_ROOT / "types.d.ts").read_text(encoding="utf-8"),
+        "web workflow": (
+            WEB_ROOT
+            / "workflows/telegram-chat-onboarding/TelegramChatOnboarding.tsx"
+        ).read_text(encoding="utf-8"),
+        "app": (WEB_ROOT / "app/App.tsx").read_text(encoding="utf-8"),
+        "page readiness": "\n".join(
+            (
+                (WEB_ROOT / path).read_text(encoding="utf-8")
+                for path in (
+                    "domains/gacha/ui/GachaView.tsx",
+                    "domains/market/ui/MarketView.tsx",
+                    "domains/battle/ui/BattleView.tsx",
+                    "domains/inventory/ui/InventoryView.tsx",
+                    "domains/tasks/ui/TasksView.tsx",
+                )
+            )
+        ),
+        "api process": (
+            API_ROOT / "workflows/telegram-chat-onboarding/process.ts"
+        ).read_text(encoding="utf-8"),
+        "webhook": (
+            API_ROOT / "workflows/telegram-webhook/routes.ts"
+        ).read_text(encoding="utf-8"),
+        "schema": (ROOT / "supabase/schemas/30_operations.sql").read_text(
+            encoding="utf-8"
+        ),
+        "security": one_security_migration(),
+        "ADR": (
+            ROOT
+            / "docs/architecture/adr/ADR-087-telegram-chat-list-onboarding.md"
+        ).read_text(encoding="utf-8"),
+        "acceptance": (ROOT / "docs/operations/acceptance.md").read_text(
+            encoding="utf-8"
+        ),
+    }
+    required = {
+        "contract": (
+            "writeAccessAllowedSchema",
+            "write_access_allowed: writeAccessAllowedSchema.optional()",
+            "from_request: z.boolean().optional()",
+        ),
+        "telegram types": (
+            "allows_write_to_pm?: boolean",
+            "isVersionAtLeast?(version: string)",
+            "requestWriteAccess?",
+        ),
+        "web workflow": (
+            "subscribeFirstPlayablePageReady",
+            "subscribeFirstScreenReady",
+            'session.entryHandoffState !== "complete"',
+            "requestTelegramWriteAccessOnce()",
+            'app.isVersionAtLeast("6.9")',
+            "writeAccessRequestAttempted = true",
+        ),
+        "app": (
+            "const TelegramChatOnboarding = lazy",
+            "workflows/telegram-chat-onboarding/TelegramChatOnboarding.tsx",
+            "<AppRouter />",
+            "<TelegramChatOnboarding />",
+        ),
+        "page readiness": (
+            "markFirstScreenReady(session.generation)",
+            'markFirstPlayablePageReady(session.generation, "/market")',
+            'markFirstPlayablePageReady(sessionGeneration, "/game")',
+            'markFirstPlayablePageReady(session.generation, "/inventory")',
+            'markFirstPlayablePageReady(session.generation, "/tasks")',
+        ),
+        "api process": (
+            "permission.from_request !== true",
+            'chat?.type !== "private"',
+            "from.id !== chat.id",
+            '"telegram_chat_onboarding_claim"',
+            '"telegram_chat_onboarding_finish"',
+            "EVOMYPET_MINI_APP_URL",
+            "cause.definitive ? \"failed\" : \"unknown\"",
+        ),
+        "webhook": ("processTelegramChatOnboarding(update)",),
+        "schema": (
+            "create table operations.telegram_chat_onboarding",
+            "first_update_id bigint not null unique",
+            "create or replace function api.telegram_chat_onboarding_claim",
+            "create or replace function api.telegram_chat_onboarding_finish",
+            "and completed_at is null",
+        ),
+        "security": (
+            "'telegram_chat_onboarding_claim'",
+            "'telegram_chat_onboarding_finish'",
+        ),
+        "ADR": (
+            "`requestWriteAccess()`",
+            "下次完整关闭并重新进入 Mini App 时自动再次请求",
+            "至多尝试一次欢迎消息",
+            "不新增环境变量",
+        ),
+        "acceptance": (
+            "Telegram 聊天列表授权",
+            "拒绝后当前 WebView 不重复",
+            "sent/failed/unknown",
+        ),
+    }
+    missing = {
+        label: [term for term in terms if term not in sources[label]]
+        for label, terms in required.items()
+        if any(term not in sources[label] for term in terms)
+    }
+    if missing:
+        raise SystemExit(
+            f"Telegram chat-list onboarding boundary is incomplete: {missing}"
+        )
+    legacy = API_ROOT / "workflows/stars-payment/telegram-webhook.ts"
+    if legacy.exists():
+        raise SystemExit("Telegram webhook orchestration cannot remain payment-owned")
+
+
+def one_security_migration() -> str:
+    matches = sorted((ROOT / "supabase/migrations").glob("*_api_security.sql"))
+    if len(matches) != 1:
+        raise SystemExit("Expected one api security migration")
+    return matches[0].read_text(encoding="utf-8")
 
 
 def verify_persistent_page_route_leaves() -> None:

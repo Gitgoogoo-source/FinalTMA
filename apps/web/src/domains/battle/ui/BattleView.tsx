@@ -50,6 +50,7 @@ import {
   usePageActive,
   usePageSearchParams,
 } from "../../../shared/navigation/pageActivity.tsx";
+import { markFirstPlayablePageReady } from "../../../shared/navigation/firstPlayablePageReadiness.ts";
 import {
   prepareBattleRealtimeRuntime,
   useBattleRealtime,
@@ -1404,6 +1405,27 @@ export function BattleView(): ReactNode {
       : roomId
         ? room === null
         : invite.isLoading);
+  useEffect(() => {
+    if (
+      pageActive &&
+      sessionGeneration &&
+      !loading &&
+      !bootstrap.isError &&
+      !identity.isError &&
+      !invite.isError &&
+      (!teamOptionsRequired || !teamOptions.isError)
+    )
+      markFirstPlayablePageReady(sessionGeneration, "/game");
+  }, [
+    bootstrap.isError,
+    identity.isError,
+    invite.isError,
+    loading,
+    pageActive,
+    sessionGeneration,
+    teamOptions.isError,
+    teamOptionsRequired,
+  ]);
   useEffect(() => {
     if (!pageActive) return;
     if (pageState !== "home") {

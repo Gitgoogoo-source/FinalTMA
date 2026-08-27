@@ -31,3 +31,5 @@ Ably token 的 capability 只允许当前用户、当前参与 room 或当前 in
 账号封禁切换先把内存账号状态设为 `banned` 并生成新 session generation，再取消请求并清空查询、操作、弹窗和导航。任何请求、预取或缓存种子写入前都同时验证原 generation 与当前 `normal` 状态，迟到响应只能作为 `AbortError` 丢弃。
 
 Telegram webhook 使用 secret token，Cron 使用 `CRON_SECRET`。支付回调按 Telegram update 与 charge 唯一键去重；Cron 同时使用任务名 advisory lock、运行租约、状态扫描和幂等 RPC。
+
+Telegram 聊天列表授权只信任通过同一 webhook secret 的私聊 `write_access_allowed` 服务消息。服务端额外要求 `from_request=true`、`message.from.id=message.chat.id`、正安全整数 Telegram ID，并在数据库重新匹配 `status=normal` 的账号；前端 `allows_write_to_pm`、用户名、语言码和 WebView 回调都没有发送权限。`operations.telegram_chat_onboarding` 启用 RLS且无客户端 policy，应用 `service_role` 也没有表级权限，只能执行显式 allowlist 中的 claim/finish RPC。claim 在任何外部发送前封存唯一资格，避免 webhook 重试或不确定网络结果造成第二条欢迎消息。

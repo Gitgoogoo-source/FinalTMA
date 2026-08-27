@@ -131,6 +131,8 @@ declare
     'tasks_check_in',
     'tasks_claim',
     'tasks_get',
+    'telegram_chat_onboarding_claim',
+    'telegram_chat_onboarding_finish',
     'topup_bootstrap',
     'topup_cancel_order',
     'topup_create_order',

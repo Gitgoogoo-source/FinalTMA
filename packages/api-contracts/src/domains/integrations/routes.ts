@@ -3,14 +3,23 @@ import { z } from "zod";
 import { defineRoute } from "../../common/route.ts";
 
 const telegramUserSchema = z.object({
-  id: z.number().int().positive(),
+  id: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
   is_bot: z.boolean().optional(),
   first_name: z.string().optional(),
   username: z.string().optional(),
 });
 const telegramChatSchema = z.object({
-  id: z.number().int(),
+  id: z
+    .number()
+    .int()
+    .min(Number.MIN_SAFE_INTEGER)
+    .max(Number.MAX_SAFE_INTEGER),
   type: z.string().min(1),
+});
+const writeAccessAllowedSchema = z.object({
+  from_request: z.boolean().optional(),
+  web_app_name: z.string().min(1).optional(),
+  from_attachment_menu: z.boolean().optional(),
 });
 const successfulPaymentSchema = z.object({
   currency: z.literal("XTR"),
@@ -27,7 +36,7 @@ const refundedPaymentSchema = z.object({
   provider_payment_charge_id: z.string().optional(),
 });
 const telegramUpdateSchema = z.object({
-  update_id: z.number().int().nonnegative(),
+  update_id: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
   pre_checkout_query: z
     .object({
       id: z.string().min(1),
@@ -43,6 +52,7 @@ const telegramUpdateSchema = z.object({
       chat: telegramChatSchema,
       from: telegramUserSchema.optional(),
       text: z.string().optional(),
+      write_access_allowed: writeAccessAllowedSchema.optional(),
       successful_payment: successfulPaymentSchema.optional(),
       refunded_payment: refundedPaymentSchema.optional(),
     })
@@ -65,6 +75,7 @@ export const integrationRoutes = [
       "WEBHOOK_UNAUTHORIZED",
       "TELEGRAM_UPDATE_INVALID",
       "TELEGRAM_API_FAILED",
+      "REQUEST_INVALID",
       "PAYMENT_MISMATCH",
       "PAYMENT_NOT_DELIVERABLE",
       "INTERNAL_ERROR",

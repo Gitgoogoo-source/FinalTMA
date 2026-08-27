@@ -178,6 +178,17 @@ def verify_database_boundaries() -> None:
         "result = operations.strip_pet_urls(p_result)",
         "result = operations.strip_pet_urls(p_detail)",
         "operations.present_result(p_operation.use_case, p_operation.result)",
+        "create table operations.telegram_chat_onboarding",
+        "telegram_id bigint not null unique",
+        "first_update_id bigint not null unique",
+        "delivery_status in ('unknown', 'sent', 'failed')",
+        "create or replace function api.telegram_chat_onboarding_claim",
+        "values ('telegram_write_access', p_update_id::text, p_payload)",
+        "on conflict do nothing",
+        "and u.status = 'normal'",
+        "create or replace function api.telegram_chat_onboarding_finish",
+        "and completed_at is null",
+        "else 'telegram_api_failed'",
     )
     missing = [fragment for fragment in operations_required if fragment not in operations_sql]
     if missing:

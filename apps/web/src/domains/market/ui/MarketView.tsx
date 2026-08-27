@@ -26,10 +26,12 @@ import {
 
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { useCatalogQuery } from "../../../platform/query/useCatalogQuery.ts";
+import { useSession } from "../../../platform/session/store.ts";
 import {
   usePageActive,
   usePageSearchParams,
 } from "../../../shared/navigation/pageActivity.tsx";
+import { markFirstPlayablePageReady } from "../../../shared/navigation/firstPlayablePageReadiness.ts";
 import { AppModal } from "../../../shared/ui/AppModal.tsx";
 import { Badge } from "../../../shared/ui/Badge.tsx";
 import { Button } from "../../../shared/ui/Button.tsx";
@@ -64,6 +66,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
   );
   const tab = requestedTab ?? (params.has("sell") ? "sell" : selectedTab);
   const pageActive = usePageActive();
+  const session = useSession();
   const purchaseTarget = params.get("buy");
   const identity = useApiQuery("identity.summary");
   const listings = useApiQuery("market.bootstrap", {}, tab === "buy");
@@ -208,6 +211,29 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
   }, [buySort, priceFilter, rarityFilter, sorted, stageFilter, tab]);
   const hasManageContent =
     tab === "manage" && (visible.length > 0 || soldEvents.length > 0);
+  const stateReady =
+    (state.data !== undefined || hasManageContent) &&
+    (!state.error || (tab === "manage" && hasManageContent));
+  useEffect(() => {
+    if (
+      pageActive &&
+      session &&
+      identity.data !== undefined &&
+      !identity.error &&
+      stateReady &&
+      !(tab === "buy" && purchaseTarget && targetListing.isLoading)
+    )
+      markFirstPlayablePageReady(session.generation, "/market");
+  }, [
+    identity.data,
+    identity.error,
+    pageActive,
+    purchaseTarget,
+    session,
+    stateReady,
+    tab,
+    targetListing.isLoading,
+  ]);
   const selectedSellItem =
     tab === "sell"
       ? (visible.find((item) => item.template_id === params.get("sell")) ??

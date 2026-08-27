@@ -10,10 +10,12 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useAppNavigate } from "../../../platform/navigation/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { useCatalogQuery } from "../../../platform/query/useCatalogQuery.ts";
+import { useSession } from "../../../platform/session/store.ts";
 import {
   usePageActive,
   usePageSearchParams,
 } from "../../../shared/navigation/pageActivity.tsx";
+import { markFirstPlayablePageReady } from "../../../shared/navigation/firstPlayablePageReadiness.ts";
 import { usePageModulePreparation } from "../../../shared/navigation/pageModulePreparation.ts";
 import { Badge } from "../../../shared/ui/Badge.tsx";
 import { Button } from "../../../shared/ui/Button.tsx";
@@ -70,6 +72,7 @@ export function InventoryView({
     searchParams.get("template") ?? searchParams.get("template_id") ?? "";
   const targetAction = searchParams.get("action");
   const catalog = useCatalogQuery(Boolean(targetId));
+  const session = useSession();
   const { templateIds: newTemplateIds, clearNew } = useNewMarkers();
   const navigate = useAppNavigate();
   const preparePage = usePageModulePreparation();
@@ -155,6 +158,26 @@ export function InventoryView({
     )
     .slice(0, thumbnailPageSize - 1)
     .map((candidate) => candidate.image_detail_url);
+  useEffect(() => {
+    if (
+      pageActive &&
+      session &&
+      query.data !== undefined &&
+      !query.error &&
+      (!targetId || !catalog.isLoading) &&
+      (!item || imageReady)
+    )
+      markFirstPlayablePageReady(session.generation, "/inventory");
+  }, [
+    catalog.isLoading,
+    imageReady,
+    item,
+    pageActive,
+    query.data,
+    query.error,
+    session,
+    targetId,
+  ]);
   useInventoryDetailPrewarm({
     enabled: pageActive && imageReady,
     selectedUrl: item?.image_detail_url ?? "",

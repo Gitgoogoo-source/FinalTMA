@@ -222,6 +222,165 @@ create table operations.webhook_events (
   primary key (provider, event_id)
 );
 
+create table operations.telegram_chat_onboarding (
+  user_id uuid primary key references identity.users(id) on delete cascade,
+  telegram_id bigint not null unique
+    check (telegram_id between 1 and 9007199254740991),
+  first_update_id bigint not null unique
+    check (first_update_id between 0 and 9007199254740991),
+  delivery_status text not null default 'unknown'
+    check (delivery_status in ('unknown', 'sent', 'failed')),
+  welcome_message_id bigint check (welcome_message_id > 0),
+  attempted_at timestamptz not null default clock_timestamp(),
+  completed_at timestamptz,
+  error_code text check (error_code is null or error_code = 'TELEGRAM_API_FAILED'),
+  updated_at timestamptz not null default clock_timestamp(),
+  check (completed_at is null or completed_at >= attempted_at),
+  check (
+    (completed_at is null
+      and delivery_status = 'unknown'
+      and welcome_message_id is null
+      and error_code is null)
+    or
+    (completed_at is not null
+      and (
+        (delivery_status = 'sent'
+          and welcome_message_id is not null
+          and error_code is null)
+        or
+        (delivery_status in ('unknown', 'failed')
+          and welcome_message_id is null
+          and error_code = 'TELEGRAM_API_FAILED')
+      ))
+  )
+);
+
+create or replace function api.telegram_chat_onboarding_claim(
+  p_update_id bigint,
+  p_telegram_id bigint,
+  p_payload jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid;
+  v_preferred_language text;
+  v_claimed_user_id uuid;
+begin
+  if p_update_id is null
+    or p_update_id < 0
+    or p_update_id > 9007199254740991
+    or p_telegram_id is null
+    or p_telegram_id <= 0
+    or p_telegram_id > 9007199254740991
+    or p_payload is null
+    or jsonb_typeof(p_payload) <> 'object'
+  then
+    perform api.raise_business_error('REQUEST_INVALID', 'Telegram 授权通知无效');
+  end if;
+
+  insert into operations.webhook_events (provider, event_id, payload)
+  values ('telegram_write_access', p_update_id::text, p_payload)
+  on conflict do nothing;
+  if not found then
+    return jsonb_build_object(
+      'should_send', false,
+      'user_id', null,
+      'preferred_language', null
+    );
+  end if;
+
+  select u.id, u.preferred_language
+  into v_user_id, v_preferred_language
+  from identity.users u
+  where u.telegram_id = p_telegram_id
+    and u.status = 'normal'
+  for update;
+
+  if v_user_id is null then
+    update operations.webhook_events
+    set processed_at = clock_timestamp()
+    where provider = 'telegram_write_access'
+      and event_id = p_update_id::text;
+    return jsonb_build_object(
+      'should_send', false,
+      'user_id', null,
+      'preferred_language', null
+    );
+  end if;
+
+  insert into operations.telegram_chat_onboarding (
+    user_id,
+    telegram_id,
+    first_update_id
+  ) values (
+    v_user_id,
+    p_telegram_id,
+    p_update_id
+  )
+  on conflict do nothing
+  returning user_id into v_claimed_user_id;
+
+  update operations.webhook_events
+  set processed_at = clock_timestamp()
+  where provider = 'telegram_write_access'
+    and event_id = p_update_id::text;
+
+  return jsonb_build_object(
+    'should_send', v_claimed_user_id is not null,
+    'user_id', v_user_id,
+    'preferred_language', v_preferred_language
+  );
+end;
+$$;
+
+create or replace function api.telegram_chat_onboarding_finish(
+  p_user_id uuid,
+  p_update_id bigint,
+  p_delivery_status text,
+  p_welcome_message_id bigint
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_updated boolean;
+begin
+  if p_user_id is null
+    or p_update_id is null
+    or p_update_id < 0
+    or p_update_id > 9007199254740991
+    or p_delivery_status is null
+    or p_delivery_status not in ('unknown', 'sent', 'failed')
+    or (p_delivery_status = 'sent' and (p_welcome_message_id is null or p_welcome_message_id <= 0))
+    or (p_delivery_status <> 'sent' and p_welcome_message_id is not null)
+  then
+    perform api.raise_business_error('REQUEST_INVALID', 'Telegram 欢迎消息结果无效');
+  end if;
+
+  update operations.telegram_chat_onboarding
+  set delivery_status = p_delivery_status,
+      welcome_message_id = p_welcome_message_id,
+      completed_at = clock_timestamp(),
+      error_code = case
+        when p_delivery_status = 'sent' then null
+        else 'TELEGRAM_API_FAILED'
+      end,
+      updated_at = clock_timestamp()
+  where user_id = p_user_id
+    and first_update_id = p_update_id
+    and completed_at is null;
+  v_updated := found;
+
+  return jsonb_build_object('updated', v_updated);
+end;
+$$;
+
 create table operations.job_runs (
   id uuid primary key default extensions.gen_random_uuid(),
   job_name text not null,

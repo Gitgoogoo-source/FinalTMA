@@ -48,6 +48,7 @@ const forbiddenModuleFragments = [
   "/apps/web/src/pages/inventory/",
   "/apps/web/src/pages/market/",
   "/apps/web/src/pages/tasks/",
+  "/apps/web/src/workflows/telegram-chat-onboarding/",
   "/apps/web/src/workflows/operation-recovery/OperationRegistryRuntimeProvider.tsx",
   "/apps/web/src/workflows/operation-recovery/presentations/",
   "/packages/api-contracts/src/domains/battle/models.ts",
