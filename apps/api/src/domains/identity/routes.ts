@@ -22,6 +22,8 @@ import {
   type HandlerMap,
 } from "../../http/handlers.ts";
 
+const TG_APP_LISTING_START_PARAM = "listed_on_tg_app";
+
 export const identityHandlers = {
   "identity.authenticate": async (context) => {
     const initData = String(context.input.init_data);
@@ -139,7 +141,7 @@ function classifyEntry(startParam: string | null): {
   referralCode: string | null;
   battleInviteTokenHash: string | null;
 } {
-  if (startParam === null)
+  if (startParam === null || startParam === TG_APP_LISTING_START_PARAM)
     return {
       kind: "direct",
       referralCode: null,

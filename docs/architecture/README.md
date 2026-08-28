@@ -22,6 +22,7 @@ ec8d89aec0a700bfb504285401bf6327ed2a4c48c94d4d8bb92559bdae2ee61e
 - Realtime：Ably Standard 只发送 Battle 状态失效通知；REST 与数据库 `state_version` 回正权威状态。
 - Blockchain：TON Connect、钱包验证与 Tact NFT Mint 实现保留休眠；当前 App/Jobs 运行时注册表与 OpenAPI 均不发布相关端点，MVP 不提供入口、恢复或定时对账。
 - Deployment：既有 Vercel Pro Project `final-tma` 是唯一生产项目；`main` 只通过 Git Integration 自动部署，不使用项目暂停、空触发提交或手动部署；既有 Supabase `final-tma-real-test / ebewtjerusxcioegpzjd` 是唯一生产数据库，完整裁决见 [ADR-086](adr/ADR-086-evomypet-production-cutover.md)。
+- Tg.app：目录打开链接附带的精确 `listed_on_tg_app` 来源值在 Telegram `initData` 验签后折叠为现有 `direct`，不创建渠道入口类型、邀请候选、邀请奖励或 Battle 状态；其他未知参数继续拒绝，完整边界见 [ADR-090](adr/ADR-090-tgapp-catalog-source-entry.md)。
 
 仓库继续保留唯一的 TON Connect 静态身份与 manifest，供休眠实现保持确定性；当前 Web 不引用该 manifest、不初始化 TON Connect，也不把其图标是否正式替换作为 MVP 发布阻塞。
 
@@ -188,3 +189,4 @@ operation 准入与保留按 [ADR-059](adr/ADR-059-bounded-operation-admission-a
 - [EvoMyPet 品牌与既有云环境生产切换](adr/ADR-086-evomypet-production-cutover.md)
 - [Telegram 聊天列表授权与首次欢迎消息](adr/ADR-087-telegram-chat-list-onboarding.md)
 - [Telegram 发现页品牌素材与公开信息闭环](adr/ADR-088-telegram-discovery-profile-and-public-info.md)
+- [Tg.app 目录来源参数精确直接入口](adr/ADR-090-tgapp-catalog-source-entry.md)

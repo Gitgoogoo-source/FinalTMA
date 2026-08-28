@@ -112,7 +112,7 @@ Battle stake / settlement / outbox event（脱敏）：
 
 ## 用户与登录第 16.11 节验收
 
-以下 21 项逐项保存独立证据，不能合并为单一“登录通过”结论：
+以下 22 项逐项保存独立证据，不能合并为单一“登录通过”结论：
 
 1. 首次有效 Telegram 登录先显示加载反馈，只创建一个 `normal` 账号并进入首屏。
 2. 再次或长期离开后登录复用原账号、资产、权益、进度和邀请码。
@@ -135,8 +135,9 @@ Battle stake / settlement / outbox event（脱敏）：
 19. 骨架、旧展示和加载动画最终由当前数据库事实覆盖，旧响应不能覆盖新登录。
 20. UI 不存在密码、邮箱、手机号、手动用户号、钱包登录、退出、注销、删除或归档入口。
 21. iOS、Android、Telegram Desktop、Telegram Web 的浅色、深色、刘海安全区和视口变化下，登录结果一致且全部启动控件可见可操作。
+22. 在真实 iPhone Telegram 中打开 `https://t.me/EvoMyPet_bot/evomypet?startapp=listed_on_tg_app`，并同时使用 Safari Web Inspector 记录认证请求、Console 与页面结果：本次 session 必须为 `direct` 并进入默认开盒页，推荐码与 Battle token hash 均为空；干净账号不得新增 `identity.entry_candidates`、`referral.bind` 操作、邀请关系或邀请奖励。随后分别打开无参数 named 链接、真实推荐链接、真实 Battle 链接以及大小写改变、增加前后缀和任意未知参数的链接，前三类保持原行为，所有近似或未知值仍返回入口参数错误；已有 `pending` 推荐候选的账号从 Tg.app 重认证时必须继承原候选，不能新增、删除或绕过。
 
-邀请交接场景必须额外记录会话 `referral_processed_at`、候选状态和门禁接口结果；存在绑定操作时记录原 `operation_id`，老用户静默进入场景确认候选与绑定操作均不存在；封禁竞态记录封禁前请求 generation、封禁后 generation、缓存键及最终空白界面截图；邀请信息记录 `/api/referrals` 为 200 且链接包含生产 Bot、`evomypet` 与当前用户邀请码。
+邀请交接场景必须额外记录会话 `referral_processed_at`、候选状态和门禁接口结果；存在绑定操作时记录原 `operation_id`，老用户静默进入场景确认候选与绑定操作均不存在；Tg.app 干净账号场景额外记录 session 与 login request 的 `entry_kind = direct`、空推荐码、空 Battle token hash，以及候选、绑定、邀请关系和邀请奖励的前后数据库差异；封禁竞态记录封禁前请求 generation、封禁后 generation、缓存键及最终空白界面截图；邀请信息记录 `/api/referrals` 为 200 且链接包含生产 Bot、`evomypet` 与当前用户邀请码。
 
 ## 账号语言与 en-US 本地化验收
 

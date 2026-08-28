@@ -196,6 +196,7 @@ def main() -> None:
     verify_identity_avatar_minimization()
     verify_browser_csp_boundaries()
     verify_telegram_release_isolation()
+    verify_telegram_catalog_start_param_allowlist()
     verify_telegram_payment_support_command()
     verify_telegram_chat_list_onboarding()
     verify_persistent_page_route_leaves()
@@ -2865,6 +2866,93 @@ def verify_session_credential_boundary() -> None:
         )
     if "identity_consume_login_rate_limit" in identity_routes:
         raise SystemExit("Legacy three-call login limiter must remain removed")
+
+
+def verify_telegram_catalog_start_param_allowlist() -> None:
+    identity_routes = (API_ROOT / "domains/identity/routes.ts").read_text(
+        encoding="utf-8"
+    )
+    required_route_terms = (
+        'const TG_APP_LISTING_START_PARAM = "listed_on_tg_app";',
+        "startParam === null ||",
+        "startParam === TG_APP_LISTING_START_PARAM",
+        "/^TMA[A-F0-9]{20}$/",
+        "/^BTL_[A-Za-z0-9_-]{32}$/",
+        'kind: "invalid"',
+    )
+    missing_route_terms = [
+        term for term in required_route_terms if term not in identity_routes
+    ]
+    if missing_route_terms or identity_routes.count('"listed_on_tg_app"') != 1:
+        raise SystemExit(
+            "Telegram catalog start parameter allowlist is incomplete: "
+            f"missing={missing_route_terms}"
+        )
+
+    forbidden_route_terms = (
+        "startParam.startsWith(TG_APP_LISTING_START_PARAM)",
+        "startParam.includes(TG_APP_LISTING_START_PARAM)",
+        "startParam.toLowerCase()",
+    )
+    present_forbidden_terms = [
+        term for term in forbidden_route_terms if term in identity_routes
+    ]
+    if present_forbidden_terms:
+        raise SystemExit(
+            "Telegram catalog start parameter must remain an exact, case-sensitive match: "
+            f"{present_forbidden_terms}"
+        )
+
+    identity_sql = (ROOT / "supabase/schemas/10_identity.sql").read_text(
+        encoding="utf-8"
+    ).lower()
+    required_identity_terms = (
+        "p_entry_kind not in ('direct', 'referral', 'battle', 'invalid')",
+        "p_entry_kind = 'direct' and (p_entry_referral_code is not null or p_battle_invite_token_hash is not null)",
+        "v_new_user and p_entry_kind = 'referral'",
+    )
+    missing_identity_terms = [
+        term for term in required_identity_terms if term not in identity_sql
+    ]
+    if missing_identity_terms or "listed_on_tg_app" in identity_sql:
+        raise SystemExit(
+            "Tg.app source must collapse to direct before the database boundary: "
+            f"missing={missing_identity_terms}"
+        )
+
+    documentation_requirements = {
+        "ADR-002": (
+            ROOT / "docs/architecture/adr/ADR-002-identity-and-session.md",
+            ("`listed_on_tg_app`", "`direct`", "精确"),
+        ),
+        "ADR-090": (
+            ROOT / "docs/architecture/adr/ADR-090-tgapp-catalog-source-entry.md",
+            ("`listed_on_tg_app`", "`direct`", "任何其他未知"),
+        ),
+        "product": (
+            ROOT / "docs/product/功能说明文档.md",
+            ("`listed_on_tg_app`", "Tg.app", "邀请候选"),
+        ),
+        "acceptance": (
+            ROOT / "docs/operations/acceptance.md",
+            (
+                "https://t.me/EvoMyPet_bot/evomypet?startapp=listed_on_tg_app",
+                "Safari Web Inspector",
+                "identity.entry_candidates",
+            ),
+        ),
+    }
+    incomplete_documents: dict[str, list[str]] = {}
+    for label, (path, required_terms) in documentation_requirements.items():
+        source = path.read_text(encoding="utf-8")
+        missing_terms = [term for term in required_terms if term not in source]
+        if missing_terms:
+            incomplete_documents[label] = missing_terms
+    if incomplete_documents:
+        raise SystemExit(
+            "Telegram catalog entry documentation is incomplete: "
+            f"{incomplete_documents}"
+        )
 
 
 def verify_identity_read_model_boundary() -> None:
