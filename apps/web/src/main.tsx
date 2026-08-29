@@ -11,6 +11,7 @@ import { initializeTelegram } from "./platform/telegram/index.ts";
 import { preloadFirstScreenContracts } from "@evomypet/api-contracts/app-client";
 import "./shared/styles/foundation.css";
 
+void import("./platform/audio/buttonClickAudio.ts").catch(() => undefined);
 const telegram = initializeTelegram();
 initializeLanguageHint(telegram?.initDataUnsafe.user?.id);
 void loadEnglishCatalog().catch(() => undefined);
