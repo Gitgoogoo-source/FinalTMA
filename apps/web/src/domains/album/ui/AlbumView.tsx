@@ -1,19 +1,10 @@
-import { ChevronLeft } from "lucide-react";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { useAppNavigate } from "../../../platform/navigation/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { useIdentityRecovery } from "../../../platform/session/store.ts";
 import { usePageModulePreparation } from "../../../shared/navigation/pageModulePreparation.ts";
 import { Badge } from "../../../shared/ui/Badge.tsx";
-import { Button } from "../../../shared/ui/Button.tsx";
 import { PageState } from "../../../shared/ui/PageState.tsx";
 import {
   useOperationBlocked,
@@ -40,7 +31,6 @@ export function AlbumView(): ReactNode {
   useBlockingOperationRecovery(recovery?.blocking_operations);
   const navigate = useAppNavigate();
   const preparePage = usePageModulePreparation();
-  const back = useCallback(() => navigate(-1), [navigate]);
   const { preload, run } = useOperationCommands();
   const blocked = useOperationBlocked("album.claim");
   const [filter, setFilter] = useState<AlbumFilter>("all");
@@ -89,9 +79,6 @@ export function AlbumView(): ReactNode {
           alt=""
           aria-hidden="true"
         />
-        <Button className="icon-only" aria-label={t("返回")} onClick={back}>
-          <ChevronLeft aria-hidden="true" />
-        </Button>
         <div>
           <span>ALBUM</span>
           <h1>{tr("Evolution", "进化图鉴")}</h1>

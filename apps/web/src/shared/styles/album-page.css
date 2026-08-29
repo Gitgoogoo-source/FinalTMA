@@ -46,24 +46,6 @@
   height: 1px;
   background: rgba(255, 156, 0, 0.34);
 }
-.album-heading .icon-only {
-  position: absolute;
-  top: 4px;
-  left: 0;
-  width: 48px;
-  height: 48px;
-  border: 1.5px solid var(--album-ink);
-  border-radius: 50%;
-  color: var(--album-ink);
-  background: rgba(255, 253, 250, 0.8);
-  box-shadow: 0 5px 14px rgba(54, 67, 75, 0.08);
-  backdrop-filter: blur(4px);
-  z-index: 1;
-}
-.album-heading .icon-only svg {
-  width: 27px;
-  height: 27px;
-}
 .album-heading > div {
   position: absolute;
   z-index: 1;
