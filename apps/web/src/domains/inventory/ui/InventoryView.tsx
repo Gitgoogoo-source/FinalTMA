@@ -208,7 +208,6 @@ export function InventoryView({
         }}
       >
         <BookOpen />
-        <span>{t("图鉴")}</span>
       </Button>
       <PageState
         loading={query.isLoading}
