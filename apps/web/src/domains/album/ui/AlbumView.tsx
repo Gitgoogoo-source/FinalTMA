@@ -23,7 +23,7 @@ import { useBlockingOperationRecovery } from "../../../workflows/operation-recov
 import type { AlbumChain, AlbumFilter, AlbumNode } from "../types.ts";
 import { AlbumChainCard } from "./AlbumChainCard.tsx";
 import { AlbumNodeDialog } from "./AlbumNodeDialog.tsx";
-import { localized, t, tp } from "../../../platform/i18n/index.ts";
+import { localized, t, tp, tr } from "../../../platform/i18n/index.ts";
 
 const filters: readonly { id: AlbumFilter; label: string }[] = localized([
   { id: "all", label: "全部" },
@@ -94,7 +94,7 @@ export function AlbumView(): ReactNode {
         </Button>
         <div>
           <span>ALBUM</span>
-          <h1>{t("进化图鉴")}</h1>
+          <h1>{tr("Evolution", "进化图鉴")}</h1>
         </div>
         {query.isFetching ? <Badge>{t("正在刷新")}</Badge> : null}
       </header>
