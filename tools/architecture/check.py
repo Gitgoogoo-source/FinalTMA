@@ -84,6 +84,7 @@ REQUIRED_PATHS = (
     "docs/architecture/adr/ADR-085-gems-display-name.md",
     "docs/architecture/adr/ADR-086-evomypet-production-cutover.md",
     "docs/architecture/adr/ADR-087-telegram-chat-list-onboarding.md",
+    "docs/architecture/adr/ADR-096-battle-session-rollover-authority-gate.md",
     "apps/web/public/maintenance.html",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
@@ -210,6 +211,7 @@ def main() -> None:
     verify_game_page_boundary()
     verify_battle_staged_runtime_loading()
     verify_battle_legacy_removal()
+    verify_battle_session_rollover_authority_gate()
     verify_battle_terminal_refresh_semantics()
     verify_battle_accept_operation_ordering()
     verify_battle_countdown_lock_semantics()
@@ -2365,6 +2367,56 @@ def verify_battle_legacy_removal() -> None:
     if violations:
         raise SystemExit(
             f"Legacy Battle contract or generated artifact remains: {violations}"
+        )
+
+
+def verify_battle_session_rollover_authority_gate() -> None:
+    client = (WEB_ROOT / "platform/api/client.ts").read_text(encoding="utf-8")
+    recovery_success = client.partition(
+        "assertCurrentNormalSession(next.generation);"
+    )[2].partition("})().finally")[0]
+    ordered_terms = (
+        "clearSensitiveState();",
+        "seedSessionInitialState(next.generation, initialState.data);",
+        "replaceSession({ ...next, recovering: false, initialStateFailed: false });",
+    )
+    positions = [recovery_success.find(term) for term in ordered_terms]
+    if any(position < 0 for position in positions) or positions != sorted(positions):
+        raise SystemExit(
+            "Recovered initial state must be seeded before the new session generation "
+            "is released to authenticated pages"
+        )
+
+    battle_view = (WEB_ROOT / "domains/battle/ui/BattleView.tsx").read_text(
+        encoding="utf-8"
+    )
+    battle_screens = (
+        WEB_ROOT / "domains/battle/ui/BattleScreens.tsx"
+    ).read_text(encoding="utf-8")
+    required_view_terms = (
+        "const authorityRecoveryPending =",
+        "participation !== null && roomUnavailable",
+        "if (bootstrap.isLoading || authorityRecoveryPending) return;",
+        'data-battle-authority-recovery="true"',
+        "battleAuthorityRetryDelays",
+        "authorityFreshGeneration.current = sessionGeneration",
+    )
+    missing_view_terms = [
+        term for term in required_view_terms if term not in battle_view
+    ]
+    recovery_render = battle_view.find('data-battle-authority-recovery="true"')
+    business_render = battle_view.find('data-battle-page-state={pageState}')
+    if (
+        missing_view_terms
+        or recovery_render < 0
+        or business_render < 0
+        or recovery_render > business_render
+        or "恢复当前 Battle" in battle_screens
+        or "battle-participation-notice" in battle_screens
+    ):
+        raise SystemExit(
+            "Battle session-rollover authority gate is incomplete: "
+            f"missing={missing_view_terms}"
         )
 
 

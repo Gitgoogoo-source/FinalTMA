@@ -4,7 +4,6 @@ import {
   ChevronRight,
   Clock3,
   Gem,
-  Radio,
   RefreshCw,
   Send,
   ShieldCheck,
@@ -29,7 +28,6 @@ import {
   battleArenaTierLabels,
   battleRarityLabels,
   battleResultLabels,
-  battleStatusLabels,
   formatBattleTime,
   tierTitle,
 } from "../labels.ts";
@@ -45,16 +43,12 @@ type InviteRoom = Extract<
 
 export function BattleHome({
   tiers,
-  participation,
   loading,
   onChooseTier,
-  onRefresh,
 }: {
   tiers: readonly BattleEntryTier[];
-  participation: BattleParticipation | null;
   loading: boolean;
   onChooseTier(tier: BattleEntryTier["id"]): void;
-  onRefresh(): void;
 }): ReactNode {
   const [selectedTierId, setSelectedTierId] = useState<
     BattleEntryTier["id"] | null
@@ -64,7 +58,7 @@ export function BattleHome({
     tiers.find((tier) => tier.entry_fee === 100) ??
     tiers[0] ??
     null;
-  const selectionDisabled = loading || Boolean(participation);
+  const selectionDisabled = loading;
 
   return (
     <div className="battle-home">
@@ -75,22 +69,6 @@ export function BattleHome({
         </div>
         <BattleHomePixelDuel />
       </section>
-
-      {participation ? (
-        <section className="battle-participation-notice" aria-live="polite">
-          <div>
-            <Radio />
-            <span>
-              <strong>{battleStatusLabels[participation.status]}</strong>
-              {t("当前入场费")} {participation.entry_fee} Stars
-            </span>
-          </div>
-          <Button onClick={onRefresh}>
-            <RefreshCw />
-            {t("恢复当前 Battle")}
-          </Button>
-        </section>
-      ) : null}
 
       <section className="battle-tier-stage" aria-label={t("选择战场")}>
         <div className="battle-tier-heading">
@@ -165,6 +143,28 @@ export function BattleHome({
         </Button>
       </section>
     </div>
+  );
+}
+
+export function BattleAuthorityRecovery(): ReactNode {
+  return (
+    <section
+      className="battle-authority-recovery"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <span className="battle-authority-recovery-emblem" aria-hidden="true">
+        <Swords />
+      </span>
+      <h1>{t("正在找回冒险")}</h1>
+      <p>{t("请稍候，伙伴们正在重新集合")}</p>
+      <span className="battle-authority-recovery-progress" aria-hidden="true">
+        <i />
+        <i />
+        <i />
+      </span>
+    </section>
   );
 }
 

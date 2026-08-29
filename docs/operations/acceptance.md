@@ -127,7 +127,7 @@ Battle stake / settlement / outbox event（脱敏）：
 11. 同一 initData 一分钟第 4 次登录返回限流且页面不自动重试。
 12. 网络/系统异常显示重新尝试；入口、时间、身份和限流错误不显示当前页重试。
 13. 会话恰好 15 分钟绝对失效且不延长，自然过期只恢复一次。
-14. 自动恢复重新读取账号和首屏，不重做资产业务；恢复得到 `pending` 时回到邀请确认。
+14. 自动恢复重新读取账号和首屏，不重做资产业务；恢复得到 `pending` 时回到邀请确认。真实 `active_turn` 跨过 15 分钟绝对到期点时，只允许一次认证交换并自动回到同一 room；从恢复页到战斗页期间 DOM 不得出现 `data-battle-page-state="home"`、“恢复当前 Battle”、档位或业务按钮，Network 不得出现重复 room/bootstrap 并行读取或新的 `battle.action`，恢复后的 round、ordinal、行动方、HP、deadline 与最新 action sequence 必须等于数据库权威快照。等待房和 lobby 分别重验自动回到原状态与新 lease；静态检查或仅等待房结果不能替代 active-turn 结论。
 15. 会话撤销或替换不自动恢复，旧页面清空并要求重新进入。
 16. 多页面同时过期只执行一次认证交换并得到同一账号结果。
 17. 恢复期间关闭重开后，旧 generation 结果不能写入新启动页。

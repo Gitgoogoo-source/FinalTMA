@@ -382,8 +382,8 @@ async function recoverSession(): Promise<void> {
     }
     assertCurrentNormalSession(next.generation);
     clearSensitiveState();
-    replaceSession({ ...next, recovering: false, initialStateFailed: false });
     seedSessionInitialState(next.generation, initialState.data);
+    replaceSession({ ...next, recovering: false, initialStateFailed: false });
   })().finally(() => {
     recovery = null;
   });

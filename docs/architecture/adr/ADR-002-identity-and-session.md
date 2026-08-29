@@ -13,3 +13,5 @@ Telegram 是唯一身份来源，不使用 Supabase Auth。只有认证交换端
 每次登录撤销同账号旧会话。会话绝对有效 15 分钟，不延长、无 Refresh Token、无退出接口。自然过期仅自动交换一次；恢复得到 `pending` 会话时回到邀请确认流程，不加载首屏。被替换或撤销的会话不自动恢复。
 
 直接入口、Battle 入口或已经完成推荐交接的认证，在 `api.identity_authenticate` 事务提交后由同一 Function 调用 `api.identity_initial`，把可空 `initial_state` 与短期令牌一起返回；初始状态读取不进入认证事务。初始读取的临时失败只把 `initial_state` 降级为空，前端保留 session 并命令式重试 `identity.initial`；会话、封禁和入口交接的稳定错误不得降级。`pending` 推荐入口固定返回空初始状态，绑定形成确定终态后再读取一次新的 `identity.initial`。首屏摘要写入 `identity.summary` 查询缓存，恢复种子只保存于当前 session generation 内存，规则由 [ADR-049](ADR-049-identity-initial-state-and-summary-read-model.md) 固定。
+
+自然过期恢复取得完整初始状态后，前端固定先清除旧 generation 的敏感状态，再为仍标记 `recovering` 的新 generation 写入摘要与恢复种子，最后才开放认证页面；不得在恢复种子尚未可读时发布 `recovering = false`。这只改变同一认证响应在客户端的发布顺序，不延长令牌、不保留旧 generation 状态，也不自动重做任何业务操作。Battle participation 到 room 的后续权威门禁由 [ADR-096](ADR-096-battle-session-rollover-authority-gate.md) 固定。

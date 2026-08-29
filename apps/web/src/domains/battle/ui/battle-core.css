@@ -322,36 +322,81 @@
   }
 }
 
-.battle-participation-notice svg {
-  width: 17px;
-  height: 17px;
-  color: var(--battle-orange);
-}
-
-.battle-participation-notice {
-  display: grid;
-  gap: 10px;
-  padding: 14px;
-  border: 1px solid rgba(47, 127, 219, 0.18);
-  border-radius: 20px;
-  background: rgba(232, 244, 255, 0.82);
-}
-
-.battle-participation-notice > div {
+.battle-authority-recovery {
+  min-height: calc(var(--tg-viewport-stable-height, 100dvh) - 164px);
   display: flex;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 10px;
+  padding: 32px 20px;
+  text-align: center;
 }
 
-.battle-participation-notice span {
+.battle-authority-recovery-emblem {
   display: grid;
-  gap: 2px;
-  color: var(--battle-muted);
-  font-size: 12px;
+  width: 64px;
+  height: 64px;
+  place-items: center;
+  border: 2px solid color-mix(in srgb, var(--battle-orange) 34%, white);
+  border-radius: 22px;
+  color: var(--battle-orange);
+  background: color-mix(in srgb, var(--battle-orange) 9%, white);
+  box-shadow: 0 16px 34px rgba(54, 67, 75, 0.08);
 }
 
-.battle-participation-notice strong {
+.battle-authority-recovery-emblem svg {
+  width: 30px;
+  height: 30px;
+}
+
+.battle-authority-recovery h1 {
+  margin: 8px 0 0;
   color: var(--battle-ink);
+  font-size: 25px;
+  font-weight: 950;
+  letter-spacing: -0.035em;
+}
+
+.battle-authority-recovery p {
+  margin: 0;
+  color: var(--battle-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.battle-authority-recovery-progress {
+  display: flex;
+  gap: 7px;
+  margin-top: 6px;
+}
+
+.battle-authority-recovery-progress i {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  background: var(--battle-orange);
+  animation: battle-authority-recovery-pulse 1.2s ease-in-out infinite;
+}
+
+.battle-authority-recovery-progress i:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.battle-authority-recovery-progress i:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+@keyframes battle-authority-recovery-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
 }
 
 .battle-tier-stage {

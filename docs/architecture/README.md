@@ -197,3 +197,4 @@ operation 准入与保留按 [ADR-059](adr/ADR-059-bounded-operation-admission-a
 - [Battle 实际对战底部导航可见性](adr/ADR-093-battle-active-bottom-navigation-visibility.md)
 - [Battle 行动截止门禁与冲突恢复](adr/ADR-094-battle-action-deadline-client-gating.md)
 - [Battle 同阶段跨稀有度技能有效威力](adr/ADR-095-battle-rarity-ordered-effective-skill-power.md)
+- [Battle 会话换代权威恢复门禁](adr/ADR-096-battle-session-rollover-authority-gate.md)

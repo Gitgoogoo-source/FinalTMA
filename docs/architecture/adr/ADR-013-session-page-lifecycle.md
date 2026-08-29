@@ -20,6 +20,8 @@ Battle prepared message 的即时分享反馈以当前 session generation 与创
 
 Battle 页面的权威优先级固定为“当前会话未离开的 viewer-specific current-room 快照 → 当前邀请入口/本地流程 → Battle 首页”。终局 room snapshot 只有在包含 `terminal_result` 时渲染 result；点击返回后，本次 session generation 内任何迟到结果都不能重新打开同一 room。`BTL_` 入口只在当前账号没有权威 room 时决定邀请页；接受命令成功返回或 bootstrap/room 刷新已给出本账号的进行中 room 时，必须立即渲染该 room 的 lobby 或 battle 状态。迟到的邀请 `accepted` 刷新不得把本账号的成功 room 降级为“挑战已被其他玩家接受”；固定冲突只属于本账号自身的失败 accept operation。同键回放与响应乱序服从高 `state_version` 快照；重新加载和重新认证不恢复终局结果，不由前端猜测赢家。
 
+Session generation 自然换代时，Battle 先按全局规则清除旧页面和旧查询；当前 generation 的 `identity.initial.recovery.battle_participation` 已发布但 viewer-specific room 尚未到达时，按 [ADR-096](ADR-096-battle-session-rollover-authority-gate.md) 保持无业务按钮的权威恢复门禁。该门禁不属于八种 Battle 页面状态，不得短暂降级为首页；bootstrap 或 room 明确形成当前数据库事实后才恢复对应页面与 presence lifecycle。
+
 页面保活和查询缓存只存在于当前内存登录会话，不写入 `localStorage`、`sessionStorage`、IndexedDB 或服务端。唯一持久化例外是 [ADR-029](ADR-029-market-sold-device-inbox.md) 定义的按内部用户 ID 隔离的 SOLD 提醒游标与未隐藏事件；它不保存查询缓存、会话令牌或业务裁决数据。Session generation 改变、身份恢复失败、会话清理或账号封禁时，全部持久页面、页内状态和查询缓存一并清除，旧 generation 的迟到结果不得恢复；SOLD 本地数据保留但在当前身份不匹配时绝不读取或展示。
 
 ## 结果

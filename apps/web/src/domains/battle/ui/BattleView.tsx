@@ -74,6 +74,7 @@ import {
 import { BattleArena } from "./BattleArena.tsx";
 import {
   BattleAccept,
+  BattleAuthorityRecovery,
   BattleCancelSheet,
   BattleHome,
   BattleInviteMissing,
@@ -113,6 +114,7 @@ type ShareAttempt = {
 };
 
 const emptySlots: BattleTeamSlots = [null, null, null];
+const battleAuthorityRetryDelays = [0, 1_000, 2_000, 5_000] as const;
 
 export function BattleView(): ReactNode {
   const pageActive = usePageActive();
@@ -190,6 +192,9 @@ export function BattleView(): ReactNode {
   const [actionBackfillVersion, setActionBackfillVersion] = useState(0);
   const [onlineState, setOnlineState] = useState<OnlineState>("syncing");
   const [lifecycleReady, setLifecycleReady] = useState(false);
+  const roomUnavailable = room === null;
+  const authorityRecoveryPending =
+    !forceHome && participation !== null && roomUnavailable;
   const battleRootRef = useRef<HTMLDivElement>(null);
   const handledResume = useRef(new Set<string>());
   const dismissedTerminalRooms = useRef(new Set<string>());
@@ -209,6 +214,7 @@ export function BattleView(): ReactNode {
     telegram()?.isActive !== false || document.hasFocus(),
   );
   const authorityHealthy = useRef(false);
+  const authorityFreshGeneration = useRef<string | null>(null);
   const authorityInFlight = useRef<Promise<boolean> | null>(null);
   const foregroundAuthorityOwner = useRef(
     Symbol("battle-foreground-authority"),
@@ -488,6 +494,8 @@ export function BattleView(): ReactNode {
       for (const request of heartbeatRequests.current) request.abort();
       heartbeatRequests.current.clear();
       presenceLifecycle.current = null;
+      authorityHealthy.current = false;
+      authorityFreshGeneration.current = null;
     });
     return () => {
       cancelled = true;
@@ -495,10 +503,19 @@ export function BattleView(): ReactNode {
   }, [publishRoom, sessionGeneration]);
 
   useEffect(() => {
+    const bootstrapSnapshot = bootstrap.data;
+    if (
+      !lifecycleReadyRef.current &&
+      (bootstrapSnapshot?.room ||
+        (bootstrapSnapshot?.participation === null && roomRef.current === null))
+    ) {
+      authorityHealthy.current = true;
+      authorityFreshGeneration.current = sessionGeneration;
+    }
     let cancelled = false;
     queueMicrotask(() => {
       if (cancelled) return;
-      const candidates = [bootstrap.data?.room].filter(
+      const candidates = [bootstrapSnapshot?.room].filter(
         (candidate): candidate is BattleRoomSnapshotDto => Boolean(candidate),
       );
       if (candidates.length === 0) {
@@ -525,7 +542,97 @@ export function BattleView(): ReactNode {
     return () => {
       cancelled = true;
     };
-  }, [bootstrap.data, onAuthoritativeRoom, publishRoom]);
+  }, [bootstrap.data, onAuthoritativeRoom, publishRoom, sessionGeneration]);
+
+  useEffect(() => {
+    const recoveryRoomId = participation?.room_id;
+    if (
+      !authorityRecoveryPending ||
+      !recoveryRoomId ||
+      !sessionGeneration ||
+      activeTerminal ||
+      bootstrap.isLoading
+    )
+      return;
+    let cancelled = false;
+    let retryTimer: number | null = null;
+    let retryAttempt = 0;
+
+    const schedule = () => {
+      if (cancelled) return;
+      const delay =
+        battleAuthorityRetryDelays[
+          Math.min(retryAttempt, battleAuthorityRetryDelays.length - 1)
+        ] ?? 5_000;
+      retryAttempt += 1;
+      retryTimer = window.setTimeout(() => void recover(), delay);
+    };
+    const stillCurrent = () =>
+      !cancelled && getSession()?.generation === sessionGeneration;
+    const publishRecoveredAuthority = async (
+      snapshot: BattleRoomSnapshotDto,
+    ) => {
+      if (!stillCurrent()) return false;
+      authorityHealthy.current = true;
+      authorityFreshGeneration.current = sessionGeneration;
+      await onAuthoritativeRoom(snapshot);
+      return true;
+    };
+    const recover = async () => {
+      retryTimer = null;
+      if (!stillCurrent()) return;
+      if (
+        !pageActive ||
+        document.visibilityState !== "visible" ||
+        !hostActiveRef.current ||
+        !window.navigator.onLine
+      ) {
+        schedule();
+        return;
+      }
+      let snapshot: BattleRoomSnapshotDto | null = null;
+      try {
+        snapshot = await readAuthorityRoom(recoveryRoomId);
+      } catch {
+        authorityHealthy.current = false;
+      }
+      if (snapshot && (await publishRecoveredAuthority(snapshot))) return;
+      if (!stillCurrent()) return;
+      try {
+        const bootstrapResult = await refetchBootstrap();
+        if (!stillCurrent()) return;
+        if (!bootstrapResult.isError && bootstrapResult.data) {
+          const recoveredRoom = bootstrapResult.data.room;
+          if (recoveredRoom) {
+            if (await publishRecoveredAuthority(recoveredRoom)) return;
+          } else if (bootstrapResult.data.participation === null) {
+            authorityHealthy.current = true;
+            authorityFreshGeneration.current = sessionGeneration;
+            return;
+          }
+        }
+      } catch {
+        authorityHealthy.current = false;
+      }
+      schedule();
+    };
+
+    schedule();
+    return () => {
+      cancelled = true;
+      if (retryTimer !== null) window.clearTimeout(retryTimer);
+    };
+  }, [
+    activeTerminal,
+    authorityRecoveryPending,
+    bootstrap.isLoading,
+    onAuthoritativeRoom,
+    pageActive,
+    participation?.room_id,
+    readAuthorityRoom,
+    refetchBootstrap,
+    sessionGeneration,
+  ]);
 
   const committedRoomId = room?.room_id ?? null;
   useEffect(() => {
@@ -875,6 +982,17 @@ export function BattleView(): ReactNode {
     lifecycleReadyRef.current = false;
     setLifecycleReady(false);
     setOnlineState("syncing");
+    if (bootstrap.isLoading || authorityRecoveryPending) return;
+    if (authorityFreshGeneration.current === sessionGeneration) {
+      authorityFreshGeneration.current = null;
+      if (!activeNow() || !authorityHealthy.current) {
+        setOnlineState("offline");
+        return;
+      }
+      lifecycleReadyRef.current = true;
+      setLifecycleReady(true);
+      return;
+    }
     await refetchRef.current();
     if (run !== lifecycleRun.current) return;
     if (!activeNow() || !authorityHealthy.current) {
@@ -883,7 +1001,12 @@ export function BattleView(): ReactNode {
     }
     lifecycleReadyRef.current = true;
     setLifecycleReady(true);
-  }, [pageActive, sessionGeneration]);
+  }, [
+    authorityRecoveryPending,
+    bootstrap.isLoading,
+    pageActive,
+    sessionGeneration,
+  ]);
 
   const resumePresence = useCallback(
     (confirmed: boolean) => {
@@ -1536,6 +1659,20 @@ export function BattleView(): ReactNode {
     />
   );
 
+  if (authorityRecoveryPending)
+    return (
+      <div
+        ref={battleRootRef}
+        className="battle-root"
+        data-battle-authority-recovery="true"
+        onFocusCapture={prepareBattleRuntimeModules}
+        onPointerDownCapture={prepareBattleRuntimeModules}
+        onTouchStartCapture={prepareBattleRuntimeModules}
+      >
+        <BattleAuthorityRecovery />
+      </div>
+    );
+
   return (
     <div
       ref={battleRootRef}
@@ -1765,13 +1902,7 @@ function BattleState({
     );
   }
   return (
-    <BattleHome
-      tiers={tiers}
-      participation={participation}
-      loading={loading}
-      onChooseTier={chooseTier}
-      onRefresh={refresh}
-    />
+    <BattleHome tiers={tiers} loading={loading} onChooseTier={chooseTier} />
   );
 }
 
