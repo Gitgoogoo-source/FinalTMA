@@ -742,8 +742,16 @@ export function BattleView(): ReactNode {
   const deadline = deadlineFor(pageState, room, participation, inviteRoom);
   const clock = useBattleDeadline({
     ...deadline,
-    onExpire: () => void refetchRef.current(),
+    onExpire: () => {
+      setSwitchOpen(false);
+      void refetchRef.current();
+    },
   });
+  const canSubmitBattleAction = useCallback(() => {
+    const open = clock.isOpenNow();
+    if (!open) clock.synchronize();
+    return open;
+  }, [clock]);
   const lobbyStartClock = useBattleDeadline({
     serverTime: room?.server_time ?? null,
     deadline: room?.lobby?.start_deadline ?? null,
@@ -1253,6 +1261,10 @@ export function BattleView(): ReactNode {
       (room.action_ordinal !== 1 && room.action_ordinal !== 2)
     )
       return;
+    if (!clock.isOpenNow()) {
+      clock.synchronize();
+      return;
+    }
     const key = battlePresentationActionKey(
       room.room_id,
       room.round_no,
@@ -1270,13 +1282,17 @@ export function BattleView(): ReactNode {
       teamSlot: null,
     });
     setActionIntent(name);
-    const snapshot = await command.execute("battle.action", {
-      room_id: room.room_id,
-      kind: "attack",
-      round_no: room.round_no,
-      action_ordinal: room.action_ordinal,
-      skill_position: skillPosition,
-    });
+    const snapshot = await command.execute(
+      "battle.action",
+      {
+        room_id: room.room_id,
+        kind: "attack",
+        round_no: room.round_no,
+        action_ordinal: room.action_ordinal,
+        skill_position: skillPosition,
+      },
+      { canSubmit: canSubmitBattleAction },
+    );
     setLocalPresentationAction(null);
     setActionIntent(null);
     if (!snapshot) setCancelledLocalActionKey(key);
@@ -1292,14 +1308,23 @@ export function BattleView(): ReactNode {
       (room.action_ordinal !== 1 && room.action_ordinal !== 2)
     )
       return;
+    if (!clock.isOpenNow()) {
+      clock.synchronize();
+      setSwitchOpen(false);
+      return;
+    }
     setActionIntent(tp("换入{{0}}", [name]));
-    const snapshot = await command.execute("battle.action", {
-      room_id: room.room_id,
-      kind: "switch",
-      round_no: room.round_no,
-      action_ordinal: room.action_ordinal,
-      team_slot: teamSlot,
-    });
+    const snapshot = await command.execute(
+      "battle.action",
+      {
+        room_id: room.room_id,
+        kind: "switch",
+        round_no: room.round_no,
+        action_ordinal: room.action_ordinal,
+        team_slot: teamSlot,
+      },
+      { canSubmit: canSubmitBattleAction },
+    );
     setActionIntent(null);
     if (!snapshot) setSwitchOpen(false);
   };
@@ -1319,6 +1344,10 @@ export function BattleView(): ReactNode {
       (room.action_ordinal !== 1 && room.action_ordinal !== 2)
     )
       return;
+    if (!clock.isOpenNow()) {
+      clock.synchronize();
+      return;
+    }
     const key = battlePresentationActionKey(
       room.room_id,
       room.round_no,
@@ -1336,14 +1365,18 @@ export function BattleView(): ReactNode {
       teamSlot,
     });
     setActionIntent(tp("换入并使用{{0}}", [name]));
-    const snapshot = await command.execute("battle.action", {
-      room_id: room.room_id,
-      kind: "replace_attack",
-      round_no: room.round_no,
-      action_ordinal: room.action_ordinal,
-      team_slot: teamSlot,
-      skill_position: skillPosition,
-    });
+    const snapshot = await command.execute(
+      "battle.action",
+      {
+        room_id: room.room_id,
+        kind: "replace_attack",
+        round_no: room.round_no,
+        action_ordinal: room.action_ordinal,
+        team_slot: teamSlot,
+        skill_position: skillPosition,
+      },
+      { canSubmit: canSubmitBattleAction },
+    );
     setLocalPresentationAction(null);
     setActionIntent(null);
     if (!snapshot) setCancelledLocalActionKey(key);
@@ -1671,6 +1704,10 @@ function BattleState({
         cancelledLocalActionKey={cancelledLocalActionKey}
         presentationResetVersion={presentationResetVersion}
         remainingSeconds={clock.remainingSeconds}
+        actionWindowOpen={
+          clock.remainingMilliseconds !== null &&
+          clock.remainingMilliseconds > 0
+        }
         actionIntent={actionIntent}
         commandPending={commandPending}
         switchOpen={switchOpen}

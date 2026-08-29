@@ -28,6 +28,7 @@ export function BattleArena({
   cancelledLocalActionKey,
   presentationResetVersion,
   remainingSeconds,
+  actionWindowOpen,
   actionIntent,
   commandPending,
   switchOpen,
@@ -45,6 +46,7 @@ export function BattleArena({
   cancelledLocalActionKey: string | null;
   presentationResetVersion: number;
   remainingSeconds: number | null;
+  actionWindowOpen: boolean;
   actionIntent: string | null;
   commandPending: boolean;
   switchOpen: boolean;
@@ -84,6 +86,7 @@ export function BattleArena({
     snapshot.status === "active_turn" &&
     snapshot.active_actor === "self" &&
     snapshot.viewer_action_state === "available" &&
+    actionWindowOpen &&
     !commandPending;
   const waitingForOpponent =
     !actionIntent &&
@@ -159,7 +162,9 @@ export function BattleArena({
               : snapshot.status !== "active_turn"
                 ? t("战斗已经结算")
                 : snapshot.active_actor === "self"
-                  ? t("你的 15 秒行动窗口已经开放")
+                  ? actionWindowOpen
+                    ? t("你的 15 秒行动窗口已经开放")
+                    : t("本次行动时间已结束")
                   : t("等待对手在其 15 秒行动窗口内操作")}
         </small>
       </div>
@@ -177,7 +182,9 @@ export function BattleArena({
         data-waiting-for-opponent={waitingForOpponent ? "true" : "false"}
       >
         <div className="battle-command-strip" aria-live="polite">
-          <strong>{actionPrompt(snapshot, actionIntent)}</strong>
+          <strong>
+            {actionPrompt(snapshot, actionIntent, actionWindowOpen)}
+          </strong>
           <span>
             {tp("回合 {{0}} · 行动 {{1}} · {{2}}", [
               Math.max(1, snapshot.round_no),
@@ -226,7 +233,9 @@ export function BattleArena({
                 ? tp("已提交：{{0}}", [actionIntent])
                 : snapshot.status !== "active_turn"
                   ? t("战斗已结算，正在完成剩余表现")
-                  : t("正在同步当前可用动作")
+                  : snapshot.active_actor === "self" && !actionWindowOpen
+                    ? t("本次行动时间已结束")
+                    : t("等待下一次行动")
             }
           />
         )}
@@ -234,7 +243,7 @@ export function BattleArena({
 
       {modalActive &&
       switchOpen &&
-      snapshot.status === "active_turn" &&
+      available &&
       snapshot.active_action_mode === "normal" ? (
         <SwitchSheet
           title={t("主动换宠")}
@@ -253,10 +262,12 @@ export function BattleArena({
 function actionPrompt(
   snapshot: BattleRoomSnapshotDto,
   actionIntent: string | null,
+  actionWindowOpen: boolean,
 ): string {
   if (actionIntent) return tp("已提交：{{0}}", [actionIntent]);
   if (snapshot.status !== "active_turn") return t("战斗已经结算");
   if (snapshot.active_actor !== "self") return t("等待对手行动");
+  if (!actionWindowOpen) return t("本次行动时间已结束");
   return snapshot.active_action_mode === "replace_attack"
     ? t("选择存活宠物，再直接选择其反击技能")
     : t("选择技能或主动换宠");

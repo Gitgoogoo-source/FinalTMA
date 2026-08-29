@@ -594,7 +594,7 @@ def verify_battle_contract() -> None:
         "'terminal_result', battle.terminal_result_json(p_room_id, p_participant_id)",
         "s.room_id = p_room_id",
         "s.participant_id = p_participant_id",
-        "v_room.status in ('finished', 'draw', 'cancelled', 'expired', 'voided')\n    and exists (\n      select 1 from battle.participants\n      where room_id = v_room.id and user_id = v_user_id\n    )\n  then\n    return jsonb_build_object('invite_status', 'none', 'server_time', now());",
+        "v_room.status in ('finished', 'draw', 'cancelled', 'expired', 'voided')\n    and exists (\n      select 1 from battle.participants\n      where room_id = v_room.id and user_id = v_user_id\n    )\n  then\n    return jsonb_build_object(\n      'invite_status', 'none', 'server_time', clock_timestamp()\n    );",
         "'effect_key', v_skill.effect_key",
         "'effect_key', p_result->'effect_key'",
         "p_presence_lease_id uuid",
@@ -619,6 +619,12 @@ def verify_battle_contract() -> None:
     missing = [fragment for fragment in required if fragment not in battle_sql]
     if missing:
         raise SystemExit(f"Battle database contract is incomplete: {missing}")
+    if battle_sql.count("'server_time', clock_timestamp()") != 6:
+        raise SystemExit(
+            "Every Battle server_time field must use response-construction time"
+        )
+    if re.search(r"'server_time'\s*,\s*now\(\)", battle_sql):
+        raise SystemExit("Battle server_time cannot use transaction-start time")
     tick_monitor = battle_sql.partition(
         "create or replace function battle.monitor_tick_health"
     )[2].partition(

@@ -1202,6 +1202,23 @@ function checkCommand(source) {
         "battle.accept",
       ) && calls(node.thenStatement, "readAuthoritativeRoom").length === 1,
   );
+  const stateConflictGuard = ifStatements(failure).find(
+    (node) =>
+      findBinaryComparison(
+        node.expression,
+        "routeId",
+        ts.SyntaxKind.EqualsEqualsEqualsToken,
+        "battle.action",
+      ) &&
+      findBinaryComparison(
+        node.expression,
+        "code",
+        ts.SyntaxKind.EqualsEqualsEqualsToken,
+        "BATTLE_STATE_CONFLICT",
+      ) &&
+      calls(node.thenStatement, "refetchAuthority").length === 1 &&
+      statementAlwaysExits(node.thenStatement),
+  );
   must(
     calls(failure, "readAuthoritativeRoom").length === 1 &&
       calls(failure, "onAuthoritativeRoom").length === 1 &&
@@ -1209,8 +1226,9 @@ function checkCommand(source) {
         containsNode(node, calls(failure, "onAuthoritativeRoom")[0]),
       ) &&
       acceptGuard &&
-      calls(failure, "refetchAuthority").length === 1,
-    "participant terminal failures may use the room reader, but accept failures must bypass it and return through current-invite discovery",
+      stateConflictGuard &&
+      calls(failure, "refetchAuthority").length === 2,
+    "participant terminal failures and action state conflicts must use their exact single-flight authority recovery paths",
   );
   const apply = topLevelFunction(source, "applyBattleCommandResult");
   const publish = calls(apply, "onAuthoritativeRoom");

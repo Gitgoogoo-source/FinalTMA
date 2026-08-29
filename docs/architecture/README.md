@@ -24,6 +24,7 @@ ec8d89aec0a700bfb504285401bf6327ed2a4c48c94d4d8bb92559bdae2ee61e
 - Deployment：既有 Vercel Pro Project `final-tma` 是唯一生产项目；`main` 只通过 Git Integration 自动部署，不使用项目暂停、空触发提交或手动部署；既有 Supabase `final-tma-real-test / ebewtjerusxcioegpzjd` 是唯一生产数据库，完整裁决见 [ADR-086](adr/ADR-086-evomypet-production-cutover.md)。
 - Tg.app：目录打开链接附带的精确 `listed_on_tg_app` 来源值在 Telegram `initData` 验签后折叠为现有 `direct`，不创建渠道入口类型、邀请候选、邀请奖励或 Battle 状态；其他未知参数继续拒绝，完整边界见 [ADR-090](adr/ADR-090-tgapp-catalog-source-entry.md)。
 - 按钮音效：文字、图标、底部导航、页签、弹窗与按钮式卡片在可信主指针按下时，通过单份预解码 Web Audio 缓冲立即播放同一短音；原始 MP3 只保留为母版，运行时使用去除前导与尾部静音的 PCM WAV，键盘与辅助功能由可信 `click` 后备且同一次指针操作不得重播。禁用控件和普通游戏画面按压静默，音效失败不阻塞按钮动作，完整边界见 [ADR-092](adr/ADR-092-low-latency-button-press-audio.md)。
+- Battle 行动时限：数据库继续裁决完整 15 秒；响应使用实际构造时刻，Web 在倒计时归零后同步关闭操作并阻止新 action POST，预截止在途请求继续由数据库裁决，`BATTLE_STATE_CONFLICT` 不重提动作且只合并读取一次权威状态，完整边界见 [ADR-094](adr/ADR-094-battle-action-deadline-client-gating.md)。
 
 仓库继续保留唯一的 TON Connect 静态身份与 manifest，供休眠实现保持确定性；当前 Web 不引用该 manifest、不初始化 TON Connect，也不把其图标是否正式替换作为 MVP 发布阻塞。
 
@@ -194,3 +195,4 @@ operation 准入与保留按 [ADR-059](adr/ADR-059-bounded-operation-admission-a
 - [全局统一按钮点击音效（已被 ADR-092 替代）](adr/ADR-091-global-button-click-audio.md)
 - [低延迟按钮按下音效](adr/ADR-092-low-latency-button-press-audio.md)
 - [Battle 实际对战底部导航可见性](adr/ADR-093-battle-active-bottom-navigation-visibility.md)
+- [Battle 行动截止门禁与冲突恢复](adr/ADR-094-battle-action-deadline-client-gating.md)

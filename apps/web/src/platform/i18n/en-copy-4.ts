@@ -265,6 +265,8 @@ export const englishCopy4: Readonly<Record<string, string>> = {
   "战斗已结算，正在完成剩余表现":
     "The battle has been settled and the remaining performance is being completed",
   正在同步当前可用动作: "Synchronizing currently available actions",
+  本次行动时间已结束: "This action window has ended",
+  等待下一次行动: "Waiting for the next action",
   主动换宠: "Take the initiative to change pets",
   "选择后立即提交，换宠消耗本次行动且不会同时攻击。":
     "Submit immediately after selection. Changing pets consumes this action and will not attack at the same time.",

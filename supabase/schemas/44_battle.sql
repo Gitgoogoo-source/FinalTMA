@@ -1219,7 +1219,7 @@ $$;
 create or replace function battle.challenge_card_json(p_room_id uuid)
 returns jsonb
 language sql
-stable
+volatile
 set search_path = ''
 as $$
   select jsonb_build_object(
@@ -1227,7 +1227,7 @@ as $$
     'entry_fee', tier.entry_fee,
     'rarity_summary', battle.rarity_summary(r.id),
     'expires_at', r.expires_at,
-    'server_time', now(),
+    'server_time', clock_timestamp(),
     'creator_online', r.status = 'waiting'
       and p.offline_since is null
       and p.last_heartbeat_at > now() - make_interval(
@@ -1662,7 +1662,7 @@ create or replace function battle.room_snapshot_json(
 )
 returns jsonb
 language plpgsql
-stable
+volatile
 set search_path = ''
 as $$
 declare
@@ -1735,7 +1735,7 @@ begin
     ),
     'viewer_action_state',
       battle.viewer_action_state(p_room_id, p_participant_id),
-    'server_time', now(),
+    'server_time', clock_timestamp(),
     'lobby', battle.lobby_json(p_room_id),
     'self_team', battle.self_team_json(p_room_id, p_participant_id),
     'opponent_team', case
@@ -1814,7 +1814,7 @@ begin
         (v_participation->>'participant_id')::uuid
       )
     end,
-    'server_time', now()
+    'server_time', clock_timestamp()
   );
 end;
 $$;
@@ -1880,7 +1880,9 @@ declare
 begin
   select * into v_session from identity.sessions where id = p_session_id;
   if v_session.entry_kind <> 'battle' then
-    return jsonb_build_object('invite_status', 'none', 'server_time', now());
+    return jsonb_build_object(
+      'invite_status', 'none', 'server_time', clock_timestamp()
+    );
   end if;
   perform battle.consume_rate_limit(v_user_id, 'invite_preview', v_session.battle_invite_token_hash);
   select * into v_room
@@ -1888,7 +1890,9 @@ begin
   where room_mode = 'friend_invite'
     and invite_token_hash = v_session.battle_invite_token_hash;
   if v_room.id is null then
-    return jsonb_build_object('invite_status', 'invalid', 'server_time', now());
+    return jsonb_build_object(
+      'invite_status', 'invalid', 'server_time', clock_timestamp()
+    );
   end if;
   if v_room.status in ('finished', 'draw', 'cancelled', 'expired', 'voided')
     and exists (
@@ -1896,7 +1900,9 @@ begin
       where room_id = v_room.id and user_id = v_user_id
     )
   then
-    return jsonb_build_object('invite_status', 'none', 'server_time', now());
+    return jsonb_build_object(
+      'invite_status', 'none', 'server_time', clock_timestamp()
+    );
   end if;
   v_card := battle.challenge_card_json(v_room.id);
   return jsonb_build_object(

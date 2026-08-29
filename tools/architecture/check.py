@@ -2128,6 +2128,9 @@ def verify_battle_staged_runtime_loading() -> None:
     battle_root = WEB_ROOT / "domains/battle"
     battle_view = (battle_root / "ui/BattleView.tsx").read_text(encoding="utf-8")
     battle_arena = (battle_root / "ui/BattleArena.tsx").read_text(encoding="utf-8")
+    battle_deadline = (battle_root / "useBattleDeadline.ts").read_text(
+        encoding="utf-8"
+    )
     animation = (battle_root / "useBattleAnimation.ts").read_text(encoding="utf-8")
     effect_loader = (battle_root / "battleRuntimeLoader.ts").read_text(
         encoding="utf-8"
@@ -2159,6 +2162,29 @@ def verify_battle_staged_runtime_loading() -> None:
 
     if (battle_root / "ui/battle.css").exists():
         raise SystemExit("Battle must not retain the former combined stylesheet")
+    deadline_required = (
+        "remainingMilliseconds",
+        "performance.now()",
+        "Date.now()",
+        "window.setTimeout(update, Math.ceil(initialRemaining))",
+        'document.addEventListener("visibilitychange", update)',
+        'window.addEventListener("focus", update)',
+        'window.addEventListener("pageshow", update)',
+        "isOpenNow(): boolean",
+        "synchronize(): void",
+    )
+    if (
+        any(fragment not in battle_deadline for fragment in deadline_required)
+        or battle_view.count("if (!clock.isOpenNow())") != 3
+        or battle_view.count("clock.synchronize();") != 4
+        or battle_view.count("{ canSubmit: canSubmitBattleAction }") != 3
+        or "clock.remainingMilliseconds > 0" not in battle_view
+        or "snapshot.viewer_action_state === \"available\" &&\n    actionWindowOpen" not in battle_arena
+        or "switchOpen &&\n      available" not in battle_arena
+    ):
+        raise SystemExit(
+            "Battle actions and controls must share the exact server-anchored deadline gate"
+        )
     if 'from "ably"' in realtime_hook or "battleEffectPlayer" in animation:
         raise SystemExit(
             "Ably and the heavy Battle effect player must not enter Battle Core statically"

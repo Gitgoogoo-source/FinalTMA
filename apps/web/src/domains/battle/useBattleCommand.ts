@@ -67,7 +67,7 @@ export function useBattleCommand(
   execute<Id extends BattleCommandRouteId>(
     routeId: Id,
     input: RouteInput<Id>,
-    options?: { terminalRoomId?: string },
+    options?: { terminalRoomId?: string; canSubmit?: () => boolean },
   ): Promise<RouteOutput<Id> | null>;
 } {
   const [state, setState] = useState<BattleCommandState>(initialState);
@@ -94,7 +94,7 @@ export function useBattleCommand(
     async <Id extends BattleCommandRouteId>(
       routeId: Id,
       input: RouteInput<Id>,
-      options?: { terminalRoomId?: string },
+      options?: { terminalRoomId?: string; canSubmit?: () => boolean },
     ): Promise<RouteOutput<Id> | null> => {
       if (active.current) return null;
       const generation = getSession()?.generation;
@@ -111,6 +111,14 @@ export function useBattleCommand(
         await nextAnimationFrame();
         if (controller.signal.aborted || !isCurrentGeneration(generation))
           return null;
+        if (options?.canSubmit && !options.canSubmit()) {
+          setState({
+            routeId,
+            operationId,
+            phase: "failed",
+          });
+          return null;
+        }
         const response = await apiRequest(routeId, input, {
           idempotencyKey: operationId,
           signal: controller.signal,
@@ -425,6 +433,10 @@ async function refreshBattleCommandFailure(
   readAuthoritativeRoom: BattleAuthoritativeRoomReader,
   refetchAuthority: () => Promise<void>,
 ): Promise<void> {
+  if (routeId === "battle.action" && code === "BATTLE_STATE_CONFLICT") {
+    await refetchAuthority().catch(() => undefined);
+    return;
+  }
   if (isBattleTerminalFailure(code)) {
     if (routeId !== "battle.accept" && terminalRoomId) {
       try {
