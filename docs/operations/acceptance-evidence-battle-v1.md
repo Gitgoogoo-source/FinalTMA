@@ -4,6 +4,24 @@
 
 > 2026-07-28 本地语义收敛说明：本文以下证据只对应其原记录的历史提交与当时已部署的八状态 Battle，不证明双人 lobby 新规则已经在真实环境生效。当前本地实现新增 `lobby_waiting/lobby_countdown`、双方 participant presence、5 分钟总时限和数据库 3 秒开战倒计时；仍须在同一提交完成真实开发环境数据库从零重建、部署、Telegram 双端与并发验收后，另行追加真实证据。本文历史 PASS、部署记录和 SHA 保持原样，不据本地静态结果改写。
 
+## 2026-08-29 英文技能提交名称修复与影响域回归
+
+真实 iPhone Telegram Mini App 在英文语言下复现到：技能按钮显示 `Gravel Rush`，提交后 HUD 与状态卡却显示 `Submitted: 砂砾突袭`。同一 Safari Web Inspector 会话确认 `document.documentElement.lang` 为 `en`，Battle action 响应继续返回权威中文内容名 `skill_name: "砂砾突袭"`。根因是技能按钮渲染时经过翻译，但点击回调把原始 `skill.name` 写入本地 `actionIntent`；`已提交：{{0}}` 只翻译模板，不会再次翻译插值参数。
+
+提交 `a80d075c0534d5acd337d1fcf3f86c77219aa3de` 将 Battle 技能显示名统一改为以 `skill_id` 经过 `contentName` 解析，并把同一显示名同时用于按钮、普通攻击提交状态和强制换宠反击状态；队伍选择页技能预览使用同一边界。`tools/i18n/check.ts` 新增 Battle UI 静态门禁，拒绝绕过 `contentName(skill.skill_id, skill.name)` 直接消费 `skill.name`。该提交没有修改 API、数据库、Battle 规则或权威中文内容数据。
+
+Git Integration 将该提交发布为 Production deployment `dpl_144F1jo45guKa9sA9GvNGHXoWDYx`，状态 `READY`；构建日志记录 Branch `main`、Commit `a80d075`。稳定入口 `https://final-tma-pi.vercel.app` 返回本次部署入口包 `assets/index-Dud9kXei.js`。本地 `pnpm validate:static` 完整通过，其中 i18n 门禁覆盖 173 个源文件、880 个活动文案键、210 只宠物和 50 个 Battle 技能；Production 构建首屏 JS 为 399,995 B / 400,000 B，Battle Core JS 为 98,993 B。
+
+修复后的真实设备影响域回归使用同一账号、iPhone 镜像、Telegram WebView 和 Safari Web Inspector 完成：
+
+1. 首次进入时 Inspector 仍显示部署前的长驻包 `index-YpLjceha.js`，该次旧包结果不计为修复后验收。通过 Inspector 忽略缓存重载后，网络面板确认加载 `index-Dud9kXei.js`，并从当前 Battle 权威状态继续运行。
+2. 英文技能选择页显示 `Gravel Rush`；点击后 HUD 和状态卡同时显示 `Submitted: Gravel Rush`，不再出现中文技能名。该项结论为 `PASS`。
+3. Safari 控制台确认 `lang = "en"`、路径为 `/game`、入口包为 `index-Dud9kXei.js`，且当前页面 `document.body.innerText.includes("砂砾突袭")` 为 `false`。该项结论为 `PASS`。
+4. 真实强制换宠窗口已出现，换入 Glintspike 后权威行动记录显示 `Our side used Gravel Rush`；但本轮没有在提交状态消失前取得强制换宠专属 `Submitted` 文案的 Inspector 快照，因此该更窄的瞬时证据保持 `UNVERIFIED`，不以共享组件和静态门禁替代真机证据。
+5. 本轮没有切换到中文并重新创建 Battle，因此中文提交文案的真机回归保持 `UNVERIFIED`；代码仍在 `zh-CN` 分支返回服务端中文原名，静态检查与生产构建已通过。
+
+本轮只执行用户已授权的游戏内 Battle 进入、编队、匹配和技能操作，没有发起或确认 Telegram Stars 支付。该影响域结论为英文普通技能提交 `PASS`；不升级 Battle v1 总体验收结论，也不覆盖其他语言、经济结算、并发、完整战斗规则或性能矩阵。
+
 ## 2026-08-01 Battle 05 旧预期替代与 R11 回归边界
 
 Battle 05 曾以“3 秒倒计时内离页应中止并在重进后完整重启”为预期记录 `FAIL`。用户最新且最高优先级裁决已经替代该预期：双方同时在线并由数据库原子写入 3 秒截止时间的瞬间即锁定本场战斗；从锁定到开战，离页、关闭、后台、离线、lease 结束、刷新和重新认证都不得取消、暂停、延后或重置截止时间。旧 `FAIL` 不得改写为新规则回归 `PASS`。
