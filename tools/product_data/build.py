@@ -138,22 +138,23 @@ def build_web_collection_skills(
         for item in battle_payload["skills"]
         if isinstance(item, dict)
     }
-    powers = {
-        str(item["id"]): int(item["power"])
-        for item in battle_payload["skill_slots"]
-        if isinstance(item, dict)
-    }
     entries = []
     for template in battle_payload["template_configs"]:
         if not isinstance(template, dict):
             raise RuntimeError("Battle template configuration must be an object")
         template_skills = []
-        for skill_id in template["skill_ids"]:
+        skill_ids = template["skill_ids"]
+        skill_powers = template["skill_powers"]
+        if len(skill_ids) != len(skill_powers):
+            raise RuntimeError(
+                f"Collection skill IDs and powers differ: {template['template_id']}"
+            )
+        for skill_id, skill_power in zip(skill_ids, skill_powers):
             skill = skills[str(skill_id)]
             template_skills.append(
                 {
                     "name": skill["name"],
-                    "damage": powers[str(skill["slot_id"])],
+                    "damage": int(skill_power),
                 }
             )
         entries.append(

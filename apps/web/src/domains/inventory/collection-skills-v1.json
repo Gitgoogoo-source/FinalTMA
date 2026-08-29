@@ -2044,11 +2044,11 @@
     "skills": [
       {
         "name": "泡沫弹",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "潮汐闪击",
-        "damage": 80
+        "damage": 81
       }
     ]
   },
@@ -2057,11 +2057,11 @@
     "skills": [
       {
         "name": "泡沫弹",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "潮汐闪击",
-        "damage": 80
+        "damage": 81
       },
       {
         "name": "海啸爆破",
@@ -2074,11 +2074,11 @@
     "skills": [
       {
         "name": "泡沫弹",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "潮汐闪击",
-        "damage": 80
+        "damage": 81
       },
       {
         "name": "海啸爆破",
@@ -2086,7 +2086,7 @@
       },
       {
         "name": "天河坠潮",
-        "damage": 125
+        "damage": 126
       }
     ]
   },
@@ -2095,11 +2095,11 @@
     "skills": [
       {
         "name": "灼热火球",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "爆炎闪击",
-        "damage": 80
+        "damage": 81
       }
     ]
   },
@@ -2108,11 +2108,11 @@
     "skills": [
       {
         "name": "灼热火球",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "爆炎闪击",
-        "damage": 80
+        "damage": 81
       },
       {
         "name": "日炎爆破",
@@ -2125,11 +2125,11 @@
     "skills": [
       {
         "name": "灼热火球",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "爆炎闪击",
-        "damage": 80
+        "damage": 81
       },
       {
         "name": "日炎爆破",
@@ -2137,7 +2137,7 @@
       },
       {
         "name": "终焉天火",
-        "damage": 125
+        "damage": 126
       }
     ]
   },
@@ -2146,11 +2146,11 @@
     "skills": [
       {
         "name": "水流突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "泡沫弹",
-        "damage": 55
+        "damage": 81
       }
     ]
   },
@@ -2159,11 +2159,11 @@
     "skills": [
       {
         "name": "水流突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "泡沫弹",
-        "damage": 55
+        "damage": 81
       },
       {
         "name": "海啸爆破",
@@ -2176,11 +2176,11 @@
     "skills": [
       {
         "name": "水流突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "泡沫弹",
-        "damage": 55
+        "damage": 81
       },
       {
         "name": "海啸爆破",
@@ -2188,7 +2188,7 @@
       },
       {
         "name": "天河坠潮",
-        "damage": 125
+        "damage": 126
       }
     ]
   },
@@ -2197,11 +2197,11 @@
     "skills": [
       {
         "name": "电弧弹",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "霆光闪击",
-        "damage": 80
+        "damage": 81
       }
     ]
   },
@@ -2210,11 +2210,11 @@
     "skills": [
       {
         "name": "电弧弹",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "霆光闪击",
-        "damage": 80
+        "damage": 81
       },
       {
         "name": "雷暴爆破",
@@ -2227,11 +2227,11 @@
     "skills": [
       {
         "name": "电弧弹",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "霆光闪击",
-        "damage": 80
+        "damage": 81
       },
       {
         "name": "雷暴爆破",
@@ -2239,7 +2239,7 @@
       },
       {
         "name": "万雷天劫",
-        "damage": 125
+        "damage": 126
       }
     ]
   },
@@ -2248,11 +2248,11 @@
     "skills": [
       {
         "name": "泥岩弹",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "地裂闪击",
-        "damage": 80
+        "damage": 81
       }
     ]
   },
@@ -2261,11 +2261,11 @@
     "skills": [
       {
         "name": "泥岩弹",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "地裂闪击",
-        "damage": 80
+        "damage": 81
       },
       {
         "name": "地脉爆破",
@@ -2278,11 +2278,11 @@
     "skills": [
       {
         "name": "泥岩弹",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "地裂闪击",
-        "damage": 80
+        "damage": 81
       },
       {
         "name": "地脉爆破",
@@ -2290,7 +2290,7 @@
       },
       {
         "name": "天陨坠岩",
-        "damage": 125
+        "damage": 126
       }
     ]
   },
@@ -2299,11 +2299,11 @@
     "skills": [
       {
         "name": "种子弹",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "荆棘闪击",
-        "damage": 80
+        "damage": 81
       }
     ]
   },
@@ -2312,11 +2312,11 @@
     "skills": [
       {
         "name": "种子弹",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "荆棘闪击",
-        "damage": 80
+        "damage": 81
       },
       {
         "name": "森罗爆破",
@@ -2329,11 +2329,11 @@
     "skills": [
       {
         "name": "种子弹",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "荆棘闪击",
-        "damage": 80
+        "damage": 81
       },
       {
         "name": "森罗爆破",
@@ -2341,7 +2341,7 @@
       },
       {
         "name": "世界树坠击",
-        "damage": 125
+        "damage": 126
       }
     ]
   },
@@ -2350,11 +2350,11 @@
     "skills": [
       {
         "name": "砂砾突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "泥岩弹",
-        "damage": 55
+        "damage": 81
       }
     ]
   },
@@ -2363,11 +2363,11 @@
     "skills": [
       {
         "name": "砂砾突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "泥岩弹",
-        "damage": 55
+        "damage": 81
       },
       {
         "name": "地脉爆破",
@@ -2380,11 +2380,11 @@
     "skills": [
       {
         "name": "砂砾突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "泥岩弹",
-        "damage": 55
+        "damage": 81
       },
       {
         "name": "地脉爆破",
@@ -2392,7 +2392,7 @@
       },
       {
         "name": "天陨坠岩",
-        "damage": 125
+        "damage": 126
       }
     ]
   },
@@ -2401,11 +2401,11 @@
     "skills": [
       {
         "name": "飞叶突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "种子弹",
-        "damage": 55
+        "damage": 81
       }
     ]
   },
@@ -2414,11 +2414,11 @@
     "skills": [
       {
         "name": "飞叶突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "种子弹",
-        "damage": 55
+        "damage": 81
       },
       {
         "name": "森罗爆破",
@@ -2431,11 +2431,11 @@
     "skills": [
       {
         "name": "飞叶突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "种子弹",
-        "damage": 55
+        "damage": 81
       },
       {
         "name": "森罗爆破",
@@ -2443,7 +2443,7 @@
       },
       {
         "name": "世界树坠击",
-        "damage": 125
+        "damage": 126
       }
     ]
   },
@@ -2452,11 +2452,11 @@
     "skills": [
       {
         "name": "火花突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "灼热火球",
-        "damage": 55
+        "damage": 81
       }
     ]
   },
@@ -2465,11 +2465,11 @@
     "skills": [
       {
         "name": "火花突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "灼热火球",
-        "damage": 55
+        "damage": 81
       },
       {
         "name": "日炎爆破",
@@ -2482,11 +2482,11 @@
     "skills": [
       {
         "name": "火花突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "灼热火球",
-        "damage": 55
+        "damage": 81
       },
       {
         "name": "日炎爆破",
@@ -2494,7 +2494,7 @@
       },
       {
         "name": "终焉天火",
-        "damage": 125
+        "damage": 126
       }
     ]
   },
@@ -2503,11 +2503,11 @@
     "skills": [
       {
         "name": "水流突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "深潮轰击",
-        "damage": 75
+        "damage": 81
       }
     ]
   },
@@ -2516,15 +2516,15 @@
     "skills": [
       {
         "name": "水流突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "深潮轰击",
-        "damage": 75
+        "damage": 81
       },
       {
         "name": "巨浪重击",
-        "damage": 85
+        "damage": 96
       }
     ]
   },
@@ -2533,19 +2533,19 @@
     "skills": [
       {
         "name": "水流突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "深潮轰击",
-        "damage": 75
+        "damage": 81
       },
       {
         "name": "巨浪重击",
-        "damage": 85
+        "damage": 96
       },
       {
         "name": "天河坠潮",
-        "damage": 125
+        "damage": 126
       }
     ]
   },
@@ -2554,11 +2554,11 @@
     "skills": [
       {
         "name": "砂砾突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "巨岩轰击",
-        "damage": 75
+        "damage": 81
       }
     ]
   },
@@ -2567,15 +2567,15 @@
     "skills": [
       {
         "name": "砂砾突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "巨岩轰击",
-        "damage": 75
+        "damage": 81
       },
       {
         "name": "山岳重击",
-        "damage": 85
+        "damage": 96
       }
     ]
   },
@@ -2584,19 +2584,19 @@
     "skills": [
       {
         "name": "砂砾突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "巨岩轰击",
-        "damage": 75
+        "damage": 81
       },
       {
         "name": "山岳重击",
-        "damage": 85
+        "damage": 96
       },
       {
         "name": "天陨坠岩",
-        "damage": 125
+        "damage": 126
       }
     ]
   },
@@ -2605,11 +2605,11 @@
     "skills": [
       {
         "name": "电光突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "磁极轰击",
-        "damage": 75
+        "damage": 81
       }
     ]
   },
@@ -2618,15 +2618,15 @@
     "skills": [
       {
         "name": "电光突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "磁极轰击",
-        "damage": 75
+        "damage": 81
       },
       {
         "name": "霹雳重击",
-        "damage": 85
+        "damage": 96
       }
     ]
   },
@@ -2635,19 +2635,19 @@
     "skills": [
       {
         "name": "电光突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "磁极轰击",
-        "damage": 75
+        "damage": 81
       },
       {
         "name": "霹雳重击",
-        "damage": 85
+        "damage": 96
       },
       {
         "name": "万雷天劫",
-        "damage": 125
+        "damage": 126
       }
     ]
   },
@@ -2656,11 +2656,11 @@
     "skills": [
       {
         "name": "电光突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "电弧弹",
-        "damage": 55
+        "damage": 81
       }
     ]
   },
@@ -2669,11 +2669,11 @@
     "skills": [
       {
         "name": "电光突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "电弧弹",
-        "damage": 55
+        "damage": 81
       },
       {
         "name": "雷暴爆破",
@@ -2686,11 +2686,11 @@
     "skills": [
       {
         "name": "电光突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "电弧弹",
-        "damage": 55
+        "damage": 81
       },
       {
         "name": "雷暴爆破",
@@ -2698,7 +2698,7 @@
       },
       {
         "name": "万雷天劫",
-        "damage": 125
+        "damage": 126
       }
     ]
   },
@@ -2707,11 +2707,11 @@
     "skills": [
       {
         "name": "飞叶突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "古木轰击",
-        "damage": 75
+        "damage": 81
       }
     ]
   },
@@ -2720,15 +2720,15 @@
     "skills": [
       {
         "name": "飞叶突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "古木轰击",
-        "damage": 75
+        "damage": 81
       },
       {
         "name": "巨藤重击",
-        "damage": 85
+        "damage": 96
       }
     ]
   },
@@ -2737,19 +2737,19 @@
     "skills": [
       {
         "name": "飞叶突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "古木轰击",
-        "damage": 75
+        "damage": 81
       },
       {
         "name": "巨藤重击",
-        "damage": 85
+        "damage": 96
       },
       {
         "name": "世界树坠击",
-        "damage": 125
+        "damage": 126
       }
     ]
   },
@@ -2758,11 +2758,11 @@
     "skills": [
       {
         "name": "火花突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "焰流轰击",
-        "damage": 75
+        "damage": 81
       }
     ]
   },
@@ -2771,15 +2771,15 @@
     "skills": [
       {
         "name": "火花突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "焰流轰击",
-        "damage": 75
+        "damage": 81
       },
       {
         "name": "熔岩重击",
-        "damage": 85
+        "damage": 96
       }
     ]
   },
@@ -2788,19 +2788,19 @@
     "skills": [
       {
         "name": "火花突袭",
-        "damage": 45
+        "damage": 71
       },
       {
         "name": "焰流轰击",
-        "damage": 75
+        "damage": 81
       },
       {
         "name": "熔岩重击",
-        "damage": 85
+        "damage": 96
       },
       {
         "name": "终焉天火",
-        "damage": 125
+        "damage": 126
       }
     ]
   },
@@ -2809,11 +2809,11 @@
     "skills": [
       {
         "name": "种子弹",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "藤刺快攻",
-        "damage": 60
+        "damage": 81
       }
     ]
   },
@@ -2822,15 +2822,15 @@
     "skills": [
       {
         "name": "种子弹",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "藤刺快攻",
-        "damage": 60
+        "damage": 81
       },
       {
         "name": "巨藤重击",
-        "damage": 85
+        "damage": 96
       }
     ]
   },
@@ -2839,19 +2839,19 @@
     "skills": [
       {
         "name": "种子弹",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "藤刺快攻",
-        "damage": 60
+        "damage": 81
       },
       {
         "name": "巨藤重击",
-        "damage": 85
+        "damage": 96
       },
       {
         "name": "世界树坠击",
-        "damage": 125
+        "damage": 126
       }
     ]
   },
@@ -2860,11 +2860,11 @@
     "skills": [
       {
         "name": "泡沫弹",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "水刃快攻",
-        "damage": 60
+        "damage": 81
       }
     ]
   },
@@ -2873,15 +2873,15 @@
     "skills": [
       {
         "name": "泡沫弹",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "水刃快攻",
-        "damage": 60
+        "damage": 81
       },
       {
         "name": "巨浪重击",
-        "damage": 85
+        "damage": 96
       }
     ]
   },
@@ -2890,19 +2890,19 @@
     "skills": [
       {
         "name": "泡沫弹",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "水刃快攻",
-        "damage": 60
+        "damage": 81
       },
       {
         "name": "巨浪重击",
-        "damage": 85
+        "damage": 96
       },
       {
         "name": "天河坠潮",
-        "damage": 125
+        "damage": 126
       }
     ]
   },
@@ -2911,11 +2911,11 @@
     "skills": [
       {
         "name": "灼热火球",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "炽焰快攻",
-        "damage": 60
+        "damage": 81
       }
     ]
   },
@@ -2924,15 +2924,15 @@
     "skills": [
       {
         "name": "灼热火球",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "炽焰快攻",
-        "damage": 60
+        "damage": 81
       },
       {
         "name": "熔岩重击",
-        "damage": 85
+        "damage": 96
       }
     ]
   },
@@ -2941,19 +2941,19 @@
     "skills": [
       {
         "name": "灼热火球",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "炽焰快攻",
-        "damage": 60
+        "damage": 81
       },
       {
         "name": "熔岩重击",
-        "damage": 85
+        "damage": 96
       },
       {
         "name": "终焉天火",
-        "damage": 125
+        "damage": 126
       }
     ]
   },
@@ -2962,11 +2962,11 @@
     "skills": [
       {
         "name": "电弧弹",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "雷针快攻",
-        "damage": 60
+        "damage": 81
       }
     ]
   },
@@ -2975,15 +2975,15 @@
     "skills": [
       {
         "name": "电弧弹",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "雷针快攻",
-        "damage": 60
+        "damage": 81
       },
       {
         "name": "霹雳重击",
-        "damage": 85
+        "damage": 96
       }
     ]
   },
@@ -2992,19 +2992,19 @@
     "skills": [
       {
         "name": "电弧弹",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "雷针快攻",
-        "damage": 60
+        "damage": 81
       },
       {
         "name": "霹雳重击",
-        "damage": 85
+        "damage": 96
       },
       {
         "name": "万雷天劫",
-        "damage": 125
+        "damage": 126
       }
     ]
   },
@@ -3013,11 +3013,11 @@
     "skills": [
       {
         "name": "泥岩弹",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "岩针快攻",
-        "damage": 60
+        "damage": 81
       }
     ]
   },
@@ -3026,15 +3026,15 @@
     "skills": [
       {
         "name": "泥岩弹",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "岩针快攻",
-        "damage": 60
+        "damage": 81
       },
       {
         "name": "山岳重击",
-        "damage": 85
+        "damage": 96
       }
     ]
   },
@@ -3043,19 +3043,19 @@
     "skills": [
       {
         "name": "泥岩弹",
-        "damage": 55
+        "damage": 71
       },
       {
         "name": "岩针快攻",
-        "damage": 60
+        "damage": 81
       },
       {
         "name": "山岳重击",
-        "damage": 85
+        "damage": 96
       },
       {
         "name": "天陨坠岩",
-        "damage": 125
+        "damage": 126
       }
     ]
   },
@@ -3064,11 +3064,11 @@
     "skills": [
       {
         "name": "水刃快攻",
-        "damage": 60
+        "damage": 72
       },
       {
         "name": "激流冲击",
-        "damage": 70
+        "damage": 82
       }
     ]
   },
@@ -3077,15 +3077,15 @@
     "skills": [
       {
         "name": "水刃快攻",
-        "damage": 60
+        "damage": 72
       },
       {
         "name": "激流冲击",
-        "damage": 70
+        "damage": 82
       },
       {
         "name": "深潮轰击",
-        "damage": 75
+        "damage": 106
       }
     ]
   },
@@ -3094,19 +3094,19 @@
     "skills": [
       {
         "name": "水刃快攻",
-        "damage": 60
+        "damage": 72
       },
       {
         "name": "激流冲击",
-        "damage": 70
+        "damage": 82
       },
       {
         "name": "深潮轰击",
-        "damage": 75
+        "damage": 106
       },
       {
         "name": "沧海怒涛",
-        "damage": 95
+        "damage": 127
       }
     ]
   },
@@ -3115,11 +3115,11 @@
     "skills": [
       {
         "name": "雷针快攻",
-        "damage": 60
+        "damage": 72
       },
       {
         "name": "雷鸣冲击",
-        "damage": 70
+        "damage": 82
       }
     ]
   },
@@ -3128,15 +3128,15 @@
     "skills": [
       {
         "name": "雷针快攻",
-        "damage": 60
+        "damage": 72
       },
       {
         "name": "雷鸣冲击",
-        "damage": 70
+        "damage": 82
       },
       {
         "name": "磁极轰击",
-        "damage": 75
+        "damage": 106
       }
     ]
   },
@@ -3145,19 +3145,19 @@
     "skills": [
       {
         "name": "雷针快攻",
-        "damage": 60
+        "damage": 72
       },
       {
         "name": "雷鸣冲击",
-        "damage": 70
+        "damage": 82
       },
       {
         "name": "磁极轰击",
-        "damage": 75
+        "damage": 106
       },
       {
         "name": "九霄天雷",
-        "damage": 95
+        "damage": 127
       }
     ]
   },
@@ -3166,11 +3166,11 @@
     "skills": [
       {
         "name": "炽焰快攻",
-        "damage": 60
+        "damage": 72
       },
       {
         "name": "烈焰冲击",
-        "damage": 70
+        "damage": 82
       }
     ]
   },
@@ -3179,15 +3179,15 @@
     "skills": [
       {
         "name": "炽焰快攻",
-        "damage": 60
+        "damage": 72
       },
       {
         "name": "烈焰冲击",
-        "damage": 70
+        "damage": 82
       },
       {
         "name": "焰流轰击",
-        "damage": 75
+        "damage": 106
       }
     ]
   },
@@ -3196,19 +3196,19 @@
     "skills": [
       {
         "name": "炽焰快攻",
-        "damage": 60
+        "damage": 72
       },
       {
         "name": "烈焰冲击",
-        "damage": 70
+        "damage": 82
       },
       {
         "name": "焰流轰击",
-        "damage": 75
+        "damage": 106
       },
       {
         "name": "炼狱坠火",
-        "damage": 95
+        "damage": 127
       }
     ]
   },
@@ -3217,11 +3217,11 @@
     "skills": [
       {
         "name": "泥岩弹",
-        "damage": 55
+        "damage": 72
       },
       {
         "name": "巨岩轰击",
-        "damage": 75
+        "damage": 82
       }
     ]
   },
@@ -3230,15 +3230,15 @@
     "skills": [
       {
         "name": "泥岩弹",
-        "damage": 55
+        "damage": 72
       },
       {
         "name": "巨岩轰击",
-        "damage": 75
+        "damage": 82
       },
       {
         "name": "地裂闪击",
-        "damage": 80
+        "damage": 106
       }
     ]
   },
@@ -3247,19 +3247,19 @@
     "skills": [
       {
         "name": "泥岩弹",
-        "damage": 55
+        "damage": 72
       },
       {
         "name": "巨岩轰击",
-        "damage": 75
+        "damage": 82
       },
       {
         "name": "地裂闪击",
-        "damage": 80
+        "damage": 106
       },
       {
         "name": "天陨坠岩",
-        "damage": 125
+        "damage": 127
       }
     ]
   },
@@ -3268,11 +3268,11 @@
     "skills": [
       {
         "name": "藤刺快攻",
-        "damage": 60
+        "damage": 72
       },
       {
         "name": "叶刃冲击",
-        "damage": 70
+        "damage": 82
       }
     ]
   },
@@ -3281,15 +3281,15 @@
     "skills": [
       {
         "name": "藤刺快攻",
-        "damage": 60
+        "damage": 72
       },
       {
         "name": "叶刃冲击",
-        "damage": 70
+        "damage": 82
       },
       {
         "name": "古木轰击",
-        "damage": 75
+        "damage": 106
       }
     ]
   },
@@ -3298,19 +3298,19 @@
     "skills": [
       {
         "name": "藤刺快攻",
-        "damage": 60
+        "damage": 72
       },
       {
         "name": "叶刃冲击",
-        "damage": 70
+        "damage": 82
       },
       {
         "name": "古木轰击",
-        "damage": 75
+        "damage": 106
       },
       {
         "name": "万叶风暴",
-        "damage": 95
+        "damage": 127
       }
     ]
   },
@@ -3319,11 +3319,11 @@
     "skills": [
       {
         "name": "电弧弹",
-        "damage": 55
+        "damage": 72
       },
       {
         "name": "磁极轰击",
-        "damage": 75
+        "damage": 82
       }
     ]
   },
@@ -3332,15 +3332,15 @@
     "skills": [
       {
         "name": "电弧弹",
-        "damage": 55
+        "damage": 72
       },
       {
         "name": "磁极轰击",
-        "damage": 75
+        "damage": 82
       },
       {
         "name": "霆光闪击",
-        "damage": 80
+        "damage": 106
       }
     ]
   },
@@ -3349,19 +3349,19 @@
     "skills": [
       {
         "name": "电弧弹",
-        "damage": 55
+        "damage": 72
       },
       {
         "name": "磁极轰击",
-        "damage": 75
+        "damage": 82
       },
       {
         "name": "霆光闪击",
-        "damage": 80
+        "damage": 106
       },
       {
         "name": "万雷天劫",
-        "damage": 125
+        "damage": 127
       }
     ]
   },
@@ -3370,11 +3370,11 @@
     "skills": [
       {
         "name": "岩针快攻",
-        "damage": 60
+        "damage": 72
       },
       {
         "name": "岩崩冲击",
-        "damage": 70
+        "damage": 82
       }
     ]
   },
@@ -3383,15 +3383,15 @@
     "skills": [
       {
         "name": "岩针快攻",
-        "damage": 60
+        "damage": 72
       },
       {
         "name": "岩崩冲击",
-        "damage": 70
+        "damage": 82
       },
       {
         "name": "巨岩轰击",
-        "damage": 75
+        "damage": 106
       }
     ]
   },
@@ -3400,19 +3400,19 @@
     "skills": [
       {
         "name": "岩针快攻",
-        "damage": 60
+        "damage": 72
       },
       {
         "name": "岩崩冲击",
-        "damage": 70
+        "damage": 82
       },
       {
         "name": "巨岩轰击",
-        "damage": 75
+        "damage": 106
       },
       {
         "name": "大地震荡",
-        "damage": 95
+        "damage": 127
       }
     ]
   },
@@ -3421,11 +3421,11 @@
     "skills": [
       {
         "name": "种子弹",
-        "damage": 55
+        "damage": 72
       },
       {
         "name": "古木轰击",
-        "damage": 75
+        "damage": 82
       }
     ]
   },
@@ -3434,15 +3434,15 @@
     "skills": [
       {
         "name": "种子弹",
-        "damage": 55
+        "damage": 72
       },
       {
         "name": "古木轰击",
-        "damage": 75
+        "damage": 82
       },
       {
         "name": "荆棘闪击",
-        "damage": 80
+        "damage": 106
       }
     ]
   },
@@ -3451,19 +3451,19 @@
     "skills": [
       {
         "name": "种子弹",
-        "damage": 55
+        "damage": 72
       },
       {
         "name": "古木轰击",
-        "damage": 75
+        "damage": 82
       },
       {
         "name": "荆棘闪击",
-        "damage": 80
+        "damage": 106
       },
       {
         "name": "世界树坠击",
-        "damage": 125
+        "damage": 127
       }
     ]
   },
@@ -3472,11 +3472,11 @@
     "skills": [
       {
         "name": "泡沫弹",
-        "damage": 55
+        "damage": 72
       },
       {
         "name": "深潮轰击",
-        "damage": 75
+        "damage": 82
       }
     ]
   },
@@ -3485,15 +3485,15 @@
     "skills": [
       {
         "name": "泡沫弹",
-        "damage": 55
+        "damage": 72
       },
       {
         "name": "深潮轰击",
-        "damage": 75
+        "damage": 82
       },
       {
         "name": "潮汐闪击",
-        "damage": 80
+        "damage": 106
       }
     ]
   },
@@ -3502,19 +3502,19 @@
     "skills": [
       {
         "name": "泡沫弹",
-        "damage": 55
+        "damage": 72
       },
       {
         "name": "深潮轰击",
-        "damage": 75
+        "damage": 82
       },
       {
         "name": "潮汐闪击",
-        "damage": 80
+        "damage": 106
       },
       {
         "name": "天河坠潮",
-        "damage": 125
+        "damage": 127
       }
     ]
   },
@@ -3523,11 +3523,11 @@
     "skills": [
       {
         "name": "灼热火球",
-        "damage": 55
+        "damage": 72
       },
       {
         "name": "焰流轰击",
-        "damage": 75
+        "damage": 82
       }
     ]
   },
@@ -3536,15 +3536,15 @@
     "skills": [
       {
         "name": "灼热火球",
-        "damage": 55
+        "damage": 72
       },
       {
         "name": "焰流轰击",
-        "damage": 75
+        "damage": 82
       },
       {
         "name": "爆炎闪击",
-        "damage": 80
+        "damage": 106
       }
     ]
   },
@@ -3553,19 +3553,19 @@
     "skills": [
       {
         "name": "灼热火球",
-        "damage": 55
+        "damage": 72
       },
       {
         "name": "焰流轰击",
-        "damage": 75
+        "damage": 82
       },
       {
         "name": "爆炎闪击",
-        "damage": 80
+        "damage": 106
       },
       {
         "name": "终焉天火",
-        "damage": 125
+        "damage": 127
       }
     ]
   }

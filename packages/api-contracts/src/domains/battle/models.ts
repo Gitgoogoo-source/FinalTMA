@@ -186,11 +186,15 @@ export const battleSkillSchema = z
     accuracy_bps: z.number().int().min(1).max(10_000),
     effect_key: battleEffectKeySchema,
   })
-  .strict();
+  .strict()
+  .meta({
+    description:
+      "A skill owned by this immutable pet-template snapshot. Power is the template's effective displayed and settlement value, not the base skill-slot power.",
+  });
 
 const battleSkillsSchema = z.array(battleSkillSchema).min(2).max(4).meta({
   description:
-    "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order",
+    "Only skills owned by this template; length equals stage + 1, positions are contiguous in nondecreasing effective-power order, and generated templates are strictly stronger at every shared position when rarity rises within the same stage",
 });
 
 const hasValidStageSkills = (

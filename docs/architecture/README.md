@@ -196,3 +196,4 @@ operation 准入与保留按 [ADR-059](adr/ADR-059-bounded-operation-admission-a
 - [低延迟按钮按下音效](adr/ADR-092-low-latency-button-press-audio.md)
 - [Battle 实际对战底部导航可见性](adr/ADR-093-battle-active-bottom-navigation-visibility.md)
 - [Battle 行动截止门禁与冲突恢复](adr/ADR-094-battle-action-deadline-client-gating.md)
+- [Battle 同阶段跨稀有度技能有效威力](adr/ADR-095-battle-rarity-ordered-effective-skill-power.md)

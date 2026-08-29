@@ -22882,9 +22882,10 @@
                                             "accuracy_bps",
                                             "effect_key"
                                           ],
-                                          "additionalProperties": false
+                                          "additionalProperties": false,
+                                          "description": "A skill owned by this immutable pet-template snapshot. Power is the template's effective displayed and settlement value, not the base skill-slot power."
                                         },
-                                        "description": "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order"
+                                        "description": "Only skills owned by this template; length equals stage + 1, positions are contiguous in nondecreasing effective-power order, and generated templates are strictly stronger at every shared position when rarity rises within the same stage"
                                       }
                                     },
                                     "required": [
@@ -23767,9 +23768,10 @@
                                     "accuracy_bps",
                                     "effect_key"
                                   ],
-                                  "additionalProperties": false
+                                  "additionalProperties": false,
+                                  "description": "A skill owned by this immutable pet-template snapshot. Power is the template's effective displayed and settlement value, not the base skill-slot power."
                                 },
-                                "description": "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order"
+                                "description": "Only skills owned by this template; length equals stage + 1, positions are contiguous in nondecreasing effective-power order, and generated templates are strictly stronger at every shared position when rarity rises within the same stage"
                               }
                             },
                             "required": [
@@ -24676,9 +24678,10 @@
                                     "accuracy_bps",
                                     "effect_key"
                                   ],
-                                  "additionalProperties": false
+                                  "additionalProperties": false,
+                                  "description": "A skill owned by this immutable pet-template snapshot. Power is the template's effective displayed and settlement value, not the base skill-slot power."
                                 },
-                                "description": "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order"
+                                "description": "Only skills owned by this template; length equals stage + 1, positions are contiguous in nondecreasing effective-power order, and generated templates are strictly stronger at every shared position when rarity rises within the same stage"
                               }
                             },
                             "required": [
@@ -26689,9 +26692,10 @@
                                     "accuracy_bps",
                                     "effect_key"
                                   ],
-                                  "additionalProperties": false
+                                  "additionalProperties": false,
+                                  "description": "A skill owned by this immutable pet-template snapshot. Power is the template's effective displayed and settlement value, not the base skill-slot power."
                                 },
-                                "description": "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order"
+                                "description": "Only skills owned by this template; length equals stage + 1, positions are contiguous in nondecreasing effective-power order, and generated templates are strictly stronger at every shared position when rarity rises within the same stage"
                               }
                             },
                             "required": [
@@ -27584,9 +27588,10 @@
                                     "accuracy_bps",
                                     "effect_key"
                                   ],
-                                  "additionalProperties": false
+                                  "additionalProperties": false,
+                                  "description": "A skill owned by this immutable pet-template snapshot. Power is the template's effective displayed and settlement value, not the base skill-slot power."
                                 },
-                                "description": "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order"
+                                "description": "Only skills owned by this template; length equals stage + 1, positions are contiguous in nondecreasing effective-power order, and generated templates are strictly stronger at every shared position when rarity rises within the same stage"
                               }
                             },
                             "required": [
@@ -28823,9 +28828,10 @@
                                     "accuracy_bps",
                                     "effect_key"
                                   ],
-                                  "additionalProperties": false
+                                  "additionalProperties": false,
+                                  "description": "A skill owned by this immutable pet-template snapshot. Power is the template's effective displayed and settlement value, not the base skill-slot power."
                                 },
-                                "description": "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order"
+                                "description": "Only skills owned by this template; length equals stage + 1, positions are contiguous in nondecreasing effective-power order, and generated templates are strictly stronger at every shared position when rarity rises within the same stage"
                               }
                             },
                             "required": [
@@ -29718,9 +29724,10 @@
                                     "accuracy_bps",
                                     "effect_key"
                                   ],
-                                  "additionalProperties": false
+                                  "additionalProperties": false,
+                                  "description": "A skill owned by this immutable pet-template snapshot. Power is the template's effective displayed and settlement value, not the base skill-slot power."
                                 },
-                                "description": "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order"
+                                "description": "Only skills owned by this template; length equals stage + 1, positions are contiguous in nondecreasing effective-power order, and generated templates are strictly stronger at every shared position when rarity rises within the same stage"
                               }
                             },
                             "required": [
@@ -30987,9 +30994,10 @@
                                     "accuracy_bps",
                                     "effect_key"
                                   ],
-                                  "additionalProperties": false
+                                  "additionalProperties": false,
+                                  "description": "A skill owned by this immutable pet-template snapshot. Power is the template's effective displayed and settlement value, not the base skill-slot power."
                                 },
-                                "description": "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order"
+                                "description": "Only skills owned by this template; length equals stage + 1, positions are contiguous in nondecreasing effective-power order, and generated templates are strictly stronger at every shared position when rarity rises within the same stage"
                               }
                             },
                             "required": [
@@ -31882,9 +31890,10 @@
                                     "accuracy_bps",
                                     "effect_key"
                                   ],
-                                  "additionalProperties": false
+                                  "additionalProperties": false,
+                                  "description": "A skill owned by this immutable pet-template snapshot. Power is the template's effective displayed and settlement value, not the base skill-slot power."
                                 },
-                                "description": "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order"
+                                "description": "Only skills owned by this template; length equals stage + 1, positions are contiguous in nondecreasing effective-power order, and generated templates are strictly stronger at every shared position when rarity rises within the same stage"
                               }
                             },
                             "required": [
@@ -33202,9 +33211,10 @@
                                     "accuracy_bps",
                                     "effect_key"
                                   ],
-                                  "additionalProperties": false
+                                  "additionalProperties": false,
+                                  "description": "A skill owned by this immutable pet-template snapshot. Power is the template's effective displayed and settlement value, not the base skill-slot power."
                                 },
-                                "description": "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order"
+                                "description": "Only skills owned by this template; length equals stage + 1, positions are contiguous in nondecreasing effective-power order, and generated templates are strictly stronger at every shared position when rarity rises within the same stage"
                               }
                             },
                             "required": [
@@ -34353,9 +34363,10 @@
                                     "accuracy_bps",
                                     "effect_key"
                                   ],
-                                  "additionalProperties": false
+                                  "additionalProperties": false,
+                                  "description": "A skill owned by this immutable pet-template snapshot. Power is the template's effective displayed and settlement value, not the base skill-slot power."
                                 },
-                                "description": "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order"
+                                "description": "Only skills owned by this template; length equals stage + 1, positions are contiguous in nondecreasing effective-power order, and generated templates are strictly stronger at every shared position when rarity rises within the same stage"
                               }
                             },
                             "required": [

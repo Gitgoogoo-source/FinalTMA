@@ -702,6 +702,23 @@
     "timeout_skill_position": 1,
     "waiting_timeout_seconds": 1800
   },
+  "skill_power_floors": [
+    {
+      "chain_type": "normal",
+      "position_floors": [0, 0, 0, 0],
+      "profile_range": "P01—P08"
+    },
+    {
+      "chain_type": "advanced",
+      "position_floors": [71, 81, 96, 126],
+      "profile_range": "P09—P12"
+    },
+    {
+      "chain_type": "top",
+      "position_floors": [72, 82, 106, 127],
+      "profile_range": "P13—P14"
+    }
+  ],
   "skill_slots": [
     {
       "accuracy_bps": 10000,
@@ -1124,6 +1141,7 @@
       "profile_id": "P01",
       "rarity": "common",
       "skill_ids": ["grass-s01", "grass-s04"],
+      "skill_powers": [45, 55],
       "stage": 1,
       "stats": {
         "attack": 100,
@@ -1139,6 +1157,7 @@
       "profile_id": "P01",
       "rarity": "rare",
       "skill_ids": ["grass-s01", "grass-s04", "grass-s06"],
+      "skill_powers": [45, 55, 85],
       "stage": 2,
       "stats": {
         "attack": 115,
@@ -1154,6 +1173,7 @@
       "profile_id": "P01",
       "rarity": "epic",
       "skill_ids": ["grass-s01", "grass-s04", "grass-s06", "grass-s09"],
+      "skill_powers": [45, 55, 85, 95],
       "stage": 3,
       "stats": {
         "attack": 132,
@@ -1169,6 +1189,7 @@
       "profile_id": "P01",
       "rarity": "common",
       "skill_ids": ["fire-s01", "fire-s04"],
+      "skill_powers": [45, 55],
       "stage": 1,
       "stats": {
         "attack": 100,
@@ -1184,6 +1205,7 @@
       "profile_id": "P01",
       "rarity": "rare",
       "skill_ids": ["fire-s01", "fire-s04", "fire-s06"],
+      "skill_powers": [45, 55, 85],
       "stage": 2,
       "stats": {
         "attack": 115,
@@ -1199,6 +1221,7 @@
       "profile_id": "P01",
       "rarity": "epic",
       "skill_ids": ["fire-s01", "fire-s04", "fire-s06", "fire-s09"],
+      "skill_powers": [45, 55, 85, 95],
       "stage": 3,
       "stats": {
         "attack": 132,
@@ -1214,6 +1237,7 @@
       "profile_id": "P01",
       "rarity": "common",
       "skill_ids": ["earth-s01", "earth-s04"],
+      "skill_powers": [45, 55],
       "stage": 1,
       "stats": {
         "attack": 100,
@@ -1229,6 +1253,7 @@
       "profile_id": "P01",
       "rarity": "rare",
       "skill_ids": ["earth-s01", "earth-s04", "earth-s06"],
+      "skill_powers": [45, 55, 85],
       "stage": 2,
       "stats": {
         "attack": 115,
@@ -1244,6 +1269,7 @@
       "profile_id": "P01",
       "rarity": "epic",
       "skill_ids": ["earth-s01", "earth-s04", "earth-s06", "earth-s09"],
+      "skill_powers": [45, 55, 85, 95],
       "stage": 3,
       "stats": {
         "attack": 132,
@@ -1259,6 +1285,7 @@
       "profile_id": "P01",
       "rarity": "common",
       "skill_ids": ["water-s01", "water-s04"],
+      "skill_powers": [45, 55],
       "stage": 1,
       "stats": {
         "attack": 100,
@@ -1274,6 +1301,7 @@
       "profile_id": "P01",
       "rarity": "rare",
       "skill_ids": ["water-s01", "water-s04", "water-s06"],
+      "skill_powers": [45, 55, 85],
       "stage": 2,
       "stats": {
         "attack": 115,
@@ -1289,6 +1317,7 @@
       "profile_id": "P01",
       "rarity": "epic",
       "skill_ids": ["water-s01", "water-s04", "water-s06", "water-s09"],
+      "skill_powers": [45, 55, 85, 95],
       "stage": 3,
       "stats": {
         "attack": 132,
@@ -1304,6 +1333,7 @@
       "profile_id": "P01",
       "rarity": "common",
       "skill_ids": ["lightning-s01", "lightning-s04"],
+      "skill_powers": [45, 55],
       "stage": 1,
       "stats": {
         "attack": 100,
@@ -1319,6 +1349,7 @@
       "profile_id": "P01",
       "rarity": "rare",
       "skill_ids": ["lightning-s01", "lightning-s04", "lightning-s06"],
+      "skill_powers": [45, 55, 85],
       "stage": 2,
       "stats": {
         "attack": 115,
@@ -1339,6 +1370,7 @@
         "lightning-s06",
         "lightning-s09"
       ],
+      "skill_powers": [45, 55, 85, 95],
       "stage": 3,
       "stats": {
         "attack": 132,
@@ -1354,6 +1386,7 @@
       "profile_id": "P02",
       "rarity": "common",
       "skill_ids": ["fire-s01", "fire-s05"],
+      "skill_powers": [45, 70],
       "stage": 1,
       "stats": {
         "attack": 115,
@@ -1369,6 +1402,7 @@
       "profile_id": "P02",
       "rarity": "rare",
       "skill_ids": ["fire-s01", "fire-s05", "fire-s08"],
+      "skill_powers": [45, 70, 75],
       "stage": 2,
       "stats": {
         "attack": 132,
@@ -1384,6 +1418,7 @@
       "profile_id": "P02",
       "rarity": "epic",
       "skill_ids": ["fire-s01", "fire-s05", "fire-s08", "fire-s07"],
+      "skill_powers": [45, 70, 75, 105],
       "stage": 3,
       "stats": {
         "attack": 152,
@@ -1399,6 +1434,7 @@
       "profile_id": "P03",
       "rarity": "common",
       "skill_ids": ["grass-s01", "grass-s05"],
+      "skill_powers": [45, 70],
       "stage": 1,
       "stats": {
         "attack": 110,
@@ -1414,6 +1450,7 @@
       "profile_id": "P03",
       "rarity": "rare",
       "skill_ids": ["grass-s01", "grass-s05", "grass-s06"],
+      "skill_powers": [45, 70, 85],
       "stage": 2,
       "stats": {
         "attack": 127,
@@ -1429,6 +1466,7 @@
       "profile_id": "P03",
       "rarity": "epic",
       "skill_ids": ["grass-s01", "grass-s05", "grass-s06", "grass-s10"],
+      "skill_powers": [45, 70, 85, 125],
       "stage": 3,
       "stats": {
         "attack": 145,
@@ -1444,6 +1482,7 @@
       "profile_id": "P02",
       "rarity": "common",
       "skill_ids": ["lightning-s01", "lightning-s05"],
+      "skill_powers": [45, 70],
       "stage": 1,
       "stats": {
         "attack": 115,
@@ -1459,6 +1498,7 @@
       "profile_id": "P02",
       "rarity": "rare",
       "skill_ids": ["lightning-s01", "lightning-s05", "lightning-s08"],
+      "skill_powers": [45, 70, 75],
       "stage": 2,
       "stats": {
         "attack": 132,
@@ -1479,6 +1519,7 @@
         "lightning-s08",
         "lightning-s07"
       ],
+      "skill_powers": [45, 70, 75, 105],
       "stage": 3,
       "stats": {
         "attack": 152,
@@ -1494,6 +1535,7 @@
       "profile_id": "P02",
       "rarity": "common",
       "skill_ids": ["water-s01", "water-s05"],
+      "skill_powers": [45, 70],
       "stage": 1,
       "stats": {
         "attack": 115,
@@ -1509,6 +1551,7 @@
       "profile_id": "P02",
       "rarity": "rare",
       "skill_ids": ["water-s01", "water-s05", "water-s08"],
+      "skill_powers": [45, 70, 75],
       "stage": 2,
       "stats": {
         "attack": 132,
@@ -1524,6 +1567,7 @@
       "profile_id": "P02",
       "rarity": "epic",
       "skill_ids": ["water-s01", "water-s05", "water-s08", "water-s07"],
+      "skill_powers": [45, 70, 75, 105],
       "stage": 3,
       "stats": {
         "attack": 152,
@@ -1539,6 +1583,7 @@
       "profile_id": "P02",
       "rarity": "common",
       "skill_ids": ["grass-s01", "grass-s05"],
+      "skill_powers": [45, 70],
       "stage": 1,
       "stats": {
         "attack": 115,
@@ -1554,6 +1599,7 @@
       "profile_id": "P02",
       "rarity": "rare",
       "skill_ids": ["grass-s01", "grass-s05", "grass-s08"],
+      "skill_powers": [45, 70, 75],
       "stage": 2,
       "stats": {
         "attack": 132,
@@ -1569,6 +1615,7 @@
       "profile_id": "P02",
       "rarity": "epic",
       "skill_ids": ["grass-s01", "grass-s05", "grass-s08", "grass-s07"],
+      "skill_powers": [45, 70, 75, 105],
       "stage": 3,
       "stats": {
         "attack": 152,
@@ -1584,6 +1631,7 @@
       "profile_id": "P03",
       "rarity": "common",
       "skill_ids": ["earth-s01", "earth-s05"],
+      "skill_powers": [45, 70],
       "stage": 1,
       "stats": {
         "attack": 110,
@@ -1599,6 +1647,7 @@
       "profile_id": "P03",
       "rarity": "rare",
       "skill_ids": ["earth-s01", "earth-s05", "earth-s06"],
+      "skill_powers": [45, 70, 85],
       "stage": 2,
       "stats": {
         "attack": 127,
@@ -1614,6 +1663,7 @@
       "profile_id": "P03",
       "rarity": "epic",
       "skill_ids": ["earth-s01", "earth-s05", "earth-s06", "earth-s10"],
+      "skill_powers": [45, 70, 85, 125],
       "stage": 3,
       "stats": {
         "attack": 145,
@@ -1629,6 +1679,7 @@
       "profile_id": "P03",
       "rarity": "common",
       "skill_ids": ["lightning-s01", "lightning-s05"],
+      "skill_powers": [45, 70],
       "stage": 1,
       "stats": {
         "attack": 110,
@@ -1644,6 +1695,7 @@
       "profile_id": "P03",
       "rarity": "rare",
       "skill_ids": ["lightning-s01", "lightning-s05", "lightning-s06"],
+      "skill_powers": [45, 70, 85],
       "stage": 2,
       "stats": {
         "attack": 127,
@@ -1664,6 +1716,7 @@
         "lightning-s06",
         "lightning-s10"
       ],
+      "skill_powers": [45, 70, 85, 125],
       "stage": 3,
       "stats": {
         "attack": 145,
@@ -1679,6 +1732,7 @@
       "profile_id": "P04",
       "rarity": "common",
       "skill_ids": ["grass-s04", "grass-s02"],
+      "skill_powers": [55, 60],
       "stage": 1,
       "stats": {
         "attack": 85,
@@ -1694,6 +1748,7 @@
       "profile_id": "P04",
       "rarity": "rare",
       "skill_ids": ["grass-s04", "grass-s02", "grass-s08"],
+      "skill_powers": [55, 60, 75],
       "stage": 2,
       "stats": {
         "attack": 98,
@@ -1709,6 +1764,7 @@
       "profile_id": "P04",
       "rarity": "epic",
       "skill_ids": ["grass-s04", "grass-s02", "grass-s08", "grass-s06"],
+      "skill_powers": [55, 60, 75, 85],
       "stage": 3,
       "stats": {
         "attack": 112,
@@ -1724,6 +1780,7 @@
       "profile_id": "P04",
       "rarity": "common",
       "skill_ids": ["fire-s04", "fire-s02"],
+      "skill_powers": [55, 60],
       "stage": 1,
       "stats": {
         "attack": 85,
@@ -1739,6 +1796,7 @@
       "profile_id": "P04",
       "rarity": "rare",
       "skill_ids": ["fire-s04", "fire-s02", "fire-s08"],
+      "skill_powers": [55, 60, 75],
       "stage": 2,
       "stats": {
         "attack": 98,
@@ -1754,6 +1812,7 @@
       "profile_id": "P04",
       "rarity": "epic",
       "skill_ids": ["fire-s04", "fire-s02", "fire-s08", "fire-s06"],
+      "skill_powers": [55, 60, 75, 85],
       "stage": 3,
       "stats": {
         "attack": 112,
@@ -1769,6 +1828,7 @@
       "profile_id": "P02",
       "rarity": "common",
       "skill_ids": ["earth-s01", "earth-s05"],
+      "skill_powers": [45, 70],
       "stage": 1,
       "stats": {
         "attack": 115,
@@ -1784,6 +1844,7 @@
       "profile_id": "P02",
       "rarity": "rare",
       "skill_ids": ["earth-s01", "earth-s05", "earth-s08"],
+      "skill_powers": [45, 70, 75],
       "stage": 2,
       "stats": {
         "attack": 132,
@@ -1799,6 +1860,7 @@
       "profile_id": "P02",
       "rarity": "epic",
       "skill_ids": ["earth-s01", "earth-s05", "earth-s08", "earth-s07"],
+      "skill_powers": [45, 70, 75, 105],
       "stage": 3,
       "stats": {
         "attack": 152,
@@ -1814,6 +1876,7 @@
       "profile_id": "P04",
       "rarity": "common",
       "skill_ids": ["lightning-s04", "lightning-s02"],
+      "skill_powers": [55, 60],
       "stage": 1,
       "stats": {
         "attack": 85,
@@ -1829,6 +1892,7 @@
       "profile_id": "P04",
       "rarity": "rare",
       "skill_ids": ["lightning-s04", "lightning-s02", "lightning-s08"],
+      "skill_powers": [55, 60, 75],
       "stage": 2,
       "stats": {
         "attack": 98,
@@ -1849,6 +1913,7 @@
         "lightning-s08",
         "lightning-s06"
       ],
+      "skill_powers": [55, 60, 75, 85],
       "stage": 3,
       "stats": {
         "attack": 112,
@@ -1864,6 +1929,7 @@
       "profile_id": "P03",
       "rarity": "common",
       "skill_ids": ["water-s01", "water-s05"],
+      "skill_powers": [45, 70],
       "stage": 1,
       "stats": {
         "attack": 110,
@@ -1879,6 +1945,7 @@
       "profile_id": "P03",
       "rarity": "rare",
       "skill_ids": ["water-s01", "water-s05", "water-s06"],
+      "skill_powers": [45, 70, 85],
       "stage": 2,
       "stats": {
         "attack": 127,
@@ -1894,6 +1961,7 @@
       "profile_id": "P03",
       "rarity": "epic",
       "skill_ids": ["water-s01", "water-s05", "water-s06", "water-s10"],
+      "skill_powers": [45, 70, 85, 125],
       "stage": 3,
       "stats": {
         "attack": 145,
@@ -1909,6 +1977,7 @@
       "profile_id": "P05",
       "rarity": "common",
       "skill_ids": ["earth-s04", "earth-s02"],
+      "skill_powers": [55, 60],
       "stage": 1,
       "stats": {
         "attack": 95,
@@ -1924,6 +1993,7 @@
       "profile_id": "P05",
       "rarity": "rare",
       "skill_ids": ["earth-s04", "earth-s02", "earth-s09"],
+      "skill_powers": [55, 60, 95],
       "stage": 2,
       "stats": {
         "attack": 109,
@@ -1939,6 +2009,7 @@
       "profile_id": "P05",
       "rarity": "epic",
       "skill_ids": ["earth-s04", "earth-s02", "earth-s09", "earth-s07"],
+      "skill_powers": [55, 60, 95, 105],
       "stage": 3,
       "stats": {
         "attack": 125,
@@ -1954,6 +2025,7 @@
       "profile_id": "P04",
       "rarity": "common",
       "skill_ids": ["water-s04", "water-s02"],
+      "skill_powers": [55, 60],
       "stage": 1,
       "stats": {
         "attack": 85,
@@ -1969,6 +2041,7 @@
       "profile_id": "P04",
       "rarity": "rare",
       "skill_ids": ["water-s04", "water-s02", "water-s08"],
+      "skill_powers": [55, 60, 75],
       "stage": 2,
       "stats": {
         "attack": 98,
@@ -1984,6 +2057,7 @@
       "profile_id": "P04",
       "rarity": "epic",
       "skill_ids": ["water-s04", "water-s02", "water-s08", "water-s06"],
+      "skill_powers": [55, 60, 75, 85],
       "stage": 3,
       "stats": {
         "attack": 112,
@@ -1999,6 +2073,7 @@
       "profile_id": "P03",
       "rarity": "common",
       "skill_ids": ["fire-s01", "fire-s05"],
+      "skill_powers": [45, 70],
       "stage": 1,
       "stats": {
         "attack": 110,
@@ -2014,6 +2089,7 @@
       "profile_id": "P03",
       "rarity": "rare",
       "skill_ids": ["fire-s01", "fire-s05", "fire-s06"],
+      "skill_powers": [45, 70, 85],
       "stage": 2,
       "stats": {
         "attack": 127,
@@ -2029,6 +2105,7 @@
       "profile_id": "P03",
       "rarity": "epic",
       "skill_ids": ["fire-s01", "fire-s05", "fire-s06", "fire-s10"],
+      "skill_powers": [45, 70, 85, 125],
       "stage": 3,
       "stats": {
         "attack": 145,
@@ -2044,6 +2121,7 @@
       "profile_id": "P05",
       "rarity": "common",
       "skill_ids": ["water-s04", "water-s02"],
+      "skill_powers": [55, 60],
       "stage": 1,
       "stats": {
         "attack": 95,
@@ -2059,6 +2137,7 @@
       "profile_id": "P05",
       "rarity": "rare",
       "skill_ids": ["water-s04", "water-s02", "water-s09"],
+      "skill_powers": [55, 60, 95],
       "stage": 2,
       "stats": {
         "attack": 109,
@@ -2074,6 +2153,7 @@
       "profile_id": "P05",
       "rarity": "epic",
       "skill_ids": ["water-s04", "water-s02", "water-s09", "water-s07"],
+      "skill_powers": [55, 60, 95, 105],
       "stage": 3,
       "stats": {
         "attack": 125,
@@ -2089,6 +2169,7 @@
       "profile_id": "P05",
       "rarity": "common",
       "skill_ids": ["grass-s04", "grass-s02"],
+      "skill_powers": [55, 60],
       "stage": 1,
       "stats": {
         "attack": 95,
@@ -2104,6 +2185,7 @@
       "profile_id": "P05",
       "rarity": "rare",
       "skill_ids": ["grass-s04", "grass-s02", "grass-s09"],
+      "skill_powers": [55, 60, 95],
       "stage": 2,
       "stats": {
         "attack": 109,
@@ -2119,6 +2201,7 @@
       "profile_id": "P05",
       "rarity": "epic",
       "skill_ids": ["grass-s04", "grass-s02", "grass-s09", "grass-s07"],
+      "skill_powers": [55, 60, 95, 105],
       "stage": 3,
       "stats": {
         "attack": 125,
@@ -2134,6 +2217,7 @@
       "profile_id": "P04",
       "rarity": "common",
       "skill_ids": ["earth-s04", "earth-s02"],
+      "skill_powers": [55, 60],
       "stage": 1,
       "stats": {
         "attack": 85,
@@ -2149,6 +2233,7 @@
       "profile_id": "P04",
       "rarity": "rare",
       "skill_ids": ["earth-s04", "earth-s02", "earth-s08"],
+      "skill_powers": [55, 60, 75],
       "stage": 2,
       "stats": {
         "attack": 98,
@@ -2164,6 +2249,7 @@
       "profile_id": "P04",
       "rarity": "epic",
       "skill_ids": ["earth-s04", "earth-s02", "earth-s08", "earth-s06"],
+      "skill_powers": [55, 60, 75, 85],
       "stage": 3,
       "stats": {
         "attack": 112,
@@ -2179,6 +2265,7 @@
       "profile_id": "P06",
       "rarity": "common",
       "skill_ids": ["earth-s02", "earth-s05"],
+      "skill_powers": [60, 70],
       "stage": 1,
       "stats": {
         "attack": 110,
@@ -2194,6 +2281,7 @@
       "profile_id": "P06",
       "rarity": "rare",
       "skill_ids": ["earth-s02", "earth-s05", "earth-s08"],
+      "skill_powers": [60, 70, 75],
       "stage": 2,
       "stats": {
         "attack": 127,
@@ -2209,6 +2297,7 @@
       "profile_id": "P06",
       "rarity": "epic",
       "skill_ids": ["earth-s02", "earth-s05", "earth-s08", "earth-s07"],
+      "skill_powers": [60, 70, 75, 105],
       "stage": 3,
       "stats": {
         "attack": 145,
@@ -2224,6 +2313,7 @@
       "profile_id": "P05",
       "rarity": "common",
       "skill_ids": ["lightning-s04", "lightning-s02"],
+      "skill_powers": [55, 60],
       "stage": 1,
       "stats": {
         "attack": 95,
@@ -2239,6 +2329,7 @@
       "profile_id": "P05",
       "rarity": "rare",
       "skill_ids": ["lightning-s04", "lightning-s02", "lightning-s09"],
+      "skill_powers": [55, 60, 95],
       "stage": 2,
       "stats": {
         "attack": 109,
@@ -2259,6 +2350,7 @@
         "lightning-s09",
         "lightning-s07"
       ],
+      "skill_powers": [55, 60, 95, 105],
       "stage": 3,
       "stats": {
         "attack": 125,
@@ -2274,6 +2366,7 @@
       "profile_id": "P06",
       "rarity": "common",
       "skill_ids": ["grass-s02", "grass-s05"],
+      "skill_powers": [60, 70],
       "stage": 1,
       "stats": {
         "attack": 110,
@@ -2289,6 +2382,7 @@
       "profile_id": "P06",
       "rarity": "rare",
       "skill_ids": ["grass-s02", "grass-s05", "grass-s08"],
+      "skill_powers": [60, 70, 75],
       "stage": 2,
       "stats": {
         "attack": 127,
@@ -2304,6 +2398,7 @@
       "profile_id": "P06",
       "rarity": "epic",
       "skill_ids": ["grass-s02", "grass-s05", "grass-s08", "grass-s07"],
+      "skill_powers": [60, 70, 75, 105],
       "stage": 3,
       "stats": {
         "attack": 145,
@@ -2319,6 +2414,7 @@
       "profile_id": "P05",
       "rarity": "common",
       "skill_ids": ["fire-s04", "fire-s02"],
+      "skill_powers": [55, 60],
       "stage": 1,
       "stats": {
         "attack": 95,
@@ -2334,6 +2430,7 @@
       "profile_id": "P05",
       "rarity": "rare",
       "skill_ids": ["fire-s04", "fire-s02", "fire-s09"],
+      "skill_powers": [55, 60, 95],
       "stage": 2,
       "stats": {
         "attack": 109,
@@ -2349,6 +2446,7 @@
       "profile_id": "P05",
       "rarity": "epic",
       "skill_ids": ["fire-s04", "fire-s02", "fire-s09", "fire-s07"],
+      "skill_powers": [55, 60, 95, 105],
       "stage": 3,
       "stats": {
         "attack": 125,
@@ -2364,6 +2462,7 @@
       "profile_id": "P06",
       "rarity": "common",
       "skill_ids": ["water-s02", "water-s05"],
+      "skill_powers": [60, 70],
       "stage": 1,
       "stats": {
         "attack": 110,
@@ -2379,6 +2478,7 @@
       "profile_id": "P06",
       "rarity": "rare",
       "skill_ids": ["water-s02", "water-s05", "water-s08"],
+      "skill_powers": [60, 70, 75],
       "stage": 2,
       "stats": {
         "attack": 127,
@@ -2394,6 +2494,7 @@
       "profile_id": "P06",
       "rarity": "epic",
       "skill_ids": ["water-s02", "water-s05", "water-s08", "water-s07"],
+      "skill_powers": [60, 70, 75, 105],
       "stage": 3,
       "stats": {
         "attack": 145,
@@ -2409,6 +2510,7 @@
       "profile_id": "P06",
       "rarity": "common",
       "skill_ids": ["lightning-s02", "lightning-s05"],
+      "skill_powers": [60, 70],
       "stage": 1,
       "stats": {
         "attack": 110,
@@ -2424,6 +2526,7 @@
       "profile_id": "P06",
       "rarity": "rare",
       "skill_ids": ["lightning-s02", "lightning-s05", "lightning-s08"],
+      "skill_powers": [60, 70, 75],
       "stage": 2,
       "stats": {
         "attack": 127,
@@ -2444,6 +2547,7 @@
         "lightning-s08",
         "lightning-s07"
       ],
+      "skill_powers": [60, 70, 75, 105],
       "stage": 3,
       "stats": {
         "attack": 145,
@@ -2459,6 +2563,7 @@
       "profile_id": "P06",
       "rarity": "common",
       "skill_ids": ["fire-s02", "fire-s05"],
+      "skill_powers": [60, 70],
       "stage": 1,
       "stats": {
         "attack": 110,
@@ -2474,6 +2579,7 @@
       "profile_id": "P06",
       "rarity": "rare",
       "skill_ids": ["fire-s02", "fire-s05", "fire-s08"],
+      "skill_powers": [60, 70, 75],
       "stage": 2,
       "stats": {
         "attack": 127,
@@ -2489,6 +2595,7 @@
       "profile_id": "P06",
       "rarity": "epic",
       "skill_ids": ["fire-s02", "fire-s05", "fire-s08", "fire-s07"],
+      "skill_powers": [60, 70, 75, 105],
       "stage": 3,
       "stats": {
         "attack": 145,
@@ -2504,6 +2611,7 @@
       "profile_id": "P07",
       "rarity": "common",
       "skill_ids": ["fire-s04", "fire-s03"],
+      "skill_powers": [55, 80],
       "stage": 1,
       "stats": {
         "attack": 105,
@@ -2519,6 +2627,7 @@
       "profile_id": "P07",
       "rarity": "rare",
       "skill_ids": ["fire-s04", "fire-s03", "fire-s06"],
+      "skill_powers": [55, 80, 85],
       "stage": 2,
       "stats": {
         "attack": 121,
@@ -2534,6 +2643,7 @@
       "profile_id": "P07",
       "rarity": "epic",
       "skill_ids": ["fire-s04", "fire-s03", "fire-s06", "fire-s09"],
+      "skill_powers": [55, 80, 85, 95],
       "stage": 3,
       "stats": {
         "attack": 139,
@@ -2549,6 +2659,7 @@
       "profile_id": "P07",
       "rarity": "common",
       "skill_ids": ["earth-s04", "earth-s03"],
+      "skill_powers": [55, 80],
       "stage": 1,
       "stats": {
         "attack": 105,
@@ -2564,6 +2675,7 @@
       "profile_id": "P07",
       "rarity": "rare",
       "skill_ids": ["earth-s04", "earth-s03", "earth-s06"],
+      "skill_powers": [55, 80, 85],
       "stage": 2,
       "stats": {
         "attack": 121,
@@ -2579,6 +2691,7 @@
       "profile_id": "P07",
       "rarity": "epic",
       "skill_ids": ["earth-s04", "earth-s03", "earth-s06", "earth-s09"],
+      "skill_powers": [55, 80, 85, 95],
       "stage": 3,
       "stats": {
         "attack": 139,
@@ -2594,6 +2707,7 @@
       "profile_id": "P08",
       "rarity": "common",
       "skill_ids": ["lightning-s05", "lightning-s08"],
+      "skill_powers": [70, 75],
       "stage": 1,
       "stats": {
         "attack": 95,
@@ -2609,6 +2723,7 @@
       "profile_id": "P08",
       "rarity": "rare",
       "skill_ids": ["lightning-s05", "lightning-s08", "lightning-s03"],
+      "skill_powers": [70, 75, 80],
       "stage": 2,
       "stats": {
         "attack": 109,
@@ -2629,6 +2744,7 @@
         "lightning-s03",
         "lightning-s07"
       ],
+      "skill_powers": [70, 75, 80, 105],
       "stage": 3,
       "stats": {
         "attack": 125,
@@ -2644,6 +2760,7 @@
       "profile_id": "P07",
       "rarity": "common",
       "skill_ids": ["grass-s04", "grass-s03"],
+      "skill_powers": [55, 80],
       "stage": 1,
       "stats": {
         "attack": 105,
@@ -2659,6 +2776,7 @@
       "profile_id": "P07",
       "rarity": "rare",
       "skill_ids": ["grass-s04", "grass-s03", "grass-s06"],
+      "skill_powers": [55, 80, 85],
       "stage": 2,
       "stats": {
         "attack": 121,
@@ -2674,6 +2792,7 @@
       "profile_id": "P07",
       "rarity": "epic",
       "skill_ids": ["grass-s04", "grass-s03", "grass-s06", "grass-s09"],
+      "skill_powers": [55, 80, 85, 95],
       "stage": 3,
       "stats": {
         "attack": 139,
@@ -2689,6 +2808,7 @@
       "profile_id": "P07",
       "rarity": "common",
       "skill_ids": ["lightning-s04", "lightning-s03"],
+      "skill_powers": [55, 80],
       "stage": 1,
       "stats": {
         "attack": 105,
@@ -2704,6 +2824,7 @@
       "profile_id": "P07",
       "rarity": "rare",
       "skill_ids": ["lightning-s04", "lightning-s03", "lightning-s06"],
+      "skill_powers": [55, 80, 85],
       "stage": 2,
       "stats": {
         "attack": 121,
@@ -2724,6 +2845,7 @@
         "lightning-s06",
         "lightning-s09"
       ],
+      "skill_powers": [55, 80, 85, 95],
       "stage": 3,
       "stats": {
         "attack": 139,
@@ -2739,6 +2861,7 @@
       "profile_id": "P08",
       "rarity": "common",
       "skill_ids": ["water-s05", "water-s08"],
+      "skill_powers": [70, 75],
       "stage": 1,
       "stats": {
         "attack": 95,
@@ -2754,6 +2877,7 @@
       "profile_id": "P08",
       "rarity": "rare",
       "skill_ids": ["water-s05", "water-s08", "water-s03"],
+      "skill_powers": [70, 75, 80],
       "stage": 2,
       "stats": {
         "attack": 109,
@@ -2769,6 +2893,7 @@
       "profile_id": "P08",
       "rarity": "epic",
       "skill_ids": ["water-s05", "water-s08", "water-s03", "water-s07"],
+      "skill_powers": [70, 75, 80, 105],
       "stage": 3,
       "stats": {
         "attack": 125,
@@ -2784,6 +2909,7 @@
       "profile_id": "P07",
       "rarity": "common",
       "skill_ids": ["water-s04", "water-s03"],
+      "skill_powers": [55, 80],
       "stage": 1,
       "stats": {
         "attack": 105,
@@ -2799,6 +2925,7 @@
       "profile_id": "P07",
       "rarity": "rare",
       "skill_ids": ["water-s04", "water-s03", "water-s06"],
+      "skill_powers": [55, 80, 85],
       "stage": 2,
       "stats": {
         "attack": 121,
@@ -2814,6 +2941,7 @@
       "profile_id": "P07",
       "rarity": "epic",
       "skill_ids": ["water-s04", "water-s03", "water-s06", "water-s09"],
+      "skill_powers": [55, 80, 85, 95],
       "stage": 3,
       "stats": {
         "attack": 139,
@@ -2829,6 +2957,7 @@
       "profile_id": "P08",
       "rarity": "common",
       "skill_ids": ["grass-s05", "grass-s08"],
+      "skill_powers": [70, 75],
       "stage": 1,
       "stats": {
         "attack": 95,
@@ -2844,6 +2973,7 @@
       "profile_id": "P08",
       "rarity": "rare",
       "skill_ids": ["grass-s05", "grass-s08", "grass-s03"],
+      "skill_powers": [70, 75, 80],
       "stage": 2,
       "stats": {
         "attack": 109,
@@ -2859,6 +2989,7 @@
       "profile_id": "P08",
       "rarity": "epic",
       "skill_ids": ["grass-s05", "grass-s08", "grass-s03", "grass-s07"],
+      "skill_powers": [70, 75, 80, 105],
       "stage": 3,
       "stats": {
         "attack": 125,
@@ -2874,6 +3005,7 @@
       "profile_id": "P08",
       "rarity": "common",
       "skill_ids": ["fire-s05", "fire-s08"],
+      "skill_powers": [70, 75],
       "stage": 1,
       "stats": {
         "attack": 95,
@@ -2889,6 +3021,7 @@
       "profile_id": "P08",
       "rarity": "rare",
       "skill_ids": ["fire-s05", "fire-s08", "fire-s03"],
+      "skill_powers": [70, 75, 80],
       "stage": 2,
       "stats": {
         "attack": 109,
@@ -2904,6 +3037,7 @@
       "profile_id": "P08",
       "rarity": "epic",
       "skill_ids": ["fire-s05", "fire-s08", "fire-s03", "fire-s07"],
+      "skill_powers": [70, 75, 80, 105],
       "stage": 3,
       "stats": {
         "attack": 125,
@@ -2919,6 +3053,7 @@
       "profile_id": "P08",
       "rarity": "common",
       "skill_ids": ["earth-s05", "earth-s08"],
+      "skill_powers": [70, 75],
       "stage": 1,
       "stats": {
         "attack": 95,
@@ -2934,6 +3069,7 @@
       "profile_id": "P08",
       "rarity": "rare",
       "skill_ids": ["earth-s05", "earth-s08", "earth-s03"],
+      "skill_powers": [70, 75, 80],
       "stage": 2,
       "stats": {
         "attack": 109,
@@ -2949,6 +3085,7 @@
       "profile_id": "P08",
       "rarity": "epic",
       "skill_ids": ["earth-s05", "earth-s08", "earth-s03", "earth-s07"],
+      "skill_powers": [70, 75, 80, 105],
       "stage": 3,
       "stats": {
         "attack": 125,
@@ -2964,6 +3101,7 @@
       "profile_id": "P09",
       "rarity": "rare",
       "skill_ids": ["water-s04", "water-s03"],
+      "skill_powers": [71, 81],
       "stage": 1,
       "stats": {
         "attack": 138,
@@ -2979,6 +3117,7 @@
       "profile_id": "P09",
       "rarity": "epic",
       "skill_ids": ["water-s04", "water-s03", "water-s07"],
+      "skill_powers": [71, 81, 105],
       "stage": 2,
       "stats": {
         "attack": 158,
@@ -2994,6 +3133,7 @@
       "profile_id": "P09",
       "rarity": "legendary",
       "skill_ids": ["water-s04", "water-s03", "water-s07", "water-s10"],
+      "skill_powers": [71, 81, 105, 126],
       "stage": 3,
       "stats": {
         "attack": 182,
@@ -3009,6 +3149,7 @@
       "profile_id": "P09",
       "rarity": "rare",
       "skill_ids": ["fire-s04", "fire-s03"],
+      "skill_powers": [71, 81],
       "stage": 1,
       "stats": {
         "attack": 138,
@@ -3024,6 +3165,7 @@
       "profile_id": "P09",
       "rarity": "epic",
       "skill_ids": ["fire-s04", "fire-s03", "fire-s07"],
+      "skill_powers": [71, 81, 105],
       "stage": 2,
       "stats": {
         "attack": 158,
@@ -3039,6 +3181,7 @@
       "profile_id": "P09",
       "rarity": "legendary",
       "skill_ids": ["fire-s04", "fire-s03", "fire-s07", "fire-s10"],
+      "skill_powers": [71, 81, 105, 126],
       "stage": 3,
       "stats": {
         "attack": 182,
@@ -3054,6 +3197,7 @@
       "profile_id": "P10",
       "rarity": "rare",
       "skill_ids": ["water-s01", "water-s04"],
+      "skill_powers": [71, 81],
       "stage": 1,
       "stats": {
         "attack": 98,
@@ -3069,6 +3213,7 @@
       "profile_id": "P10",
       "rarity": "epic",
       "skill_ids": ["water-s01", "water-s04", "water-s07"],
+      "skill_powers": [71, 81, 105],
       "stage": 2,
       "stats": {
         "attack": 112,
@@ -3084,6 +3229,7 @@
       "profile_id": "P10",
       "rarity": "legendary",
       "skill_ids": ["water-s01", "water-s04", "water-s07", "water-s10"],
+      "skill_powers": [71, 81, 105, 126],
       "stage": 3,
       "stats": {
         "attack": 129,
@@ -3099,6 +3245,7 @@
       "profile_id": "P09",
       "rarity": "rare",
       "skill_ids": ["lightning-s04", "lightning-s03"],
+      "skill_powers": [71, 81],
       "stage": 1,
       "stats": {
         "attack": 138,
@@ -3114,6 +3261,7 @@
       "profile_id": "P09",
       "rarity": "epic",
       "skill_ids": ["lightning-s04", "lightning-s03", "lightning-s07"],
+      "skill_powers": [71, 81, 105],
       "stage": 2,
       "stats": {
         "attack": 158,
@@ -3134,6 +3282,7 @@
         "lightning-s07",
         "lightning-s10"
       ],
+      "skill_powers": [71, 81, 105, 126],
       "stage": 3,
       "stats": {
         "attack": 182,
@@ -3149,6 +3298,7 @@
       "profile_id": "P09",
       "rarity": "rare",
       "skill_ids": ["earth-s04", "earth-s03"],
+      "skill_powers": [71, 81],
       "stage": 1,
       "stats": {
         "attack": 138,
@@ -3164,6 +3314,7 @@
       "profile_id": "P09",
       "rarity": "epic",
       "skill_ids": ["earth-s04", "earth-s03", "earth-s07"],
+      "skill_powers": [71, 81, 105],
       "stage": 2,
       "stats": {
         "attack": 158,
@@ -3179,6 +3330,7 @@
       "profile_id": "P09",
       "rarity": "legendary",
       "skill_ids": ["earth-s04", "earth-s03", "earth-s07", "earth-s10"],
+      "skill_powers": [71, 81, 105, 126],
       "stage": 3,
       "stats": {
         "attack": 182,
@@ -3194,6 +3346,7 @@
       "profile_id": "P09",
       "rarity": "rare",
       "skill_ids": ["grass-s04", "grass-s03"],
+      "skill_powers": [71, 81],
       "stage": 1,
       "stats": {
         "attack": 138,
@@ -3209,6 +3362,7 @@
       "profile_id": "P09",
       "rarity": "epic",
       "skill_ids": ["grass-s04", "grass-s03", "grass-s07"],
+      "skill_powers": [71, 81, 105],
       "stage": 2,
       "stats": {
         "attack": 158,
@@ -3224,6 +3378,7 @@
       "profile_id": "P09",
       "rarity": "legendary",
       "skill_ids": ["grass-s04", "grass-s03", "grass-s07", "grass-s10"],
+      "skill_powers": [71, 81, 105, 126],
       "stage": 3,
       "stats": {
         "attack": 182,
@@ -3239,6 +3394,7 @@
       "profile_id": "P10",
       "rarity": "rare",
       "skill_ids": ["earth-s01", "earth-s04"],
+      "skill_powers": [71, 81],
       "stage": 1,
       "stats": {
         "attack": 98,
@@ -3254,6 +3410,7 @@
       "profile_id": "P10",
       "rarity": "epic",
       "skill_ids": ["earth-s01", "earth-s04", "earth-s07"],
+      "skill_powers": [71, 81, 105],
       "stage": 2,
       "stats": {
         "attack": 112,
@@ -3269,6 +3426,7 @@
       "profile_id": "P10",
       "rarity": "legendary",
       "skill_ids": ["earth-s01", "earth-s04", "earth-s07", "earth-s10"],
+      "skill_powers": [71, 81, 105, 126],
       "stage": 3,
       "stats": {
         "attack": 129,
@@ -3284,6 +3442,7 @@
       "profile_id": "P10",
       "rarity": "rare",
       "skill_ids": ["grass-s01", "grass-s04"],
+      "skill_powers": [71, 81],
       "stage": 1,
       "stats": {
         "attack": 98,
@@ -3299,6 +3458,7 @@
       "profile_id": "P10",
       "rarity": "epic",
       "skill_ids": ["grass-s01", "grass-s04", "grass-s07"],
+      "skill_powers": [71, 81, 105],
       "stage": 2,
       "stats": {
         "attack": 112,
@@ -3314,6 +3474,7 @@
       "profile_id": "P10",
       "rarity": "legendary",
       "skill_ids": ["grass-s01", "grass-s04", "grass-s07", "grass-s10"],
+      "skill_powers": [71, 81, 105, 126],
       "stage": 3,
       "stats": {
         "attack": 129,
@@ -3329,6 +3490,7 @@
       "profile_id": "P10",
       "rarity": "rare",
       "skill_ids": ["fire-s01", "fire-s04"],
+      "skill_powers": [71, 81],
       "stage": 1,
       "stats": {
         "attack": 98,
@@ -3344,6 +3506,7 @@
       "profile_id": "P10",
       "rarity": "epic",
       "skill_ids": ["fire-s01", "fire-s04", "fire-s07"],
+      "skill_powers": [71, 81, 105],
       "stage": 2,
       "stats": {
         "attack": 112,
@@ -3359,6 +3522,7 @@
       "profile_id": "P10",
       "rarity": "legendary",
       "skill_ids": ["fire-s01", "fire-s04", "fire-s07", "fire-s10"],
+      "skill_powers": [71, 81, 105, 126],
       "stage": 3,
       "stats": {
         "attack": 129,
@@ -3374,6 +3538,7 @@
       "profile_id": "P11",
       "rarity": "rare",
       "skill_ids": ["water-s01", "water-s08"],
+      "skill_powers": [71, 81],
       "stage": 1,
       "stats": {
         "attack": 127,
@@ -3389,6 +3554,7 @@
       "profile_id": "P11",
       "rarity": "epic",
       "skill_ids": ["water-s01", "water-s08", "water-s06"],
+      "skill_powers": [71, 81, 96],
       "stage": 2,
       "stats": {
         "attack": 145,
@@ -3404,6 +3570,7 @@
       "profile_id": "P11",
       "rarity": "legendary",
       "skill_ids": ["water-s01", "water-s08", "water-s06", "water-s10"],
+      "skill_powers": [71, 81, 96, 126],
       "stage": 3,
       "stats": {
         "attack": 167,
@@ -3419,6 +3586,7 @@
       "profile_id": "P11",
       "rarity": "rare",
       "skill_ids": ["earth-s01", "earth-s08"],
+      "skill_powers": [71, 81],
       "stage": 1,
       "stats": {
         "attack": 127,
@@ -3434,6 +3602,7 @@
       "profile_id": "P11",
       "rarity": "epic",
       "skill_ids": ["earth-s01", "earth-s08", "earth-s06"],
+      "skill_powers": [71, 81, 96],
       "stage": 2,
       "stats": {
         "attack": 145,
@@ -3449,6 +3618,7 @@
       "profile_id": "P11",
       "rarity": "legendary",
       "skill_ids": ["earth-s01", "earth-s08", "earth-s06", "earth-s10"],
+      "skill_powers": [71, 81, 96, 126],
       "stage": 3,
       "stats": {
         "attack": 167,
@@ -3464,6 +3634,7 @@
       "profile_id": "P11",
       "rarity": "rare",
       "skill_ids": ["lightning-s01", "lightning-s08"],
+      "skill_powers": [71, 81],
       "stage": 1,
       "stats": {
         "attack": 127,
@@ -3479,6 +3650,7 @@
       "profile_id": "P11",
       "rarity": "epic",
       "skill_ids": ["lightning-s01", "lightning-s08", "lightning-s06"],
+      "skill_powers": [71, 81, 96],
       "stage": 2,
       "stats": {
         "attack": 145,
@@ -3499,6 +3671,7 @@
         "lightning-s06",
         "lightning-s10"
       ],
+      "skill_powers": [71, 81, 96, 126],
       "stage": 3,
       "stats": {
         "attack": 167,
@@ -3514,6 +3687,7 @@
       "profile_id": "P10",
       "rarity": "rare",
       "skill_ids": ["lightning-s01", "lightning-s04"],
+      "skill_powers": [71, 81],
       "stage": 1,
       "stats": {
         "attack": 98,
@@ -3529,6 +3703,7 @@
       "profile_id": "P10",
       "rarity": "epic",
       "skill_ids": ["lightning-s01", "lightning-s04", "lightning-s07"],
+      "skill_powers": [71, 81, 105],
       "stage": 2,
       "stats": {
         "attack": 112,
@@ -3549,6 +3724,7 @@
         "lightning-s07",
         "lightning-s10"
       ],
+      "skill_powers": [71, 81, 105, 126],
       "stage": 3,
       "stats": {
         "attack": 129,
@@ -3564,6 +3740,7 @@
       "profile_id": "P11",
       "rarity": "rare",
       "skill_ids": ["grass-s01", "grass-s08"],
+      "skill_powers": [71, 81],
       "stage": 1,
       "stats": {
         "attack": 127,
@@ -3579,6 +3756,7 @@
       "profile_id": "P11",
       "rarity": "epic",
       "skill_ids": ["grass-s01", "grass-s08", "grass-s06"],
+      "skill_powers": [71, 81, 96],
       "stage": 2,
       "stats": {
         "attack": 145,
@@ -3594,6 +3772,7 @@
       "profile_id": "P11",
       "rarity": "legendary",
       "skill_ids": ["grass-s01", "grass-s08", "grass-s06", "grass-s10"],
+      "skill_powers": [71, 81, 96, 126],
       "stage": 3,
       "stats": {
         "attack": 167,
@@ -3609,6 +3788,7 @@
       "profile_id": "P11",
       "rarity": "rare",
       "skill_ids": ["fire-s01", "fire-s08"],
+      "skill_powers": [71, 81],
       "stage": 1,
       "stats": {
         "attack": 127,
@@ -3624,6 +3804,7 @@
       "profile_id": "P11",
       "rarity": "epic",
       "skill_ids": ["fire-s01", "fire-s08", "fire-s06"],
+      "skill_powers": [71, 81, 96],
       "stage": 2,
       "stats": {
         "attack": 145,
@@ -3639,6 +3820,7 @@
       "profile_id": "P11",
       "rarity": "legendary",
       "skill_ids": ["fire-s01", "fire-s08", "fire-s06", "fire-s10"],
+      "skill_powers": [71, 81, 96, 126],
       "stage": 3,
       "stats": {
         "attack": 167,
@@ -3654,6 +3836,7 @@
       "profile_id": "P12",
       "rarity": "rare",
       "skill_ids": ["grass-s04", "grass-s02"],
+      "skill_powers": [71, 81],
       "stage": 1,
       "stats": {
         "attack": 104,
@@ -3669,6 +3852,7 @@
       "profile_id": "P12",
       "rarity": "epic",
       "skill_ids": ["grass-s04", "grass-s02", "grass-s06"],
+      "skill_powers": [71, 81, 96],
       "stage": 2,
       "stats": {
         "attack": 119,
@@ -3684,6 +3868,7 @@
       "profile_id": "P12",
       "rarity": "legendary",
       "skill_ids": ["grass-s04", "grass-s02", "grass-s06", "grass-s10"],
+      "skill_powers": [71, 81, 96, 126],
       "stage": 3,
       "stats": {
         "attack": 137,
@@ -3699,6 +3884,7 @@
       "profile_id": "P12",
       "rarity": "rare",
       "skill_ids": ["water-s04", "water-s02"],
+      "skill_powers": [71, 81],
       "stage": 1,
       "stats": {
         "attack": 104,
@@ -3714,6 +3900,7 @@
       "profile_id": "P12",
       "rarity": "epic",
       "skill_ids": ["water-s04", "water-s02", "water-s06"],
+      "skill_powers": [71, 81, 96],
       "stage": 2,
       "stats": {
         "attack": 119,
@@ -3729,6 +3916,7 @@
       "profile_id": "P12",
       "rarity": "legendary",
       "skill_ids": ["water-s04", "water-s02", "water-s06", "water-s10"],
+      "skill_powers": [71, 81, 96, 126],
       "stage": 3,
       "stats": {
         "attack": 137,
@@ -3744,6 +3932,7 @@
       "profile_id": "P12",
       "rarity": "rare",
       "skill_ids": ["fire-s04", "fire-s02"],
+      "skill_powers": [71, 81],
       "stage": 1,
       "stats": {
         "attack": 104,
@@ -3759,6 +3948,7 @@
       "profile_id": "P12",
       "rarity": "epic",
       "skill_ids": ["fire-s04", "fire-s02", "fire-s06"],
+      "skill_powers": [71, 81, 96],
       "stage": 2,
       "stats": {
         "attack": 119,
@@ -3774,6 +3964,7 @@
       "profile_id": "P12",
       "rarity": "legendary",
       "skill_ids": ["fire-s04", "fire-s02", "fire-s06", "fire-s10"],
+      "skill_powers": [71, 81, 96, 126],
       "stage": 3,
       "stats": {
         "attack": 137,
@@ -3789,6 +3980,7 @@
       "profile_id": "P12",
       "rarity": "rare",
       "skill_ids": ["lightning-s04", "lightning-s02"],
+      "skill_powers": [71, 81],
       "stage": 1,
       "stats": {
         "attack": 104,
@@ -3804,6 +3996,7 @@
       "profile_id": "P12",
       "rarity": "epic",
       "skill_ids": ["lightning-s04", "lightning-s02", "lightning-s06"],
+      "skill_powers": [71, 81, 96],
       "stage": 2,
       "stats": {
         "attack": 119,
@@ -3824,6 +4017,7 @@
         "lightning-s06",
         "lightning-s10"
       ],
+      "skill_powers": [71, 81, 96, 126],
       "stage": 3,
       "stats": {
         "attack": 137,
@@ -3839,6 +4033,7 @@
       "profile_id": "P12",
       "rarity": "rare",
       "skill_ids": ["earth-s04", "earth-s02"],
+      "skill_powers": [71, 81],
       "stage": 1,
       "stats": {
         "attack": 104,
@@ -3854,6 +4049,7 @@
       "profile_id": "P12",
       "rarity": "epic",
       "skill_ids": ["earth-s04", "earth-s02", "earth-s06"],
+      "skill_powers": [71, 81, 96],
       "stage": 2,
       "stats": {
         "attack": 119,
@@ -3869,6 +4065,7 @@
       "profile_id": "P12",
       "rarity": "legendary",
       "skill_ids": ["earth-s04", "earth-s02", "earth-s06", "earth-s10"],
+      "skill_powers": [71, 81, 96, 126],
       "stage": 3,
       "stats": {
         "attack": 137,
@@ -3884,6 +4081,7 @@
       "profile_id": "P13",
       "rarity": "epic",
       "skill_ids": ["water-s02", "water-s05"],
+      "skill_powers": [72, 82],
       "stage": 1,
       "stats": {
         "attack": 145,
@@ -3899,6 +4097,7 @@
       "profile_id": "P13",
       "rarity": "legendary",
       "skill_ids": ["water-s02", "water-s05", "water-s08"],
+      "skill_powers": [72, 82, 106],
       "stage": 2,
       "stats": {
         "attack": 167,
@@ -3914,6 +4113,7 @@
       "profile_id": "P13",
       "rarity": "mythic",
       "skill_ids": ["water-s02", "water-s05", "water-s08", "water-s09"],
+      "skill_powers": [72, 82, 106, 127],
       "stage": 3,
       "stats": {
         "attack": 193,
@@ -3929,6 +4129,7 @@
       "profile_id": "P13",
       "rarity": "epic",
       "skill_ids": ["lightning-s02", "lightning-s05"],
+      "skill_powers": [72, 82],
       "stage": 1,
       "stats": {
         "attack": 145,
@@ -3944,6 +4145,7 @@
       "profile_id": "P13",
       "rarity": "legendary",
       "skill_ids": ["lightning-s02", "lightning-s05", "lightning-s08"],
+      "skill_powers": [72, 82, 106],
       "stage": 2,
       "stats": {
         "attack": 167,
@@ -3964,6 +4166,7 @@
         "lightning-s08",
         "lightning-s09"
       ],
+      "skill_powers": [72, 82, 106, 127],
       "stage": 3,
       "stats": {
         "attack": 193,
@@ -3979,6 +4182,7 @@
       "profile_id": "P13",
       "rarity": "epic",
       "skill_ids": ["fire-s02", "fire-s05"],
+      "skill_powers": [72, 82],
       "stage": 1,
       "stats": {
         "attack": 145,
@@ -3994,6 +4198,7 @@
       "profile_id": "P13",
       "rarity": "legendary",
       "skill_ids": ["fire-s02", "fire-s05", "fire-s08"],
+      "skill_powers": [72, 82, 106],
       "stage": 2,
       "stats": {
         "attack": 167,
@@ -4009,6 +4214,7 @@
       "profile_id": "P13",
       "rarity": "mythic",
       "skill_ids": ["fire-s02", "fire-s05", "fire-s08", "fire-s09"],
+      "skill_powers": [72, 82, 106, 127],
       "stage": 3,
       "stats": {
         "attack": 193,
@@ -4024,6 +4230,7 @@
       "profile_id": "P14",
       "rarity": "epic",
       "skill_ids": ["earth-s04", "earth-s08"],
+      "skill_powers": [72, 82],
       "stage": 1,
       "stats": {
         "attack": 125,
@@ -4039,6 +4246,7 @@
       "profile_id": "P14",
       "rarity": "legendary",
       "skill_ids": ["earth-s04", "earth-s08", "earth-s03"],
+      "skill_powers": [72, 82, 106],
       "stage": 2,
       "stats": {
         "attack": 144,
@@ -4054,6 +4262,7 @@
       "profile_id": "P14",
       "rarity": "mythic",
       "skill_ids": ["earth-s04", "earth-s08", "earth-s03", "earth-s10"],
+      "skill_powers": [72, 82, 106, 127],
       "stage": 3,
       "stats": {
         "attack": 166,
@@ -4069,6 +4278,7 @@
       "profile_id": "P13",
       "rarity": "epic",
       "skill_ids": ["grass-s02", "grass-s05"],
+      "skill_powers": [72, 82],
       "stage": 1,
       "stats": {
         "attack": 145,
@@ -4084,6 +4294,7 @@
       "profile_id": "P13",
       "rarity": "legendary",
       "skill_ids": ["grass-s02", "grass-s05", "grass-s08"],
+      "skill_powers": [72, 82, 106],
       "stage": 2,
       "stats": {
         "attack": 167,
@@ -4099,6 +4310,7 @@
       "profile_id": "P13",
       "rarity": "mythic",
       "skill_ids": ["grass-s02", "grass-s05", "grass-s08", "grass-s09"],
+      "skill_powers": [72, 82, 106, 127],
       "stage": 3,
       "stats": {
         "attack": 193,
@@ -4114,6 +4326,7 @@
       "profile_id": "P14",
       "rarity": "epic",
       "skill_ids": ["lightning-s04", "lightning-s08"],
+      "skill_powers": [72, 82],
       "stage": 1,
       "stats": {
         "attack": 125,
@@ -4129,6 +4342,7 @@
       "profile_id": "P14",
       "rarity": "legendary",
       "skill_ids": ["lightning-s04", "lightning-s08", "lightning-s03"],
+      "skill_powers": [72, 82, 106],
       "stage": 2,
       "stats": {
         "attack": 144,
@@ -4149,6 +4363,7 @@
         "lightning-s03",
         "lightning-s10"
       ],
+      "skill_powers": [72, 82, 106, 127],
       "stage": 3,
       "stats": {
         "attack": 166,
@@ -4164,6 +4379,7 @@
       "profile_id": "P13",
       "rarity": "epic",
       "skill_ids": ["earth-s02", "earth-s05"],
+      "skill_powers": [72, 82],
       "stage": 1,
       "stats": {
         "attack": 145,
@@ -4179,6 +4395,7 @@
       "profile_id": "P13",
       "rarity": "legendary",
       "skill_ids": ["earth-s02", "earth-s05", "earth-s08"],
+      "skill_powers": [72, 82, 106],
       "stage": 2,
       "stats": {
         "attack": 167,
@@ -4194,6 +4411,7 @@
       "profile_id": "P13",
       "rarity": "mythic",
       "skill_ids": ["earth-s02", "earth-s05", "earth-s08", "earth-s09"],
+      "skill_powers": [72, 82, 106, 127],
       "stage": 3,
       "stats": {
         "attack": 193,
@@ -4209,6 +4427,7 @@
       "profile_id": "P14",
       "rarity": "epic",
       "skill_ids": ["grass-s04", "grass-s08"],
+      "skill_powers": [72, 82],
       "stage": 1,
       "stats": {
         "attack": 125,
@@ -4224,6 +4443,7 @@
       "profile_id": "P14",
       "rarity": "legendary",
       "skill_ids": ["grass-s04", "grass-s08", "grass-s03"],
+      "skill_powers": [72, 82, 106],
       "stage": 2,
       "stats": {
         "attack": 144,
@@ -4239,6 +4459,7 @@
       "profile_id": "P14",
       "rarity": "mythic",
       "skill_ids": ["grass-s04", "grass-s08", "grass-s03", "grass-s10"],
+      "skill_powers": [72, 82, 106, 127],
       "stage": 3,
       "stats": {
         "attack": 166,
@@ -4254,6 +4475,7 @@
       "profile_id": "P14",
       "rarity": "epic",
       "skill_ids": ["water-s04", "water-s08"],
+      "skill_powers": [72, 82],
       "stage": 1,
       "stats": {
         "attack": 125,
@@ -4269,6 +4491,7 @@
       "profile_id": "P14",
       "rarity": "legendary",
       "skill_ids": ["water-s04", "water-s08", "water-s03"],
+      "skill_powers": [72, 82, 106],
       "stage": 2,
       "stats": {
         "attack": 144,
@@ -4284,6 +4507,7 @@
       "profile_id": "P14",
       "rarity": "mythic",
       "skill_ids": ["water-s04", "water-s08", "water-s03", "water-s10"],
+      "skill_powers": [72, 82, 106, 127],
       "stage": 3,
       "stats": {
         "attack": 166,
@@ -4299,6 +4523,7 @@
       "profile_id": "P14",
       "rarity": "epic",
       "skill_ids": ["fire-s04", "fire-s08"],
+      "skill_powers": [72, 82],
       "stage": 1,
       "stats": {
         "attack": 125,
@@ -4314,6 +4539,7 @@
       "profile_id": "P14",
       "rarity": "legendary",
       "skill_ids": ["fire-s04", "fire-s08", "fire-s03"],
+      "skill_powers": [72, 82, 106],
       "stage": 2,
       "stats": {
         "attack": 144,
@@ -4329,6 +4555,7 @@
       "profile_id": "P14",
       "rarity": "mythic",
       "skill_ids": ["fire-s04", "fire-s08", "fire-s03", "fire-s10"],
+      "skill_powers": [72, 82, 106, 127],
       "stage": 3,
       "stats": {
         "attack": 166,

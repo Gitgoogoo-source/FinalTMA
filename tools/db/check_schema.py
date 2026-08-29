@@ -580,12 +580,21 @@ def verify_battle_contract() -> None:
         "unique (room_id, round_no, action_ordinal)",
         "char_length(prepared_message_id) between 1 and 256",
         "effect_key = element || '-' || substr(slot_id, 2)",
-        "skill_3_id text,",
-        "stage = 1 and skill_3_id is null and skill_4_id is null",
+        "skill_1_power integer not null check (skill_1_power > 0)",
+        "skill_3_power integer check (skill_3_power is null or skill_3_power > 0)",
+        "and skill_3_id is null and skill_3_power is null",
         "current_slot.power > next_slot.power",
         "pl.position <= bc.stage + 1",
         "skill.skill_id is not null",
         "= 630",
+        "create or replace function battle.skill_power_for_position",
+        "p_skill_powers integer[]",
+        "from unnest(p_skill_ids, p_skill_powers)",
+        "v_power := battle.skill_power_for_position(p_attacker, p_action.skill_position)",
+        "2::bigint * v_power::bigint",
+        "'power', v_power",
+        "higher_skill.power <= lower_skill.power",
+        "lower_stage.skill_1_power is distinct from higher_stage.skill_1_power",
         "'prepare_deadline', case",
         "'prepared_message_id', case",
         "'viewer_action_state',",
@@ -619,6 +628,8 @@ def verify_battle_contract() -> None:
     missing = [fragment for fragment in required if fragment not in battle_sql]
     if missing:
         raise SystemExit(f"Battle database contract is incomplete: {missing}")
+    if "2::bigint * v_slot.power::bigint" in battle_sql:
+        raise SystemExit("Battle settlement cannot use the base skill-slot power")
     if battle_sql.count("'server_time', clock_timestamp()") != 6:
         raise SystemExit(
             "Every Battle server_time field must use response-construction time"

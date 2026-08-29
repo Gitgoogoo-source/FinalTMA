@@ -7,12 +7,13 @@
     "profile_loadouts": 14,
     "rarity_factors": 5,
     "role_profiles": 14,
+    "skill_power_floor_groups": 3,
     "skill_slots": 10,
     "skills": 50,
     "template_skill_assignments": 630,
     "templates": 210,
     "type_matchups": 25
   },
-  "sha256": "2f5b434a8854709ea6e659ffd250d79b95f30166ba7e9ea188ae05f7a6508fff",
+  "sha256": "448212ef370d96ee871cf5f0d486a4a47263c7aabf77651b228b6330e99e0dac",
   "version": "battle-v1"
 }

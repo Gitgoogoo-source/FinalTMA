@@ -3589,9 +3589,13 @@ create table battle.template_configs (
   defense integer not null check (defense > 0),
   speed integer not null check (speed > 0),
   skill_1_id text not null,
+  skill_1_power integer not null check (skill_1_power > 0),
   skill_2_id text not null,
+  skill_2_power integer not null check (skill_2_power > 0),
   skill_3_id text,
+  skill_3_power integer check (skill_3_power is null or skill_3_power > 0),
   skill_4_id text,
+  skill_4_power integer check (skill_4_power is null or skill_4_power > 0),
   primary key (ruleset_id, template_id),
   foreign key (ruleset_id, chain_id) references battle.chain_configs(ruleset_id, chain_id),
   foreign key (ruleset_id, profile_id) references battle.role_profiles(ruleset_id, id),
@@ -3600,9 +3604,26 @@ create table battle.template_configs (
   foreign key (ruleset_id, skill_3_id) references battle.skills(ruleset_id, id),
   foreign key (ruleset_id, skill_4_id) references battle.skills(ruleset_id, id),
   check (
-    (stage = 1 and skill_3_id is null and skill_4_id is null)
-    or (stage = 2 and skill_3_id is not null and skill_4_id is null)
-    or (stage = 3 and skill_3_id is not null and skill_4_id is not null)
+    (
+      stage = 1
+      and skill_3_id is null and skill_3_power is null
+      and skill_4_id is null and skill_4_power is null
+    )
+    or (
+      stage = 2
+      and skill_3_id is not null and skill_3_power is not null
+      and skill_4_id is null and skill_4_power is null
+    )
+    or (
+      stage = 3
+      and skill_3_id is not null and skill_3_power is not null
+      and skill_4_id is not null and skill_4_power is not null
+    )
+  ),
+  check (
+    skill_1_power <= skill_2_power
+    and (skill_3_power is null or skill_2_power <= skill_3_power)
+    and (skill_4_power is null or skill_3_power <= skill_4_power)
   ),
   check (
     skill_1_id <> skill_2_id
@@ -3826,9 +3847,13 @@ create table battle.team_members (
   defense integer not null check (defense > 0),
   speed integer not null check (speed > 0),
   skill_1_id text not null,
+  skill_1_power integer not null check (skill_1_power > 0),
   skill_2_id text not null,
+  skill_2_power integer not null check (skill_2_power > 0),
   skill_3_id text,
+  skill_3_power integer check (skill_3_power is null or skill_3_power > 0),
   skill_4_id text,
+  skill_4_power integer check (skill_4_power is null or skill_4_power > 0),
   alive boolean not null default true,
   active boolean not null default false,
   unique (participant_id, slot),
@@ -3836,9 +3861,26 @@ create table battle.team_members (
   check (alive = (current_hp > 0)),
   check (not active or alive),
   check (
-    (stage = 1 and skill_3_id is null and skill_4_id is null)
-    or (stage = 2 and skill_3_id is not null and skill_4_id is null)
-    or (stage = 3 and skill_3_id is not null and skill_4_id is not null)
+    (
+      stage = 1
+      and skill_3_id is null and skill_3_power is null
+      and skill_4_id is null and skill_4_power is null
+    )
+    or (
+      stage = 2
+      and skill_3_id is not null and skill_3_power is not null
+      and skill_4_id is null and skill_4_power is null
+    )
+    or (
+      stage = 3
+      and skill_3_id is not null and skill_3_power is not null
+      and skill_4_id is not null and skill_4_power is not null
+    )
+  ),
+  check (
+    skill_1_power <= skill_2_power
+    and (skill_3_power is null or skill_2_power <= skill_3_power)
+    and (skill_4_power is null or skill_3_power <= skill_4_power)
   ),
   check (
     skill_1_id <> skill_2_id
@@ -4119,6 +4161,13 @@ as $$
       from battle.template_configs
       where ruleset_id = p_ruleset_id
     )
+    and (
+      select coalesce(sum(num_nonnulls(
+        skill_1_power, skill_2_power, skill_3_power, skill_4_power
+      )), 0) = 630
+      from battle.template_configs
+      where ruleset_id = p_ruleset_id
+    )
     and not exists (
       select 1
       from battle.template_configs bc
@@ -4135,6 +4184,9 @@ as $$
           or bc.profile_id <> cc.profile_id
           or num_nonnulls(
             bc.skill_1_id, bc.skill_2_id, bc.skill_3_id, bc.skill_4_id
+          ) <> bc.stage + 1
+          or num_nonnulls(
+            bc.skill_1_power, bc.skill_2_power, bc.skill_3_power, bc.skill_4_power
           ) <> bc.stage + 1
           or (bc.skill_3_id is null and bc.skill_4_id is not null)
           or (
@@ -4185,6 +4237,9 @@ as $$
         on expected_skill.ruleset_id = bc.ruleset_id
        and expected_skill.element = bc.element
        and expected_skill.slot_id = pl.slot_id
+      left join battle.skill_slots expected_slot
+        on expected_slot.ruleset_id = expected_skill.ruleset_id
+       and expected_slot.id = expected_skill.slot_id
       where bc.ruleset_id = p_ruleset_id
         and (
           expected_skill.id is null
@@ -4194,7 +4249,55 @@ as $$
             when 3 then bc.skill_3_id
             when 4 then bc.skill_4_id
           end is distinct from expected_skill.id
+          or case pl.position
+            when 1 then bc.skill_1_power
+            when 2 then bc.skill_2_power
+            when 3 then bc.skill_3_power
+            when 4 then bc.skill_4_power
+          end < expected_slot.power
         )
+    )
+    and not exists (
+      select 1
+      from battle.template_configs lower_stage
+      join battle.template_configs higher_stage
+        on higher_stage.ruleset_id = lower_stage.ruleset_id
+       and higher_stage.chain_id = lower_stage.chain_id
+       and higher_stage.stage = lower_stage.stage + 1
+      where lower_stage.ruleset_id = p_ruleset_id
+        and (
+          lower_stage.skill_1_power is distinct from higher_stage.skill_1_power
+          or lower_stage.skill_2_power is distinct from higher_stage.skill_2_power
+          or (
+            lower_stage.stage >= 2
+            and lower_stage.skill_3_power is distinct from higher_stage.skill_3_power
+          )
+        )
+    )
+    and not exists (
+      select 1
+      from battle.template_configs lower_rarity
+      join battle.template_configs higher_rarity
+        on higher_rarity.ruleset_id = lower_rarity.ruleset_id
+       and higher_rarity.stage = lower_rarity.stage
+       and catalog.rarity_rank(higher_rarity.rarity)
+         = catalog.rarity_rank(lower_rarity.rarity) + 1
+      cross join lateral (values
+        (1, lower_rarity.skill_1_power),
+        (2, lower_rarity.skill_2_power),
+        (3, lower_rarity.skill_3_power),
+        (4, lower_rarity.skill_4_power)
+      ) lower_skill(position, power)
+      cross join lateral (values
+        (1, higher_rarity.skill_1_power),
+        (2, higher_rarity.skill_2_power),
+        (3, higher_rarity.skill_3_power),
+        (4, higher_rarity.skill_4_power)
+      ) higher_skill(position, power)
+      where lower_rarity.ruleset_id = p_ruleset_id
+        and lower_skill.position = higher_skill.position
+        and lower_skill.position <= lower_rarity.stage + 1
+        and higher_skill.power <= lower_skill.power
     )
 $$;
 
@@ -4530,6 +4633,23 @@ as $$
   end
 $$;
 
+create or replace function battle.skill_power_for_position(
+  p_member battle.team_members,
+  p_position integer
+)
+returns integer
+language sql
+immutable
+set search_path = ''
+as $$
+  select case p_position
+    when 1 then p_member.skill_1_power
+    when 2 then p_member.skill_2_power
+    when 3 then p_member.skill_3_power
+    when 4 then p_member.skill_4_power
+  end
+$$;
+
 create or replace function battle.hit_roll(
   p_private_seed bytea,
   p_room_id uuid,
@@ -4582,6 +4702,7 @@ as $$
 declare
   v_slot battle.skill_slots%rowtype;
   v_skill battle.skills%rowtype;
+  v_power integer;
   v_multiplier integer;
   v_roll integer;
   v_raw bigint;
@@ -4595,12 +4716,13 @@ begin
   select ss.* into v_slot
   from battle.skill_slots ss
   where ss.ruleset_id = p_room.ruleset_id and ss.id = v_skill.slot_id;
+  v_power := battle.skill_power_for_position(p_attacker, p_action.skill_position);
   select multiplier_bps into v_multiplier
   from battle.type_matchups
   where ruleset_id = p_room.ruleset_id
     and attacker = p_attacker.element
     and defender = p_defender.element;
-  if v_slot.id is null or v_multiplier is null then
+  if v_slot.id is null or v_power is null or v_multiplier is null then
     raise exception using errcode = 'P0001', message = 'BATTLE_INVARIANT',
       detail = jsonb_build_object('kind', 'attack_config_missing', 'action_id', p_action.id)::text;
   end if;
@@ -4611,7 +4733,7 @@ begin
   );
   if v_roll < v_slot.accuracy_bps then
     v_raw := (
-      2::bigint * v_slot.power::bigint * p_attacker.attack::bigint
+      2::bigint * v_power::bigint * p_attacker.attack::bigint
       * p_attacker.attack::bigint * v_multiplier::bigint
     ) / (
       (p_attacker.attack::bigint + p_defender.defense::bigint) * 100::bigint * 10000::bigint
@@ -4642,6 +4764,7 @@ begin
     'skill_id', v_skill.id,
     'skill_name', v_skill.name,
     'effect_key', v_skill.effect_key,
+    'power', v_power,
     'accuracy_bps', v_slot.accuracy_bps,
     'roll', v_roll,
     'hit', v_roll < v_slot.accuracy_bps,
@@ -4764,7 +4887,8 @@ $$;
 create or replace function battle.skill_json(
   p_ruleset_id text,
   p_skill_id text,
-  p_position integer
+  p_position integer,
+  p_power integer
 )
 returns jsonb
 language sql
@@ -4775,19 +4899,20 @@ as $$
     'position', p_position,
     'skill_id', s.id,
     'name', s.name,
-    'power', ss.power,
+    'power', p_power,
     'accuracy_bps', ss.accuracy_bps,
     'effect_key', s.effect_key
   )
   from battle.skills s
   join battle.skill_slots ss
     on ss.ruleset_id = s.ruleset_id and ss.id = s.slot_id
-  where s.ruleset_id = p_ruleset_id and s.id = p_skill_id
+  where s.ruleset_id = p_ruleset_id and s.id = p_skill_id and p_power > 0
 $$;
 
 create or replace function battle.skills_json(
   p_ruleset_id text,
-  p_skill_ids text[]
+  p_skill_ids text[],
+  p_skill_powers integer[]
 )
 returns jsonb
 language sql
@@ -4796,17 +4921,20 @@ set search_path = ''
 as $$
   select coalesce(
     jsonb_agg(
-      battle.skill_json(p_ruleset_id, skill.skill_id, skill.position::integer)
+      battle.skill_json(
+        p_ruleset_id, skill.skill_id, skill.position::integer, skill.power
+      )
       order by skill.position
     ),
     '[]'::jsonb
   )
-  from unnest(p_skill_ids) with ordinality skill(skill_id, position)
+  from unnest(p_skill_ids, p_skill_powers)
+    with ordinality skill(skill_id, power, position)
   join battle.skills s
     on s.ruleset_id = p_ruleset_id and s.id = skill.skill_id
   join battle.skill_slots ss
     on ss.ruleset_id = s.ruleset_id and ss.id = s.slot_id
-  where skill.skill_id is not null
+  where skill.skill_id is not null and skill.power is not null
 $$;
 
 create or replace function battle.self_team_json(
@@ -4836,7 +4964,10 @@ as $$
     'active', tm.active,
     'skills', battle.skills_json(
       r.ruleset_id,
-      array[tm.skill_1_id, tm.skill_2_id, tm.skill_3_id, tm.skill_4_id]
+      array[tm.skill_1_id, tm.skill_2_id, tm.skill_3_id, tm.skill_4_id],
+      array[
+        tm.skill_1_power, tm.skill_2_power, tm.skill_3_power, tm.skill_4_power
+      ]
     )
   ) order by tm.slot), '[]'::jsonb)
   from battle.team_members tm
@@ -5316,7 +5447,10 @@ begin
         'speed', bc.speed,
         'skills', battle.skills_json(
           v_ruleset_id,
-          array[bc.skill_1_id, bc.skill_2_id, bc.skill_3_id, bc.skill_4_id]
+          array[bc.skill_1_id, bc.skill_2_id, bc.skill_3_id, bc.skill_4_id],
+          array[
+            bc.skill_1_power, bc.skill_2_power, bc.skill_3_power, bc.skill_4_power
+          ]
         )
       ) order by item.sort_order)
       from user_items item
@@ -5557,12 +5691,17 @@ begin
       participant_id, slot, template_id, template_name,
       rarity, stage, element,
       max_hp, current_hp, attack, defense, speed,
-      skill_1_id, skill_2_id, skill_3_id, skill_4_id, alive, active
+      skill_1_id, skill_1_power, skill_2_id, skill_2_power,
+      skill_3_id, skill_3_power, skill_4_id, skill_4_power,
+      alive, active
     ) values (
       p_participant_id, v_item.slot, v_template.id, v_template.name,
       v_template.rarity, v_template.stage, v_config.element,
       v_config.max_hp, v_config.max_hp, v_config.attack, v_config.defense, v_config.speed,
-      v_config.skill_1_id, v_config.skill_2_id, v_config.skill_3_id, v_config.skill_4_id,
+      v_config.skill_1_id, v_config.skill_1_power,
+      v_config.skill_2_id, v_config.skill_2_power,
+      v_config.skill_3_id, v_config.skill_3_power,
+      v_config.skill_4_id, v_config.skill_4_power,
       true, v_item.slot = 1
     );
     perform inventory.reserve(
@@ -5914,9 +6053,13 @@ begin
           or tm.defense is distinct from c.defense
           or tm.speed is distinct from c.speed
           or tm.skill_1_id is distinct from c.skill_1_id
+          or tm.skill_1_power is distinct from c.skill_1_power
           or tm.skill_2_id is distinct from c.skill_2_id
+          or tm.skill_2_power is distinct from c.skill_2_power
           or tm.skill_3_id is distinct from c.skill_3_id
+          or tm.skill_3_power is distinct from c.skill_3_power
           or tm.skill_4_id is distinct from c.skill_4_id
+          or tm.skill_4_power is distinct from c.skill_4_power
           or not tm.alive
           or tm.active is distinct from (tm.slot = 1)
       ) > 0
@@ -13281,7 +13424,7 @@ as $$
           'fixture_version', 'battle-v1',
           'catalog_version', 'v1',
           'catalog_checksum', 'ec8d89aec0a700bfb504285401bf6327ed2a4c48c94d4d8bb92559bdae2ee61e',
-          'battle_checksum', '2f5b434a8854709ea6e659ffd250d79b95f30166ba7e9ea188ae05f7a6508fff',
+          'battle_checksum', '448212ef370d96ee871cf5f0d486a4a47263c7aabf77651b228b6330e99e0dac',
           'matrix', jsonb_agg(
             jsonb_build_object(
               'role', d.role,
@@ -13794,7 +13937,7 @@ begin
   cross join lateral unnest(d.skill_slots) skill_slot
   where d.fixture_version = p_fixture_version;
   if v_catalog_checksum <> 'ec8d89aec0a700bfb504285401bf6327ed2a4c48c94d4d8bb92559bdae2ee61e'
-    or v_battle_checksum <> '2f5b434a8854709ea6e659ffd250d79b95f30166ba7e9ea188ae05f7a6508fff'
+    or v_battle_checksum <> '448212ef370d96ee871cf5f0d486a4a47263c7aabf77651b228b6330e99e0dac'
     or not battle.rules_complete('battle-v1')
     or v_matrix_count <> 36
     or v_matrix_element_count <> 5
