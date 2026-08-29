@@ -1960,6 +1960,24 @@ def verify_game_page_boundary() -> None:
             "Battle countdown must cover the viewport and both navigation bars: "
             f"{missing_countdown_css}"
         )
+    live_battle_shell_selector = (
+        '.app-shell:has(.battle-root[data-battle-page-state="battle"])'
+    )
+    live_battle_shell_rule = battle_css.partition(
+        f"{live_battle_shell_selector} {{"
+    )[2].partition("}")[0]
+    live_battle_navigation_rule = battle_css.partition(
+        f"{live_battle_shell_selector} .bottom-nav {{"
+    )[2].partition("}")[0]
+    if (
+        "padding-bottom: var(--safe-bottom)" not in live_battle_shell_rule
+        or "display: none" not in live_battle_navigation_rule
+        or f"{live_battle_shell_selector} .topbar" in battle_css
+    ):
+        raise SystemExit(
+            "Live Battle must hide only bottom navigation and release its layout "
+            "space while preserving the Telegram safe area"
+        )
     lobby_source = battle_screens.partition(
         "export function BattleLobby"
     )[2].partition("export function BattleInviteMissing")[0]

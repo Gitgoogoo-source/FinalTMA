@@ -1377,6 +1377,14 @@
   pointer-events: none;
 }
 
+.app-shell:has(.battle-root[data-battle-page-state="battle"]) {
+  padding-bottom: var(--safe-bottom);
+}
+
+.app-shell:has(.battle-root[data-battle-page-state="battle"]) .bottom-nav {
+  display: none;
+}
+
 .battle-countdown-lock::before,
 .battle-countdown-lock::after {
   position: absolute;

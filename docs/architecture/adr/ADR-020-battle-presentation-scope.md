@@ -2,7 +2,7 @@
 
 ## 状态
 
-已接受。
+已接受；裁决中关于 `battle` 状态继续展示共享底部导航的部分已由 [ADR-093](ADR-093-battle-active-bottom-navigation-visibility.md) 取代，其余裁决继续有效。
 
 ## 背景
 

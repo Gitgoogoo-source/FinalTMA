@@ -193,3 +193,4 @@ operation 准入与保留按 [ADR-059](adr/ADR-059-bounded-operation-admission-a
 - [Tg.app 目录来源参数精确直接入口](adr/ADR-090-tgapp-catalog-source-entry.md)
 - [全局统一按钮点击音效（已被 ADR-092 替代）](adr/ADR-091-global-button-click-audio.md)
 - [低延迟按钮按下音效](adr/ADR-092-low-latency-button-press-audio.md)
+- [Battle 实际对战底部导航可见性](adr/ADR-093-battle-active-bottom-navigation-visibility.md)
