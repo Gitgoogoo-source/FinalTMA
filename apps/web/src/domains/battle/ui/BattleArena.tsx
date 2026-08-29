@@ -14,7 +14,7 @@ import {
   type BattleLocalActionIntent,
 } from "../useBattleAnimation.ts";
 import { BattleModal } from "./BattleModal.tsx";
-import { t, tp } from "../../../platform/i18n/index.ts";
+import { contentName, t, tp } from "../../../platform/i18n/index.ts";
 
 type SelfMember = BattleSelfTeamDto[number];
 type Skill = SelfMember["skills"][number];
@@ -54,12 +54,16 @@ export function BattleArena({
   modalBackgroundRef: RefObject<HTMLElement | null>;
   setSwitchOpen(open: boolean): void;
   onPresentationBusyChange(busy: boolean): void;
-  onAttack(position: SkillPosition, name: string, effectKey: string): void;
+  onAttack(
+    position: SkillPosition,
+    displayName: string,
+    effectKey: string,
+  ): void;
   onSwitch(slot: TeamSlot, name: string): void;
   onReplaceAttack(
     slot: TeamSlot,
     position: SkillPosition,
-    name: string,
+    displayName: string,
     effectKey: string,
   ): void;
 }): ReactNode {
@@ -280,26 +284,31 @@ function SkillGrid({
 }: {
   skills: readonly Skill[];
   disabled: boolean;
-  choose(position: SkillPosition, name: string, effectKey: string): void;
+  choose(position: SkillPosition, displayName: string, effectKey: string): void;
 }): ReactNode {
   return (
     <div className="battle-skill-grid">
-      {skills.map((skill) => (
-        <button
-          key={skill.skill_id}
-          type="button"
-          disabled={disabled}
-          onClick={() => choose(skill.position, skill.name, skill.effect_key)}
-        >
-          <span>{t(skill.name)}</span>
-          <small>
-            {tp("威力 {{0}} · 命中 {{1}}%", [
-              skill.power,
-              skill.accuracy_bps / 100,
-            ])}
-          </small>
-        </button>
-      ))}
+      {skills.map((skill) => {
+        const displayName = contentName(skill.skill_id, skill.name);
+        return (
+          <button
+            key={skill.skill_id}
+            type="button"
+            disabled={disabled}
+            onClick={() =>
+              choose(skill.position, displayName, skill.effect_key)
+            }
+          >
+            <span>{displayName}</span>
+            <small>
+              {tp("威力 {{0}} · 命中 {{1}}%", [
+                skill.power,
+                skill.accuracy_bps / 100,
+              ])}
+            </small>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -318,7 +327,7 @@ function ReplacementAction({
   chooseSkill(
     slot: TeamSlot,
     position: SkillPosition,
-    name: string,
+    displayName: string,
     effectKey: string,
   ): void;
 }): ReactNode {

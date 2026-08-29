@@ -84,12 +84,9 @@ export function t(source: string): string {
 }
 
 export function contentName(id: string, source: string): string {
-  if (currentLanguage === "zh-CN") return source;
-  return (
-    englishCatalog?.gameContentById(id) ??
-    englishCatalog?.gameContent(source) ??
-    englishFallback(source, "Pet")
-  );
+  return currentLanguage === "en"
+    ? (englishCatalog?.gameContentById(id) ?? t(source))
+    : source;
 }
 
 export function apiErrorMessage(code: string, source: string): string {
@@ -166,7 +163,7 @@ function emitChange(): void {
 }
 
 function englishFallback(source: string, fallback = "Loading"): string {
-  return /[\p{Script=Han}]/u.test(source) ? fallback : source;
+  return /\p{sc=Han}/u.test(source) ? fallback : source;
 }
 
 function storageKey(telegramId: string): string {

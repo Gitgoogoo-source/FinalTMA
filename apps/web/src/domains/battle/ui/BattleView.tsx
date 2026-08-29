@@ -1249,7 +1249,7 @@ export function BattleView(): ReactNode {
 
   const attack = async (
     skillPosition: 1 | 2 | 3 | 4,
-    name: string,
+    displayName: string,
     effectKey: string,
   ) => {
     if (
@@ -1281,7 +1281,7 @@ export function BattleView(): ReactNode {
       effectKey,
       teamSlot: null,
     });
-    setActionIntent(name);
+    setActionIntent(displayName);
     const snapshot = await command.execute(
       "battle.action",
       {
@@ -1332,7 +1332,7 @@ export function BattleView(): ReactNode {
   const replaceAttack = async (
     teamSlot: 1 | 2 | 3,
     skillPosition: 1 | 2 | 3 | 4,
-    name: string,
+    displayName: string,
     effectKey: string,
   ) => {
     if (
@@ -1364,7 +1364,7 @@ export function BattleView(): ReactNode {
       effectKey,
       teamSlot,
     });
-    setActionIntent(tp("换入并使用{{0}}", [name]));
+    setActionIntent(tp("换入并使用{{0}}", [displayName]));
     const snapshot = await command.execute(
       "battle.action",
       {

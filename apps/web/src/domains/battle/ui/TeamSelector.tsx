@@ -11,7 +11,12 @@ import type { RouteOutput } from "@evomypet/api-contracts/app-client";
 import { Button } from "../../../shared/ui/Button.tsx";
 import { CatalogImage } from "../../../shared/ui/CatalogImage.tsx";
 import { battleElementLabels, battleRarityLabels } from "../labels.ts";
-import { t, tp, useAppLanguage } from "../../../platform/i18n/index.ts";
+import {
+  contentName,
+  t,
+  tp,
+  useAppLanguage,
+} from "../../../platform/i18n/index.ts";
 
 type TeamOption = RouteOutput<"battle.team_options">["items"][number];
 export type BattleTeamSlots = readonly [
@@ -318,17 +323,20 @@ function TeamOptionDetail({ item }: { item: TeamOption }): ReactNode {
           </div>
         </dl>
         <div className="battle-skill-preview">
-          {item.skills.map((skill) => (
-            <div key={skill.skill_id}>
-              <strong>{t(skill.name)}</strong>
-              <span>
-                {tp("威力 {{0}} · 命中 {{1}}%", [
-                  skill.power,
-                  skill.accuracy_bps / 100,
-                ])}
-              </span>
-            </div>
-          ))}
+          {item.skills.map((skill) => {
+            const displayName = contentName(skill.skill_id, skill.name);
+            return (
+              <div key={skill.skill_id}>
+                <strong>{displayName}</strong>
+                <span>
+                  {tp("威力 {{0}} · 命中 {{1}}%", [
+                    skill.power,
+                    skill.accuracy_bps / 100,
+                  ])}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>

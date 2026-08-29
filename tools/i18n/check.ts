@@ -82,6 +82,7 @@ function inspectSourceFile(file: string): void {
   visit(sourceFile);
 
   function visit(node: ts.Node): void {
+    inspectBattleSkillNameBoundary(sourceFile, node);
     const value = stringValue(node);
     if (value !== null && containsHan(value)) {
       const localization = localizationBoundary(node, value);
@@ -99,6 +100,52 @@ function inspectSourceFile(file: string): void {
     }
     ts.forEachChild(node, visit);
   }
+}
+
+function inspectBattleSkillNameBoundary(
+  sourceFile: ts.SourceFile,
+  node: ts.Node,
+): void {
+  const relativeFile = path.relative(process.cwd(), sourceFile.fileName);
+  const battleUiRoot =
+    ["apps", "web", "src", "domains", "battle", "ui"].join(path.sep) + path.sep;
+  if (
+    !relativeFile.startsWith(battleUiRoot) ||
+    !ts.isPropertyAccessExpression(node) ||
+    !ts.isIdentifier(node.expression) ||
+    node.expression.text !== "skill" ||
+    node.name.text !== "name"
+  )
+    return;
+
+  let ancestor: ts.Node | undefined = node.parent;
+  while (ancestor) {
+    if (
+      ts.isCallExpression(ancestor) &&
+      ts.isIdentifier(ancestor.expression) &&
+      ancestor.expression.text === "contentName" &&
+      ancestor.arguments.some((argument) => isWithin(node, argument))
+    ) {
+      const stableId = ancestor.arguments[0];
+      if (
+        stableId &&
+        ts.isPropertyAccessExpression(stableId) &&
+        ts.isIdentifier(stableId.expression) &&
+        stableId.expression.text === "skill" &&
+        stableId.name.text === "skill_id"
+      )
+        return;
+      failures.push(
+        `${relativePosition(sourceFile, node)} Battle skill name must use skill.skill_id as its contentName identity`,
+      );
+      return;
+    }
+    ancestor = ancestor.parent;
+  }
+
+  failures.push(
+    `${relativePosition(sourceFile, node)} Battle skill name must cross the stable-ID contentName boundary`,
+  );
 }
 
 function inspectFrozenGameContent(): void {
