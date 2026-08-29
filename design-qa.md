@@ -117,6 +117,59 @@ final result: passed
 
 ---
 
+# Battle 挑战卡右侧方案 1 验收
+
+**Comparison Target**
+
+- Source visual truth: `/Users/mac/.codex/generated_images/01a04e85-6cb6-7951-9500-fae42fbddeaf/exec-e6b1a8e6-cbfa-4aa4-970e-02f6d67a3951.png`
+- Implementation screenshot: `/Users/mac/.codex/visualizations/2026/08/29/01a04e85-6cb6-7951-9500-fae42fbddeaf/finaltma-battle-tier-qa/implementation-iphone-scrolled.jpeg`
+- Viewport: real iPhone Telegram Mini App shown through iPhone Mirroring. Mirrored capture is `330 x 733` pixels. Safari Web Inspector was unavailable, so the underlying CSS viewport and device scale factor remain unverified.
+- Source dimensions: `1011 x 1556` pixels. This is an ImageGen concept rather than a CSS viewport, so it has no authoritative CSS size or device scale factor.
+- State: Play > Battle home, three arena cards visible, tier `100` selected, fixed CTA visible.
+- Normalization: the full comparison scales both artifacts to `760` pixels high. The focused comparison crops each right-side panel from the source and implementation independently, scales each crop to `260` pixels wide without changing its aspect ratio, and places corresponding tiers side by side.
+
+**Evidence**
+
+- Full-view comparison: `/Users/mac/.codex/visualizations/2026/08/29/01a04e85-6cb6-7951-9500-fae42fbddeaf/finaltma-battle-tier-qa/comparison-full.png`
+- Focused right-panel comparison: `/Users/mac/.codex/visualizations/2026/08/29/01a04e85-6cb6-7951-9500-fae42fbddeaf/finaltma-battle-tier-qa/comparison-right-panels.png`
+- Additional unscrolled implementation capture: `/Users/mac/.codex/visualizations/2026/08/29/01a04e85-6cb6-7951-9500-fae42fbddeaf/finaltma-battle-tier-qa/implementation-iphone.jpeg`
+
+**Findings**
+
+- No actionable P0, P1, or P2 visual differences remain in the approved scope.
+- Fonts and typography: the implementation preserves the product's existing UI face, uses the existing condensed digit face for prize amounts, and reproduces the concept's hierarchy of rarity, gems, separator, prize label, and large value. The typography is intentionally compacted to fit the existing card height.
+- Spacing and layout rhythm: the existing two-thirds art and one-third information grid, card height, radii, list gaps, CTA, and navigation remain unchanged. The right panel is centered and uses two clear vertical groups without the removed title or entry-fee rows.
+- Colors and visual tokens: common, rare, and epic use the approved green, orange, and violet tier accents. The selected tier keeps the product's existing orange border and check treatment. Warm ivory backgrounds and restrained tier glows match the selected direction.
+- Image quality and asset fidelity: the implementation intentionally retains the three existing project Battle room images and their center crop, as explicitly required by the user. The generated source's replacement left-side images were concept-only and are not implementation targets. No Battle room image file was edited.
+- Copy and content: the visible right panel contains only rarity, the actual count of tier gems, `PRIZE POOL`, the prize amount, and the existing arrow/check action. Arena names, `Entry Fee`, ticket labels, and entry amounts are absent from the right panel.
+- Interaction state: selecting tier `20` moved the orange border/check to the first card and changed the existing CTA to `20 Stars`; tier `100` was then restored and the check/CTA returned to the second card and `100 Stars`. No payment action was opened or confirmed.
+
+**Open Questions**
+
+- Safari Web Inspector console and network inspection were not completed because Safari was unavailable. This remains an explicit production acceptance gap, but it does not block the visual comparison because the deployed implementation was rendered and interacted with in the real iPhone Telegram Mini App.
+
+**Comparison History**
+
+- Pass 1: the approved source and deployed iPhone implementation were placed into the same full-view comparison. No P0/P1/P2 mismatch was found within the right-panel-only scope.
+- Focused pass: all three right panels were compared at a normalized width. No corrective visual iteration was required.
+
+**Implementation Checklist**
+
+- [x] Keep left Battle room images, crop, width, and card geometry unchanged.
+- [x] Remove the visible arena name and entry-fee row from the right panel.
+- [x] Show only rarity, real gem count, prize-pool label/value, and arrow/check.
+- [x] Preserve selected and unselected card interaction states.
+- [x] Verify typecheck, production build, deployment status, and real-iPhone rendering.
+- [ ] Complete Safari Web Inspector console/network acceptance when Safari becomes available.
+
+**Follow-up Polish**
+
+- No P3 polish item is required for the approved scope.
+
+final result: passed
+
+---
+
 # VIP 月卡皇冠与双权益真实素材验收
 
 ## 验收对象
