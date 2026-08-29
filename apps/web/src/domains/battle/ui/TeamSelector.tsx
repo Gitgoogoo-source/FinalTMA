@@ -1,22 +1,16 @@
-import {
-  ArrowLeftRight,
-  ChevronLeft,
-  ChevronRight,
-  Search,
-  X,
-} from "lucide-react";
+import { ArrowLeftRight, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import type { RouteOutput } from "@evomypet/api-contracts/app-client";
 
 import { Button } from "../../../shared/ui/Button.tsx";
 import { CatalogImage } from "../../../shared/ui/CatalogImage.tsx";
-import { battleElementLabels, battleRarityLabels } from "../labels.ts";
 import {
-  contentName,
-  t,
-  tp,
-  useAppLanguage,
-} from "../../../platform/i18n/index.ts";
+  CollectionFilterControls,
+  type CollectionChainType,
+  type CollectionStage,
+} from "../../../shared/ui/CollectionFilterControls.tsx";
+import { battleElementLabels, battleRarityLabels } from "../labels.ts";
+import { contentName, t, tp } from "../../../platform/i18n/index.ts";
 
 type TeamOption = RouteOutput<"battle.team_options">["items"][number];
 export type BattleTeamSlots = readonly [
@@ -26,6 +20,20 @@ export type BattleTeamSlots = readonly [
 ];
 
 const pageSize = 9;
+
+const chainTypeByTemplatePrefix = {
+  N: "normal",
+  A: "advanced",
+  T: "top",
+} as const satisfies Record<string, CollectionChainType>;
+
+function chainTypeForTemplate(templateId: string): CollectionChainType | null {
+  const match = /^PET-([NAT])-\d{3}-[123]$/.exec(templateId);
+  const prefix = match?.[1] as
+    | keyof typeof chainTypeByTemplatePrefix
+    | undefined;
+  return prefix ? chainTypeByTemplatePrefix[prefix] : null;
+}
 
 export function TeamSelector({
   items,
@@ -42,19 +50,24 @@ export function TeamSelector({
 }): ReactNode {
   const [activeSlot, setActiveSlot] = useState<0 | 1 | 2>(0);
   const [focusedId, setFocusedId] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
+  const [rarityFilter, setRarityFilter] = useState<TeamOption["rarity"] | null>(
+    null,
+  );
+  const [stageFilter, setStageFilter] = useState<CollectionStage | null>(null);
+  const [chainTypeFilter, setChainTypeFilter] =
+    useState<CollectionChainType | null>(null);
   const [page, setPage] = useState(0);
-  const language = useAppLanguage();
-  const filtered = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase(language);
-    return normalized
-      ? items.filter(
-          (item) =>
-            t(item.name).toLocaleLowerCase(language).includes(normalized) ||
-            item.template_id.toLocaleLowerCase("en-US").includes(normalized),
-        )
-      : items;
-  }, [items, language, query]);
+  const filtered = useMemo(
+    () =>
+      items.filter(
+        (item) =>
+          (rarityFilter === null || item.rarity === rarityFilter) &&
+          (stageFilter === null || item.stage === stageFilter) &&
+          (chainTypeFilter === null ||
+            chainTypeForTemplate(item.template_id) === chainTypeFilter),
+      ),
+    [chainTypeFilter, items, rarityFilter, stageFilter],
+  );
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, pageCount - 1);
   const visible = filtered.slice(
@@ -62,8 +75,8 @@ export function TeamSelector({
     (safePage + 1) * pageSize,
   );
   const focused =
-    items.find((item) => item.template_id === focusedId) ??
-    items.find((item) => item.template_id === slots[activeSlot]) ??
+    filtered.find((item) => item.template_id === focusedId) ??
+    filtered.find((item) => item.template_id === slots[activeSlot]) ??
     visible[0] ??
     null;
 
@@ -196,19 +209,28 @@ export function TeamSelector({
         </Button>
       </div>
 
-      <label className="battle-team-search">
-        <Search />
-        <span className="sr-only">{t("搜索本人可用藏品")}</span>
-        <input
-          value={query}
-          disabled={disabled}
-          placeholder={t("搜索本人可用藏品")}
-          onChange={(event) => {
-            setQuery(event.target.value);
-            setPage(0);
-          }}
-        />
-      </label>
+      <CollectionFilterControls
+        idPrefix="battle-team"
+        className="battle-team-filters"
+        rarity={rarityFilter}
+        stage={stageFilter}
+        chainType={chainTypeFilter}
+        resultCount={filtered.length}
+        disabled={disabled}
+        onRarityChange={(value) => {
+          setRarityFilter(value);
+          setPage(0);
+        }}
+        onStageChange={(value) => {
+          setStageFilter(value);
+          setPage(0);
+        }}
+        onChainTypeChange={(value) => {
+          setChainTypeFilter(value);
+          setFocusedId(null);
+          setPage(0);
+        }}
+      />
 
       {loading ? (
         <div className="battle-selector-state">{t("正在加载可用藏品")}</div>

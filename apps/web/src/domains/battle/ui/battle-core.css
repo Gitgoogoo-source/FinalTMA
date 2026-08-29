@@ -816,31 +816,6 @@
   width: 16px;
 }
 
-.battle-team-search {
-  min-height: 46px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 13px;
-  border: 1px solid var(--battle-line);
-  border-radius: 15px;
-  background: rgba(255, 255, 255, 0.85);
-}
-
-.battle-team-search svg {
-  width: 18px;
-  color: var(--battle-muted);
-}
-
-.battle-team-search input {
-  min-width: 0;
-  flex: 1;
-  border: 0;
-  outline: 0;
-  color: var(--battle-ink);
-  background: transparent;
-}
-
 .battle-selector-state {
   min-height: 130px;
   display: grid;

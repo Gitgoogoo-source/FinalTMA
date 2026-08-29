@@ -1,0 +1,113 @@
+.app-shell .collection-filter-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(7px, 2vw, 10px);
+}
+
+.app-shell .collection-filter-strip > button {
+  min-width: 0;
+  height: clamp(34px, 4.8dvh, 40px);
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 10px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  border: 1px solid rgba(47, 50, 53, 0.1);
+  border-radius: 21px;
+  color: #4f5357;
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow:
+    0 4px 12px rgba(36, 39, 42, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  font-size: clamp(8px, 2.25vw, 10px);
+  font-weight: 850;
+}
+
+.app-shell .collection-filter-strip > button.active {
+  color: var(--sprout-orange);
+  border-color: rgba(255, 122, 0, 0.23);
+  background: rgba(255, 249, 241, 0.94);
+}
+
+.app-shell .collection-filter-strip > button:disabled {
+  cursor: default;
+  opacity: 0.58;
+}
+
+.app-shell .collection-filter-strip > button svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.2;
+}
+
+.app-shell .collection-filter-strip > button svg:last-child {
+  width: 10px;
+  transition: transform 0.16s ease;
+}
+
+.app-shell
+  .collection-filter-strip
+  > button[aria-expanded="true"]
+  svg:last-child {
+  transform: rotate(180deg);
+}
+
+.app-shell .collection-filter-strip > button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-shell .collection-filter-panel {
+  position: fixed;
+  z-index: 80;
+  left: 50%;
+  bottom: calc(var(--safe-bottom) + 82px);
+  width: min(calc(100% - 28px), 402px);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  padding: 10px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 22px;
+  background: rgba(255, 253, 250, 0.94);
+  box-shadow:
+    0 22px 46px rgba(54, 67, 75, 0.14),
+    0 0 26px rgba(255, 255, 255, 0.66),
+    inset 0 1px 0 #fff;
+  backdrop-filter: blur(24px) saturate(165%);
+  -webkit-backdrop-filter: blur(24px) saturate(165%);
+  animation: market-filter-enter 0.18s ease-out;
+}
+
+.app-shell .collection-filter-panel > button {
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid rgba(54, 67, 75, 0.08);
+  border-radius: 15px;
+  color: #5c676c;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.app-shell .collection-filter-panel > button.active {
+  color: #fff;
+  border-color: rgba(255, 122, 0, 0.4);
+  background: var(--sprout-orange);
+  box-shadow: 0 8px 16px rgba(255, 106, 0, 0.2);
+}
+
+.app-shell .collection-filter-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
