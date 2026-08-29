@@ -434,7 +434,6 @@
 
 .battle-tier-list > button {
   --battle-tier-accent: #55a968;
-  --battle-tier-soft: #edf8eb;
   position: relative;
   isolation: isolate;
   min-height: 122px;
@@ -459,19 +458,16 @@
 .battle-tier-list > button[data-entry-fee="20"] {
   --battle-tier-image: url("/assets/battle/rooms/battle-room-20.webp");
   --battle-tier-accent: #55a968;
-  --battle-tier-soft: #edf8eb;
 }
 
 .battle-tier-list > button[data-entry-fee="100"] {
   --battle-tier-image: url("/assets/battle/rooms/battle-room-100.webp");
   --battle-tier-accent: #f47a34;
-  --battle-tier-soft: #fff0e5;
 }
 
 .battle-tier-list > button[data-entry-fee="500"] {
   --battle-tier-image: url("/assets/battle/rooms/battle-room-500.webp");
   --battle-tier-accent: #8b67c7;
-  --battle-tier-soft: #f2ecfb;
 }
 
 .battle-tier-list > button.selected {
@@ -498,45 +494,34 @@
 }
 
 .battle-tier-details {
+  position: relative;
   min-width: 0;
   display: grid;
+  grid-template-rows: auto auto;
   align-content: center;
-  gap: 4px;
-  padding: 8px 7px;
-}
-
-.battle-tier-title-row {
-  min-width: 0;
-  display: grid;
-  justify-items: start;
-  gap: 3px;
-  padding-right: 26px;
+  gap: 7px;
+  padding: 10px 7px 8px;
+  background:
+    radial-gradient(
+      circle at 50% 78%,
+      color-mix(in srgb, var(--battle-tier-accent) 16%, transparent),
+      transparent 58%
+    ),
+    rgba(255, 252, 245, 0.94);
 }
 
 .battle-tier-rarity-row {
   min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.battle-tier-title-row > strong {
-  min-width: 0;
-  overflow: hidden;
-  font-size: 14px;
-  font-weight: 950;
-  line-height: 1.1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
 }
 
 .battle-tier-rarity-name {
   display: inline-flex;
   align-items: baseline;
   gap: 4px;
-  border-radius: 999px;
   color: var(--battle-tier-accent);
-  background: var(--battle-tier-soft);
   white-space: nowrap;
 }
 
@@ -544,31 +529,26 @@
   display: none;
 }
 
-.battle-tier-economy small {
-  color: var(--battle-orange);
-  font-size: 11px;
-  font-weight: 950;
-}
-
 .battle-tier-rarity-name {
-  padding: 2px 5px;
+  padding: 0;
 }
 
 .battle-tier-rarity-name strong {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 950;
+  line-height: 1;
 }
 
 .battle-tier-rarity-gems {
   display: flex;
   align-items: center;
   gap: 2px;
-  color: var(--battle-orange);
+  color: var(--battle-tier-accent);
 }
 
 .battle-tier-rarity-gems svg {
-  width: 11px;
-  height: 11px;
+  width: 10px;
+  height: 10px;
   fill: currentColor;
   stroke-width: 2.2;
 }
@@ -580,24 +560,44 @@
 }
 
 .battle-tier-economy > span {
+  position: relative;
   min-width: 0;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: baseline;
-  gap: 4px;
-  padding: 2px 5px;
-  border: 1px solid rgba(54, 67, 75, 0.08);
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.76);
+  justify-items: center;
+  gap: 1px;
+  padding: 8px 0 0;
+}
+
+.battle-tier-economy > span::before {
+  position: absolute;
+  top: 0;
+  right: 8px;
+  left: 8px;
+  height: 1px;
+  background: color-mix(in srgb, var(--battle-tier-accent) 38%, transparent);
+  content: "";
+}
+
+.battle-tier-economy small {
+  color: var(--battle-tier-accent);
+  font-size: 9px;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .battle-tier-economy strong {
   min-width: 0;
-  overflow: hidden;
-  color: var(--battle-orange);
-  font-size: 11px;
-  font-weight: 950;
-  text-overflow: ellipsis;
+  color: var(--battle-tier-accent);
+  font-family: "Teko Asset Digits", "DIN Condensed", "Arial Narrow", sans-serif;
+  font-size: 31px;
+  font-weight: 500;
+  line-height: 0.98;
+  letter-spacing: 0.015em;
+  text-shadow: 0 4px 12px
+    color-mix(in srgb, var(--battle-tier-accent) 20%, transparent);
   white-space: nowrap;
 }
 

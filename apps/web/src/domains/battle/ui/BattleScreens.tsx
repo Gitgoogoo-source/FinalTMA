@@ -96,9 +96,6 @@ export function BattleHome({
               >
                 <span className="battle-tier-art" aria-hidden="true" />
                 <span className="battle-tier-details">
-                  <span className="battle-tier-title-row">
-                    <strong>{t(arena.name)}</strong>
-                  </span>
                   <span className="battle-tier-rarity-row">
                     <span className="battle-tier-rarity-name">
                       <small>{t("稀有度")}</small>
@@ -117,10 +114,6 @@ export function BattleHome({
                     <span>
                       <small>{t("奖池")}</small>
                       <strong>{tier.pool}</strong>
-                    </span>
-                    <span>
-                      <small>{t("门票")}</small>
-                      <strong>{tierTitle(tier)}</strong>
                     </span>
                   </span>
                 </span>
