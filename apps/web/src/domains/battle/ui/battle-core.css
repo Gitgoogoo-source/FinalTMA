@@ -1381,6 +1381,14 @@
   padding-bottom: var(--safe-bottom);
 }
 
+.game-page:has(> .battle-root[data-battle-page-state="battle"]) {
+  padding-bottom: 0;
+}
+
+.battle-root[data-battle-page-state="battle"] {
+  min-height: 0;
+}
+
 .app-shell:has(.battle-root[data-battle-page-state="battle"]) .bottom-nav {
   display: none;
 }
@@ -2365,11 +2373,13 @@
 }
 
 .battle-skill-grid {
+  height: 95px;
+  grid-auto-rows: minmax(0, 1fr);
   gap: 7px;
 }
 
 .battle-skill-grid > button {
-  min-height: 92px;
+  min-height: 0;
   padding: 8px 9px;
   border: 3px solid #273b42;
   border-radius: 4px;
@@ -2394,6 +2404,25 @@
 .battle-skill-grid small {
   color: #60716d;
   font-size: 9px;
+}
+
+.battle-skill-grid:has(> button:nth-child(3)) > button {
+  align-content: center;
+  gap: 1px;
+  padding: 3px 7px;
+}
+
+.battle-skill-grid:has(> button:nth-child(3)) > button span {
+  min-width: 0;
+  font-size: clamp(9px, 2.9vw, 12px);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.battle-skill-grid:has(> button:nth-child(3)) small {
+  font-size: 8px;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 .battle-arena .battle-switch-trigger.button {

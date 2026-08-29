@@ -1978,6 +1978,45 @@ def verify_game_page_boundary() -> None:
             "Live Battle must hide only bottom navigation and release its layout "
             "space while preserving the Telegram safe area"
         )
+    live_battle_page_selector = (
+        '.game-page:has(> .battle-root[data-battle-page-state="battle"])'
+    )
+    live_battle_page_rule = battle_css.partition(
+        f"{live_battle_page_selector} {{"
+    )[2].partition("}")[0]
+    live_battle_root_rule = battle_css.partition(
+        '.battle-root[data-battle-page-state="battle"] {'
+    )[2].partition("}")[0]
+    battle_skill_grid_rule = battle_css.rpartition(".battle-skill-grid {")[2].partition(
+        "}"
+    )[0]
+    battle_skill_button_rule = battle_css.rpartition(
+        ".battle-skill-grid > button {"
+    )[2].partition("}")[0]
+    compact_skill_selector = (
+        ".battle-skill-grid:has(> button:nth-child(3)) > button"
+    )
+    compact_skill_name_selector = f"{compact_skill_selector} span"
+    compact_skill_meta_selector = (
+        ".battle-skill-grid:has(> button:nth-child(3)) small"
+    )
+    if (
+        "padding-bottom: 0" not in live_battle_page_rule
+        or "min-height: 0" not in live_battle_root_rule
+        or "height: 95px" not in battle_skill_grid_rule
+        or "grid-auto-rows: minmax(0, 1fr)" not in battle_skill_grid_rule
+        or "min-height: 0" not in battle_skill_button_rule
+        or f"{compact_skill_selector} {{" not in battle_css
+        or f"{compact_skill_name_selector} {{" not in battle_css
+        or f"{compact_skill_meta_selector} {{" not in battle_css
+        or "font-size: clamp(9px, 2.9vw, 12px)" not in battle_css
+        or ".battle-skill-grid > button:nth-child(3):last-child" not in battle_css
+    ):
+        raise SystemExit(
+            "Live Battle skill controls must keep one 95px command grid, "
+            "compact three/four skills into two readable rows, and remove "
+            "generic page overflow without changing the three-skill span"
+        )
     lobby_source = battle_screens.partition(
         "export function BattleLobby"
     )[2].partition("export function BattleInviteMissing")[0]
