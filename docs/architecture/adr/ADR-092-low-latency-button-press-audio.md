@@ -16,7 +16,7 @@
 
 应用入口继续立即动态加载独立的按钮音频模块。模块创建一个 `latencyHint: "interactive"` 的 `AudioContext`，同源获取并只解码一份运行时 WAV 为复用 `AudioBuffer`，通过固定 `35%` 的共享 `GainNode` 输出。每次反馈创建一次轻量 `AudioBufferSourceNode`，结束后立即断开；最多允许八个短源同时存活，超过上限时停止最早的源，避免恶意或异常高频输入累积资源。不得继续创建 `HTMLAudioElement` 播放池、重置 `currentTime` 或为每次反馈重新获取、解码音频。
 
-捕获阶段监听可信主指针的 `pointerdown`。事件必须满足 `isPrimary=true`、主按钮 `button=0`，且目标向上最近的控件必须是原生 `button`、按钮型 `input` 或具有 `button`、`radio`、`tab` 语义的可用控件；满足后在原始事件调用栈内恢复音频上下文并立即排定播放。随后的同一控件可信 `click` 必须去重。键盘、VoiceOver 或其他没有对应 `pointerdown` 的可信 `click` 作为无障碍后备播放一次。`pointercancel` 清理去重状态；程序触发的非可信事件、非主指针、非主鼠标键、原生 `disabled`、`aria-disabled="true"`、`inert`、`hidden`、输入、普通画面及从非按钮区域开始的滚动或拖动均静默。
+捕获阶段监听可信主指针的 `pointerdown`。事件必须满足 `isPrimary=true`、主按钮 `button=0`，且目标向上最近的控件必须是原生 `button`、按钮型 `input` 或具有 `button`、`radio`、`tab` 语义的可用控件；满足后在原始事件调用栈内恢复音频上下文并立即排定播放。随后的同一控件可信 `click` 必须去重。iOS Telegram WebView 可能在 `pointerup` 与 `click` 之间先执行零延迟定时器，因此 `pointerup` 不得立即清除去重状态；状态保留至对应 `click` 消费，最迟在一秒后自动清除，`pointercancel` 则立即清除。键盘、VoiceOver 或其他没有对应 `pointerdown` 的可信 `click` 作为无障碍后备播放一次。程序触发的非可信事件、非主指针、非主鼠标键、原生 `disabled`、`aria-disabled="true"`、`inert`、`hidden`、输入、普通画面及从非按钮区域开始的滚动或拖动均静默。
 
 运行时 WAV 尚未完成解码、Web Audio 不可用、上下文恢复被浏览器拒绝、资源加载或解码失败、系统静音时，只允许省略当次表现并在后续真实交互重试准备；不得阻塞控件动作、显示技术错误、重试业务操作或改变前端、API、数据库状态。模块热替换或卸载时必须移除全部全局监听器、停止并断开活动源、断开增益节点并关闭自身上下文。
 
@@ -28,4 +28,4 @@
 
 真实设备验收分成两轮。第一轮关闭 Safari Web Inspector，在设备取消静音、媒体音量可听的真实 iPhone Telegram 中逐项按下文字按钮、图标按钮、底部导航、页签、弹窗按钮和按钮式卡片，确认声音与按下同步、音色一致、快速连续按压不漏播或爆音；禁用控件、输入、普通画面以及从非按钮区域开始的滚动和拖动保持静默。按住按钮后滑开可以已经播放一次，但不得触发第二次声音或业务动作。
 
-第二轮连接 Safari Web Inspector，确认运行时 WAV 只有一次同源成功获取与一次解码，`AudioContext` 能在真实用户激活后进入 `running`，每次主指针按下只创建一个 `AudioBufferSourceNode`，后续 `click` 不重复创建，键盘或 VoiceOver 后备点击创建一次，控制台没有 CSP、资源、解码、未处理 Promise 或运行时错误。静态检查、构建、普通浏览器试听、程序触发的非可信点击和 Inspector 播放链路证据均不能替代第一轮真实 iPhone 人耳结论。
+第二轮连接 Safari Web Inspector，确认运行时 WAV 只有一次同源成功获取与一次解码，`AudioContext` 能在真实用户激活后进入 `running`，每次主指针按下只创建一个 `AudioBufferSourceNode`，后续 `click` 不重复创建，键盘或 VoiceOver 后备点击创建一次，控制台没有 CSP、资源、解码、未处理 Promise 或运行时错误。事件证据必须同时覆盖真实 iPhone Telegram WebView 的 `pointerdown` 与后续 `click`，防止桌面浏览器事件顺序掩盖 iOS 在两者之间执行零延迟定时器的问题。静态检查、构建、普通浏览器试听、程序触发的非可信点击和 Inspector 播放链路证据均不能替代第一轮真实 iPhone 人耳结论。

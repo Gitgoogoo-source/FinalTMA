@@ -1,5 +1,6 @@
 const BUTTON_CLICK_VOLUME = 0.35;
 const MAX_ACTIVE_SOURCES = 8;
+const POINTER_CLICK_DEDUPE_MS = 1_000;
 const BUTTON_TARGET_SELECTOR = [
   "button",
   'input[type="button"]',
@@ -18,6 +19,7 @@ const BUTTON_CLICK_SOUND_URL = new URL(
 type PointerActivation = {
   control: Element;
   pointerId: number;
+  releasedAt: number | null;
 };
 
 let audioContext: AudioContext | null = null;
@@ -31,12 +33,17 @@ if (import.meta.hot) import.meta.hot.dispose(dispose);
 
 function installButtonClickAudio(): () => void {
   let pointerActivation: PointerActivation | null = null;
-  let pointerReleaseTimer: number | null = null;
+  let pointerClickDedupeTimer: number | null = null;
 
-  const clearPointerReleaseTimer = () => {
-    if (pointerReleaseTimer === null) return;
-    window.clearTimeout(pointerReleaseTimer);
-    pointerReleaseTimer = null;
+  const clearPointerClickDedupeTimer = () => {
+    if (pointerClickDedupeTimer === null) return;
+    window.clearTimeout(pointerClickDedupeTimer);
+    pointerClickDedupeTimer = null;
+  };
+
+  const clearPointerActivation = () => {
+    clearPointerClickDedupeTimer();
+    pointerActivation = null;
   };
 
   const onPointerDown = (event: PointerEvent) => {
@@ -44,24 +51,28 @@ function installButtonClickAudio(): () => void {
     const control = findAvailableControl(event.target);
     if (!control) return;
 
-    clearPointerReleaseTimer();
-    pointerActivation = { control, pointerId: event.pointerId };
+    clearPointerClickDedupeTimer();
+    pointerActivation = {
+      control,
+      pointerId: event.pointerId,
+      releasedAt: null,
+    };
     playButtonClick();
   };
 
   const onPointerUp = (event: PointerEvent) => {
     if (pointerActivation?.pointerId !== event.pointerId) return;
-    clearPointerReleaseTimer();
-    pointerReleaseTimer = window.setTimeout(() => {
+    pointerActivation.releasedAt = performance.now();
+    clearPointerClickDedupeTimer();
+    pointerClickDedupeTimer = window.setTimeout(() => {
       pointerActivation = null;
-      pointerReleaseTimer = null;
-    }, 0);
+      pointerClickDedupeTimer = null;
+    }, POINTER_CLICK_DEDUPE_MS);
   };
 
   const onPointerCancel = (event: PointerEvent) => {
     if (pointerActivation?.pointerId !== event.pointerId) return;
-    clearPointerReleaseTimer();
-    pointerActivation = null;
+    clearPointerActivation();
   };
 
   const onClick = (event: MouseEvent) => {
@@ -69,12 +80,17 @@ function installButtonClickAudio(): () => void {
     const control = findAvailableControl(event.target);
     if (!control) return;
 
-    if (pointerActivation?.control === control) {
-      clearPointerReleaseTimer();
-      pointerActivation = null;
+    if (
+      pointerActivation?.control === control &&
+      (pointerActivation.releasedAt === null ||
+        performance.now() - pointerActivation.releasedAt <=
+          POINTER_CLICK_DEDUPE_MS)
+    ) {
+      clearPointerActivation();
       return;
     }
 
+    clearPointerActivation();
     playButtonClick();
   };
 
@@ -89,8 +105,7 @@ function installButtonClickAudio(): () => void {
     document.removeEventListener("pointerup", onPointerUp, true);
     document.removeEventListener("pointercancel", onPointerCancel, true);
     document.removeEventListener("click", onClick, true);
-    clearPointerReleaseTimer();
-    pointerActivation = null;
+    clearPointerActivation();
     disposeAudioRuntime();
   };
 }
