@@ -78,6 +78,11 @@ export function InventoryView({
   const preparePage = usePageModulePreparation();
   const pageActive = usePageActive();
   const ownedItems = (query.data?.items ?? []).filter((item) => item.total > 0);
+  const emptyInventory =
+    query.data !== undefined &&
+    !query.isLoading &&
+    ownedItems.length === 0 &&
+    !targetId;
   const selectableItems = ownedItems.filter((item) => item.available > 0);
   const [selection, setSelection] = useState({
     targetId,
@@ -214,7 +219,7 @@ export function InventoryView({
     });
   }, [query.isLoading, targetAction, targetId, targetOwned, targetTemplate]);
   return (
-    <main className="page inventory-page">
+    <main className={`page inventory-page${emptyInventory ? " is-empty" : ""}`}>
       <Button
         className="inventory-atlas-button"
         aria-label={t("打开图鉴")}
@@ -394,9 +399,9 @@ export function InventoryView({
           </>
         )}
         {targetId && !targetOwned && targetTemplate && (
-          <section
+          <Card
             ref={missingTargetRef}
-            className="card inventory-target-empty"
+            className="inventory-target-empty"
             tabIndex={-1}
             aria-labelledby="inventory-target-empty-title"
           >
@@ -427,7 +432,7 @@ export function InventoryView({
                 {t("查看当前藏品")}
               </Button>
             </div>
-          </section>
+          </Card>
         )}
         {targetId && catalog.isLoading && (
           <div className="inventory-location" role="status">
@@ -445,11 +450,29 @@ export function InventoryView({
           </div>
         )}
       </PageState>
-      {!query.isLoading && ownedItems.length === 0 && !targetId && (
-        <Card>
-          <h2>{t("当前没有可用藏品。")}</h2>
-          <p>{t("当前账号尚未持有藏品。")}</p>
+      {emptyInventory && (
+        <section
+          className="inventory-empty"
+          aria-labelledby="inventory-empty-title"
+        >
+          <img
+            className="inventory-empty-art"
+            src="/assets/inventory/collection-empty-anime-v1.webp"
+            alt=""
+            width="853"
+            height="1844"
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
+            draggable={false}
+            aria-hidden="true"
+          />
+          <div className="inventory-empty-copy">
+            <h1 id="inventory-empty-title">{t("新故事从这里开始")}</h1>
+            <p>{t("打开一个盲盒，开启你的藏品之旅。")}</p>
+          </div>
           <Button
+            className="inventory-empty-cta"
             onPointerEnter={() => preparePage("/")}
             onPointerDown={() => preparePage("/")}
             onFocus={() => preparePage("/")}
@@ -460,7 +483,7 @@ export function InventoryView({
           >
             {t("去开盲盒")}
           </Button>
-        </Card>
+        </section>
       )}
     </main>
   );

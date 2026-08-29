@@ -92,6 +92,12 @@
   overscroll-behavior: none;
   color: #292b2e;
 }
+.app-shell .inventory-page.is-empty {
+  padding-right: 0;
+  padding-bottom: 0;
+  padding-left: 0;
+  background: #fffdfa;
+}
 .app-shell .inventory-atlas-button {
   position: absolute;
   z-index: 5;
@@ -131,6 +137,112 @@
   font-weight: 700;
   line-height: 1;
   white-space: nowrap;
+}
+.app-shell .inventory-page.is-empty .inventory-atlas-button {
+  width: clamp(42px, 6dvh, 48px);
+  min-width: clamp(42px, 6dvh, 48px);
+  height: clamp(42px, 6dvh, 48px);
+  min-height: clamp(42px, 6dvh, 48px);
+  place-content: center;
+  gap: 0;
+  color: #36434b;
+  background: rgba(255, 253, 250, 0.86);
+}
+.app-shell .inventory-page.is-empty .inventory-atlas-button svg {
+  width: 23px;
+  height: 23px;
+}
+.app-shell .inventory-page.is-empty .inventory-atlas-button span {
+  display: none;
+}
+.app-shell .inventory-empty {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  isolation: isolate;
+  color: #36434b;
+  background: #fffdfa;
+}
+.app-shell .inventory-empty-art {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 50%;
+  pointer-events: none;
+  user-select: none;
+}
+.app-shell .inventory-empty-copy {
+  position: absolute;
+  z-index: 2;
+  top: clamp(24px, 5dvh, 44px);
+  left: 50%;
+  width: min(calc(100% - 88px), 306px);
+  text-align: center;
+  transform: translateX(-50%);
+}
+.app-shell .inventory-empty-copy h1 {
+  margin: 0;
+  color: #36434b;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(29px, min(9vw, 4.7dvh), 40px);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+.app-shell .inventory-empty-copy p {
+  max-width: 286px;
+  margin: clamp(12px, 2dvh, 18px) auto 0;
+  color: #59666d;
+  font-size: clamp(12px, 3.45vw, 14px);
+  font-weight: 500;
+  line-height: 1.45;
+  text-wrap: balance;
+}
+.app-shell .button.inventory-empty-cta {
+  position: absolute;
+  z-index: 3;
+  right: clamp(28px, 8vw, 38px);
+  bottom: clamp(9px, 1.8dvh, 16px);
+  left: clamp(28px, 8vw, 38px);
+  min-height: clamp(52px, 7.2dvh, 60px);
+  padding: 0 24px;
+  border: 1px solid rgba(255, 156, 0, 0.76);
+  border-radius: var(--radius-pill);
+  color: #fffdfa;
+  background: #ff9c00;
+  box-shadow:
+    0 12px 25px rgba(255, 156, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.58);
+  font-size: clamp(15px, 4.2vw, 18px);
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+.app-shell .button.inventory-empty-cta:not(:disabled):active {
+  background: #ff9c00;
+}
+@media (max-height: 700px) {
+  .app-shell .inventory-empty-copy {
+    top: 14px;
+  }
+  .app-shell .inventory-empty-copy h1 {
+    font-size: 28px;
+  }
+  .app-shell .inventory-empty-copy p {
+    margin-top: 9px;
+    font-size: 12px;
+  }
+  .app-shell .inventory-empty-art {
+    object-position: center 54%;
+  }
+  .app-shell .button.inventory-empty-cta {
+    bottom: 6px;
+    min-height: 48px;
+  }
 }
 .app-shell .inventory-location {
   margin: 0 0 10px;

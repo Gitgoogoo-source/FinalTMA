@@ -53,6 +53,9 @@ export const professionalEnglishCopy: Readonly<Record<string, string>> = {
   "已点亮，当前拥有 {{0}}": "Discovered. Owned: {{0}}",
   图鉴总览: "Codex Overview",
   当前筛选下没有图鉴链: "No Codex lineages match this filter.",
+  新故事从这里开始: "A new story starts here",
+  "打开一个盲盒，开启你的藏品之旅。":
+    "Your collection begins with one Mystery Box.",
   去开盲盒: "Open Mystery Boxes",
   打开图鉴: "Open Codex",
   可产出: "Available from ",
