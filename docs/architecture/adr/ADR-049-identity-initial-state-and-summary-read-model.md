@@ -40,7 +40,7 @@ where use_case <> 'gacha.open'
   );
 ```
 
-`operations_recoverable` 的 Wheel 未决项与 Evolution 未确认项是该部分索引谓词的子集，继续共用 `operations_user_recovery_idx`；晚提交终态游标查询继续使用 `operations_user_authority_sequence_idx`。服务端只为两个新 RPC 授予 `service_role` 执行权，`PUBLIC`、`anon` 和 `authenticated` 保持无权。
+`operations_recoverable` 的 Wheel 未决项与 Evolution 未确认项是该部分索引谓词的子集，继续共用 `operations_user_recovery_idx`；晚提交终态游标查询继续使用 `operations_user_authority_sequence_idx`。数据库另用 `operations_one_blocking_evolution_per_user_idx` 固定每位用户最多一条未决或未确认进化；`identity_initial` 与 `operations_recoverable` 都通过独立终态子查询和 `LIMIT 1` 显式限制进化恢复项，API 服务端在输出共享响应 Schema 后同样拒绝多条阻塞进化，但不限制其他合法未决项。服务端只为两个新 RPC 授予 `service_role` 执行权，`PUBLIC`、`anon` 和 `authenticated` 保持无权。
 
 ## 兼容与迁移
 

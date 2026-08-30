@@ -35,3 +35,5 @@ Battle 终局只在当前前台会话通过 `BattleRoomSnapshotDto.terminal_resu
 `gacha.open`、`wheel.spin` 与 `inventory.decompose` 的操作记录分别是对应领域交互锁的唯一前端事实。记录在 `confirming`、`submitting`、`pending`、`unknown` 阶段锁定本领域按钮和规定导航。除进化外的终态结果只在取得它们的当前前台运行期保留至用户执行弹窗动作或应用离开前台；离开即清除终态展示和锁，返回后读取权威页面状态，不恢复旧结果。已离开运行期但仍为 `pending`、`unknown` 的非开盒操作继续保留必要交互锁并只查询原 `operation_id`，其终态只触发权威刷新和静默清除。结果弹窗的“确定”“收下”或本地返回始终只处理当前 Web 内存状态。
 
 `inventory.evolve` 在 `confirming`、`submitting`、`pending`、`unknown` 阶段锁定新的进化提交和全部底部导航；`pending` 与 `unknown` 只能查询原 `operation_id`，不得生成新幂等键。服务端终态通过进化专用结果组件展示；成功目标无论是否重复获得都写入当前 session generation 的 NEW 集合，查看该目标藏品详情后清除。完全重启不额外恢复已确认结果的 NEW；若重启恢复的是尚未确认展示的原成功结果，则该结果再次把目标写入新运行期的 NEW 集合。
+
+每位用户只有一个数据库进化阻塞槽：`pending/unknown`，或 `succeeded/failed` 且 `result_acknowledged_at` 为空，都会占用同一槽位。`identity.initial` 与 `GET /api/operations/recoverable` 均显式最多返回一条阻塞进化，其他用例的合法未决操作不受该上限影响。未确认结果没有超时或服务端到期时间；进化路由的新 operation key 必须在插入前返回 `ACK_REQUIRED`，不会制造第二条失败记录。Web 收到该错误后删除本次尚未持久化的临时提交，使统一发现立即重新启用并读取 `GET /api/operations/recoverable` 水合原结果；读取失败时继续按统一发现节奏追赶，绝不查询不存在的新 operation。确认 RPC 与新建准入使用同一用户事务锁，首次确认提交后才释放槽位；确认后的 operation 继续执行 7/30/37 天既有清理规则。

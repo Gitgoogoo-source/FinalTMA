@@ -8,6 +8,10 @@
 
 ## 写入规则
 
+进化使用单用户阻塞槽作为跨请求数据库不变量：任一 `pending/unknown`，或 `succeeded/failed` 且 `result_acknowledged_at` 为空的 `inventory.evolve` 都占用同一槽位。旧 operation key 的同请求回放和异请求冲突先裁决；只有新 key 才在落库前校验正式模板 ID 形状、bigint 正数及 3 的倍数，并在用户事务锁内检查槽位。条件唯一索引阻止并发绕过；确认 RPC 取得同一用户锁后幂等写入首次确认时间。未确认结果没有 TTL，单用户最多一条；确认后继续执行普通 7/30/37 天清理。
+
+`identity_initial` 和 `operations_recoverable` 各自保留其他合法未决操作，同时以独立终态子查询显式最多选择一条阻塞进化；API 服务端在输出共享响应 Schema 后再对同一不变量二次校验。Web 收到进化路由的 `ACK_REQUIRED` 时不得保留本次未落库的临时 operation；删除临时项会立即重新启用统一发现，由其读取恢复接口并水合原进化结果。
+
 公开匹配由 `api.battle_matchmake` 单事务完成。它先取得当前用户锁，再取得 `ruleset_id + entry_tier_id` 独立匹配锁；只在同规则、同档、`public_match/waiting` 候选中随机执行 `FOR UPDATE`。档位锁保证匹配请求串行；候选被心跳、取消或到期事务短暂占用时等待其完成并重新裁决，因此有有效候选就加入，只有确实没有候选才建房。存在候选时与好友接受共用 `battle.attach_opponent_and_start_lobby`，但内部函数按 `room_mode` 裁决：好友房保留 presence 等待，公开匹配固定直接锁定 3 秒 `lobby_countdown`。不存在候选时原子创建 120 秒房间、三份 reservation 和一份 locked stake。取消或超时共用 `battle.close_unstarted_room`，原额退款并释放三宠。好友房与公开房通过 `room_mode`、条件字段和部分候选索引双向隔离。
 
 所有玩家写操作只调用一个 `api` 命令 RPC。创建 operation 的 RPC 依次验证会话、账号状态、资源归属、请求前置条件和幂等键；不创建 operation 的语义幂等 RPC 依次验证同一安全边界与目标状态。资产、账本、库存、预留、奖励和业务状态写入均在一个 PostgreSQL 事务中完成。Functions 只能传递用户意图和目标标识。

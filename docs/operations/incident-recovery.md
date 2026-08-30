@@ -14,6 +14,8 @@
 
 出现 operation 表增长或准入限流异常时，先核对 `operations.user_admission_counters`、最近 24 小时失败数、当前未决数和 `cleanup-idempotency` 的 `maintenance`/`job_runs.details`。不得手工删除有外键引用、未决、未确认进化或活动支付/Mint operation；恢复清理任务时只重跑原 job，由 UUIDv7 新鲜度和引用保护保证旧命令不重新执行。
 
+进化恢复异常还必须执行单槽不变量查询：按 `user_id` 统计 `use_case = 'inventory.evolve' and result_acknowledged_at is null`，任何 `count(*) > 1` 都是数据库约束失效，不能通过删除未确认结果止血。先停止产生新进化的应用流量，核对条件唯一索引、确认 RPC 与准入锁，再从声明式 migration 重建当前开发环境。未确认结果没有 TTL；只有玩家确认后，原记录才重新进入 7/30/37 天清理规则。
+
 封禁事故先确认客户端已切换到新 generation 且 DOM、查询缓存、操作弹窗和导航为空，再按旧 generation 定位迟到请求。禁止通过恢复缓存或重放成功响应复原页面。
 
 ## Stars

@@ -210,6 +210,85 @@ def verify_database_boundaries() -> None:
         raise SystemExit(f"Catalog cleanup mutation boundary is incomplete: {missing}")
 
 
+def verify_evolution_recovery_contract() -> None:
+    operations_sql = (SCHEMAS / "30_operations.sql").read_text(encoding="utf-8").lower()
+    identity_sql = (SCHEMAS / "10_identity.sql").read_text(encoding="utf-8").lower()
+    evolution_sql = (SCHEMAS / "43_evolution.sql").read_text(encoding="utf-8").lower()
+    invariants = (
+        ROOT / "apps/api/src/workflows/operation-recovery/invariants.ts"
+    ).read_text(encoding="utf-8")
+    identity_handlers = (ROOT / "apps/api/src/domains/identity/routes.ts").read_text(
+        encoding="utf-8"
+    )
+    recovery_handlers = (
+        ROOT / "apps/api/src/workflows/operation-recovery/routes.ts"
+    ).read_text(encoding="utf-8")
+
+    required = (
+        "create unique index operations_one_blocking_evolution_per_user_idx",
+        "where use_case = 'inventory.evolve' and result_acknowledged_at is null",
+        "'ack_required'",
+        "p_request <> jsonb_build_object(",
+        "p_request->>'template_id' !~ '^pet-[nat]-[0-9]{3}-[123]$'",
+        "mod(v_evolution_quantity, 3) <> 0",
+        "candidate.use_case in ('wheel.spin', 'inventory.evolve')",
+        "candidate.status in ('succeeded', 'failed')",
+        "limit 1",
+    )
+    source = operations_sql + identity_sql
+    missing = [fragment for fragment in required if fragment not in source]
+    if missing:
+        raise SystemExit(f"Evolution recovery ceiling is incomplete: {missing}")
+    if (
+        'operation.use_case === "inventory.evolve"' not in invariants
+        or "++blockingEvolutionCount > 1" not in invariants
+        or identity_handlers.count("assertEvolutionRecoveryCeiling(") < 2
+        or recovery_handlers.count("assertEvolutionRecoveryCeiling(") < 1
+    ):
+        raise SystemExit("Evolution recovery API boundary must cap blocking results at one")
+
+    begin_command = operations_sql.partition(
+        "create or replace function operations.begin_command"
+    )[2].partition("$$;")[0]
+    begin_order = [
+        begin_command.find("select * into v_operation"),
+        begin_command.find("if p_use_case = 'inventory.evolve' then"),
+        begin_command.find("perform operations.assert_new_operation_id"),
+        begin_command.find("perform operations.admit_new_command"),
+        begin_command.find("insert into operations.operations"),
+    ]
+    if any(position < 0 for position in begin_order) or begin_order != sorted(begin_order):
+        raise SystemExit(
+            "Evolution validation must follow replay and precede admission and insertion"
+        )
+
+    admission = operations_sql.partition(
+        "create or replace function operations.admit_new_command"
+    )[2].partition("$$;")[0]
+    admission_order = [
+        admission.find("for update"),
+        admission.find("'ack_required'"),
+        admission.find("v_counter.minute_window_started_at"),
+    ]
+    if any(position < 0 for position in admission_order) or admission_order != sorted(admission_order):
+        raise SystemExit("Evolution blocking-result admission must run under the user lock")
+
+    acknowledge = evolution_sql.partition(
+        "create or replace function api.inventory_evolution_acknowledge_result"
+    )[2].partition("$$;")[0]
+    acknowledgement_order = [
+        acknowledge.find("hashtextextended('operations.admission:'"),
+        acknowledge.find("select * into v_operation"),
+        acknowledge.find("for update"),
+        acknowledge.find("set result_acknowledged_at = now()"),
+    ]
+    if (
+        any(position < 0 for position in acknowledgement_order)
+        or acknowledgement_order != sorted(acknowledgement_order)
+    ):
+        raise SystemExit("Evolution acknowledgement must serialize with new admission")
+
+
 def verify_inventory_read_model() -> None:
     inventory_sql = (SCHEMAS / "32_inventory.sql").read_text(encoding="utf-8").lower()
     security_sql = one_migration("_api_security.sql").read_text(encoding="utf-8").lower()
@@ -1026,6 +1105,7 @@ def main() -> None:
     verify_security(security)
     verify_database_error_codes()
     verify_database_boundaries()
+    verify_evolution_recovery_contract()
     verify_inventory_read_model()
     verify_market_listing_quota_contract()
     verify_identity_login_contract()

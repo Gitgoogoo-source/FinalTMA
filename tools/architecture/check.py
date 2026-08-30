@@ -1612,13 +1612,15 @@ def verify_operation_recovery_discovery() -> None:
     )
     backend_terms = (
         '"operations.recoverable": async (context)',
-        'rpc("operations_recoverable"',
+        'rpc<unknown>("operations_recoverable"',
         "p_after_authority_cursor bigint",
         "'authority_refresh_routes'",
         "'next_authority_cursor'",
         "operations.user_authority_sequences",
-        "o.use_case = 'wheel.spin' and o.status in ('pending', 'unknown')",
-        "o.use_case = 'inventory.evolve' and o.result_acknowledged_at is null",
+        "candidate.use_case in ('wheel.spin', 'inventory.evolve')",
+        "candidate.use_case = 'inventory.evolve'",
+        "candidate.result_acknowledged_at is null",
+        "limit 1",
         "order by o.created_at, o.id",
     )
     backend_source = handlers + schema
@@ -1712,8 +1714,8 @@ def verify_operation_recovery_discovery() -> None:
         encoding="utf-8"
     )
     if (
-        "o.use_case = 'inventory.evolve'" not in identity_schema
-        or "o.use_case in ('wheel.spin', 'inventory.evolve')" in identity_schema
+        "candidate.use_case = 'inventory.evolve'" not in identity_schema
+        or "candidate.use_case in ('wheel.spin', 'inventory.evolve')" in identity_schema
         or "o.use_case = 'inventory.evolve' and o.result_acknowledged_at is null"
         not in jobs_schema
         or "use_case in ('wheel.spin', 'inventory.evolve')" in jobs_schema
@@ -1827,11 +1829,18 @@ def verify_security_finding_closures() -> None:
         "v_open_count >= 20",
         "if p_use_case like 'battle.%' then",
         "pg_advisory_xact_lock(hashtextextended('operations.command:'",
+        "create unique index operations_one_blocking_evolution_per_user_idx",
+        "where use_case = 'inventory.evolve' and result_acknowledged_at is null",
+        "'ack_required'",
+        "p_request->>'template_id' !~ '^pet-[nat]-[0-9]{3}-[123]$'",
+        "p_request <> jsonb_build_object(",
+        "mod(v_evolution_quantity, 3) <> 0",
     )
     missing = [term for term in operation_required if term not in operations]
     begin_command = operations[operations.index("create or replace function operations.begin_command") :]
     ordering = [
         begin_command.find("select * into v_operation"),
+        begin_command.find("if p_use_case = 'inventory.evolve' then"),
         begin_command.find("perform operations.assert_new_operation_id"),
         begin_command.find("perform operations.admit_new_command"),
         begin_command.find("insert into operations.operations"),

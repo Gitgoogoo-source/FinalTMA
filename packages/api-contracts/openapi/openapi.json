@@ -405,6 +405,7 @@
                                                       "DRAW_COUNT_INVALID",
                                                       "ENTRY_HANDOFF_PENDING",
                                                       "EVOLUTION_NOT_AVAILABLE",
+                                                      "ACK_REQUIRED",
                                                       "EXPEDITION_ALREADY_ACTIVE",
                                                       "EXPEDITION_ITEMS_INVALID",
                                                       "EXPEDITION_LIMIT_REACHED",
@@ -1598,6 +1599,7 @@
                                           "DRAW_COUNT_INVALID",
                                           "ENTRY_HANDOFF_PENDING",
                                           "EVOLUTION_NOT_AVAILABLE",
+                                          "ACK_REQUIRED",
                                           "EXPEDITION_ALREADY_ACTIVE",
                                           "EXPEDITION_ITEMS_INVALID",
                                           "EXPEDITION_LIMIT_REACHED",
@@ -6400,7 +6402,7 @@
             }
           },
           "409": {
-            "description": "Errors: ENTRY_HANDOFF_PENDING, EVOLUTION_NOT_AVAILABLE, INSUFFICIENT_INVENTORY, INSUFFICIENT_BALANCE, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, EVOLUTION_NOT_AVAILABLE, ACK_REQUIRED, INSUFFICIENT_INVENTORY, INSUFFICIENT_BALANCE, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -6476,6 +6478,7 @@
           "RATE_LIMITED",
           "OPERATION_RESULT_EXPIRED",
           "EVOLUTION_NOT_AVAILABLE",
+          "ACK_REQUIRED",
           "INSUFFICIENT_INVENTORY",
           "INSUFFICIENT_BALANCE",
           "IDEMPOTENCY_KEY_REUSED"
@@ -6593,6 +6596,13 @@
             "refreshScope": "none",
             "recoveryAction": "none"
           },
+          "ACK_REQUIRED": {
+            "status": 409,
+            "message": "请先确认",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
           "INSUFFICIENT_INVENTORY": {
             "status": 409,
             "message": "可用藏品数量不足",
@@ -6627,8 +6637,7 @@
                 "properties": {
                   "template_id": {
                     "type": "string",
-                    "minLength": 1,
-                    "maxLength": 128
+                    "pattern": "^PET-[NAT]-[0-9]{3}-[123]$"
                   },
                   "quantity": {
                     "type": "integer",
@@ -35484,6 +35493,7 @@
                                       "DRAW_COUNT_INVALID",
                                       "ENTRY_HANDOFF_PENDING",
                                       "EVOLUTION_NOT_AVAILABLE",
+                                      "ACK_REQUIRED",
                                       "EXPEDITION_ALREADY_ACTIVE",
                                       "EXPEDITION_ITEMS_INVALID",
                                       "EXPEDITION_LIMIT_REACHED",
@@ -35891,6 +35901,7 @@
                                 "DRAW_COUNT_INVALID",
                                 "ENTRY_HANDOFF_PENDING",
                                 "EVOLUTION_NOT_AVAILABLE",
+                                "ACK_REQUIRED",
                                 "EXPEDITION_ALREADY_ACTIVE",
                                 "EXPEDITION_ITEMS_INVALID",
                                 "EXPEDITION_LIMIT_REACHED",
@@ -38302,6 +38313,7 @@
                   "DRAW_COUNT_INVALID",
                   "ENTRY_HANDOFF_PENDING",
                   "EVOLUTION_NOT_AVAILABLE",
+                  "ACK_REQUIRED",
                   "EXPEDITION_ALREADY_ACTIVE",
                   "EXPEDITION_ITEMS_INVALID",
                   "EXPEDITION_LIMIT_REACHED",

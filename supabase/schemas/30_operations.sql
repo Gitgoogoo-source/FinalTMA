@@ -29,7 +29,10 @@ create table operations.operations (
   result_acknowledged_at timestamptz,
   payload_purged_at timestamptz,
   check (substr(id::text, 15, 1) = '7' and substr(id::text, 20, 1) in ('8', '9', 'a', 'b')),
-  check (result_acknowledged_at is null or status in ('succeeded', 'failed')),
+  check (
+    result_acknowledged_at is null
+    or (use_case = 'inventory.evolve' and status in ('succeeded', 'failed'))
+  ),
   check (
     (status in ('pending', 'unknown') and authority_sequence is null)
     or (
@@ -63,6 +66,9 @@ where status = 'failed' and use_case not like 'battle.%';
 create unique index operations_user_authority_sequence_idx
 on operations.operations (user_id, authority_sequence)
 where authority_sequence is not null;
+create unique index operations_one_blocking_evolution_per_user_idx
+on operations.operations (user_id)
+where use_case = 'inventory.evolve' and result_acknowledged_at is null;
 create index operations_payload_cleanup_idx
 on operations.operations (completed_at, id)
 where status in ('succeeded', 'failed') and payload_purged_at is null;
@@ -149,6 +155,19 @@ begin
   from operations.user_admission_counters
   where user_id = p_user_id
   for update;
+
+  if p_use_case = 'inventory.evolve' and exists (
+    select 1
+    from operations.operations o
+    where o.user_id = p_user_id
+      and o.use_case = 'inventory.evolve'
+      and o.result_acknowledged_at is null
+  ) then
+    perform api.raise_business_error(
+      'ACK_REQUIRED',
+      '请先确认上一次进化结果'
+    );
+  end if;
 
   if v_counter.minute_window_started_at <= v_now - interval '60 seconds' then
     v_counter.minute_window_started_at := v_now;
@@ -556,6 +575,7 @@ declare
   );
   v_hash text := encode(extensions.digest(convert_to(p_request::text, 'UTF8'), 'sha256'), 'hex');
   v_operation operations.operations%rowtype;
+  v_evolution_quantity numeric;
 begin
   if p_operation_id is null or p_use_case is null or btrim(p_use_case) = '' or p_request is null then
     perform api.raise_business_error('REQUEST_INVALID', '操作请求无效');
@@ -573,6 +593,31 @@ begin
       perform api.raise_business_error('OPERATION_RESULT_EXPIRED', '操作结果已超过可恢复期限');
     end if;
     return v_operation;
+  end if;
+
+  if p_use_case = 'inventory.evolve' then
+    if jsonb_typeof(p_request) <> 'object' then
+      perform api.raise_business_error('REQUEST_INVALID', '进化请求无效');
+    end if;
+    if p_request <> jsonb_build_object(
+        'template_id', p_request->'template_id',
+        'quantity', p_request->'quantity'
+      )
+      or p_request->>'template_id' is null
+      or p_request->>'template_id' !~ '^PET-[NAT]-[0-9]{3}-[123]$'
+      or jsonb_typeof(p_request->'quantity') <> 'number'
+      or p_request->>'quantity' !~ '^[0-9]+$'
+      or length(p_request->>'quantity') > 19
+    then
+      perform api.raise_business_error('REQUEST_INVALID', '进化请求无效');
+    end if;
+    v_evolution_quantity := (p_request->>'quantity')::numeric;
+    if v_evolution_quantity <= 0
+      or v_evolution_quantity > 9223372036854775807
+      or mod(v_evolution_quantity, 3) <> 0
+    then
+      perform api.raise_business_error('REQUEST_INVALID', '进化请求无效');
+    end if;
   end if;
 
   perform operations.assert_new_operation_id(p_operation_id);
@@ -697,11 +742,25 @@ begin
     'operations', coalesce((
       select jsonb_agg(operations.operation_json(o) order by o.created_at, o.id)
       from operations.operations o
-      where o.user_id = v_user_id
-        and (
-          (o.use_case = 'wheel.spin' and o.status in ('pending', 'unknown'))
-          or (o.use_case = 'inventory.evolve' and o.result_acknowledged_at is null)
-        )
+      join (
+        select candidate.id
+        from operations.operations candidate
+        where candidate.user_id = v_user_id
+          and candidate.use_case in ('wheel.spin', 'inventory.evolve')
+          and candidate.status in ('pending', 'unknown')
+        union all
+        select terminal.id
+        from (
+          select candidate.id
+          from operations.operations candidate
+          where candidate.user_id = v_user_id
+            and candidate.use_case = 'inventory.evolve'
+            and candidate.status in ('succeeded', 'failed')
+            and candidate.result_acknowledged_at is null
+          order by candidate.created_at, candidate.id
+          limit 1
+        ) terminal
+      ) recoverable on recoverable.id = o.id
     ), '[]'::jsonb),
     'authority_refresh_routes', coalesce((
       select jsonb_agg(marker.use_case order by marker.first_sequence)

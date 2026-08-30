@@ -206,6 +206,7 @@ export const errorRegistry = {
     "refresh",
   ),
   EVOLUTION_NOT_AVAILABLE: error(409, "当前藏品不能进化"),
+  ACK_REQUIRED: error(409, "请先确认"),
   EXPEDITION_ALREADY_ACTIVE: error(
     409,
     "所选藏品已在远征中",

@@ -130,6 +130,9 @@ declare
   v_user_id uuid := api.session_user(p_session_id);
   v_operation operations.operations%rowtype;
 begin
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended('operations.admission:' || v_user_id::text, 0)
+  );
   select * into v_operation
   from operations.operations o
   where o.id = p_operation_id

@@ -47,3 +47,5 @@ export const operationSummarySchema = z
     updated_at: timestampSchema,
   })
   .strict();
+
+export const recoverableOperationListSchema = z.array(operationSummarySchema);

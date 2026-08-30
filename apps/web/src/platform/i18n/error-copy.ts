@@ -41,6 +41,7 @@ export const englishErrorCopy: Readonly<Record<string, string>> = {
   ENTRY_HANDOFF_PENDING:
     "Your referral is still being confirmed. Check again soon.",
   EVOLUTION_NOT_AVAILABLE: "This collectible can't evolve.",
+  ACK_REQUIRED: "Confirm the previous result first.",
   EXPEDITION_ALREADY_ACTIVE:
     "One of these collectibles is already on an Expedition.",
   EXPEDITION_ITEMS_INVALID: "Choose a valid Expedition team.",

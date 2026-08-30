@@ -16,7 +16,7 @@ Telegram WebApp 在 `createRoot().render()` 前按 `ready → expand → disable
 
 认证、入口交接与首个可操作页面完成后，`telegram-chat-onboarding` workflow 按 [ADR-087](adr/ADR-087-telegram-chat-list-onboarding.md) 检查 `allows_write_to_pm`，并在 Bot API 6.9+ 的新 WebView 中至多调用一次 `requestWriteAccess()`。该 workflow 是首屏静态闭包外的动态模块；页面就绪快照按 session generation 与路径保留，即使模块稍后加载也不会丢失触发。拒绝只影响当前原生弹窗结果，下次新 WebView 自动再次请求；支持判断、调用异常和用户结果都不触发浏览器 API 或数据库访问，也不阻塞当前页面。开盒、市场、Battle、藏品与任务分别在本页的主查询和必要首屏素材就绪后标记为可操作。
 
-结果弹窗的“确定”“收下”或本地返回只移除 Web 内存状态，不请求 API、RPC、原操作或权威刷新。隐藏、Telegram `deactivated`、`pagehide`、刷新或重进立即丢弃旧结果和领域动画；非进化终态不进入 `blocking_operations` 的结果恢复，未决原操作只查询原 `operation_id`，取得终态后刷新权威状态并静默解锁。
+结果弹窗的“确定”“收下”或本地返回只移除 Web 内存状态，不请求 API、RPC、原操作或权威刷新。隐藏、Telegram `deactivated`、`pagehide`、刷新或重进立即丢弃旧结果和领域动画；非进化终态不进入 `blocking_operations` 的结果恢复，未决原操作只查询原 `operation_id`，取得终态后刷新权威状态并静默解锁。进化是唯一例外：每位用户只有一条未决或未确认结果，未确认无 TTL；新进化被服务端拒绝时 Runtime 立即从统一恢复接口水合原结果，不保留不存在的新 operation。
 
 进化确认通过 React Portal 挂载到 `document.body`，不进入藏品卡片或页面内容的层叠上下文。确认页固定覆盖主应用稳定视口，在 Telegram 内容顶部安全区下方开始布局，内部使用独立滚动区与位于设备底部安全区上方的固定操作区；确认页打开期间锁定根文档滚动，关闭后恢复原滚动状态。Catalog v1 产品数据构建同时生成 Web 专用的 140 条静态进化路线，打开确认页只读取该前端构建产物和页面已有库存、资产状态，不请求服务端进化预览；静态路线不参与提交后的保底或资产裁决。
 

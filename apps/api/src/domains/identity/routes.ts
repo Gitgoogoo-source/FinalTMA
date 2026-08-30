@@ -21,6 +21,7 @@ import {
   requireSession,
   type HandlerMap,
 } from "../../http/handlers.ts";
+import { assertEvolutionRecoveryCeiling } from "../../workflows/operation-recovery/invariants.ts";
 
 const TG_APP_LISTING_START_PARAM = "listed_on_tg_app";
 
@@ -98,7 +99,14 @@ export const identityHandlers = {
         const initial = await rpc<unknown>("identity_initial", {
           p_session_id: issued.sessionId,
         });
-        initialState = parseRouteOutput("identity.initial", initial);
+        const parsedInitialState = parseRouteOutput(
+          "identity.initial",
+          initial,
+        );
+        assertEvolutionRecoveryCeiling(
+          parsedInitialState.recovery.blocking_operations,
+        );
+        initialState = parsedInitialState;
       } catch (cause) {
         if (isStableInitialStateFailure(cause)) throw cause;
       }
@@ -118,11 +126,16 @@ export const identityHandlers = {
       },
     };
   },
-  "identity.initial": async (context) => ({
-    data: await rpc("identity_initial", {
-      p_session_id: requireSession(context).session_id,
-    }),
-  }),
+  "identity.initial": async (context) => {
+    const data = parseRouteOutput(
+      "identity.initial",
+      await rpc<unknown>("identity_initial", {
+        p_session_id: requireSession(context).session_id,
+      }),
+    );
+    assertEvolutionRecoveryCeiling(data.recovery.blocking_operations);
+    return { data };
+  },
   "identity.summary": async (context) => ({
     data: await rpc("identity_summary", {
       p_session_id: requireSession(context).session_id,

@@ -904,6 +904,10 @@ export function OperationRegistryRuntimeProvider({
                 true,
                 id,
               );
+        if (routeId === "inventory.evolve" && failure.code === "ACK_REQUIRED") {
+          remove(id);
+          return null;
+        }
         const unknown =
           Boolean(failure.operationId) &&
           ([
@@ -1051,7 +1055,6 @@ export function OperationRegistryRuntimeProvider({
     },
     [markNew, refreshAuthorityAfterLeave],
   );
-
   const recover = useCallback(
     async (operation: RegisteredOperation) => {
       if (

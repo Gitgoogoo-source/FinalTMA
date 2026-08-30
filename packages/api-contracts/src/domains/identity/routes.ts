@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import {
   assetsSchema,
-  operationSummarySchema,
+  recoverableOperationListSchema,
   userSchema,
 } from "../../common/models.ts";
 import { defineRoute } from "../../common/route.ts";
@@ -32,7 +32,7 @@ export const identitySummarySchema = z
 export const identityRecoverySchema = z
   .object({
     authority_cursor: nonNegativeBigintStringSchema,
-    blocking_operations: z.array(operationSummarySchema),
+    blocking_operations: recoverableOperationListSchema,
     payment_recovery_orders: z.array(paymentSchema),
     pending_mints: z.array(mintSchema),
     battle_participation: battleParticipationSchema.nullable(),

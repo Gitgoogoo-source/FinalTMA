@@ -9,6 +9,10 @@ import {
   inventoryItemSchema,
 } from "./models.ts";
 
+const evolutionTemplateIdSchema = z
+  .string()
+  .regex(/^PET-[NAT]-[0-9]{3}-[123]$/);
+
 export const inventoryRoutes = [
   defineRoute({
     id: "inventory.list",
@@ -88,16 +92,18 @@ export const inventoryRoutes = [
     refreshScopes: ["assets", "inventory"],
     input: z
       .object({
-        template_id: identifierSchema,
+        template_id: evolutionTemplateIdSchema,
         quantity: z.number().int().positive().multipleOf(3),
       })
       .strict(),
     output: evolutionResultSchema,
     errors: [
       "EVOLUTION_NOT_AVAILABLE",
+      "ACK_REQUIRED",
       "INSUFFICIENT_INVENTORY",
       "INSUFFICIENT_BALANCE",
       "IDEMPOTENCY_KEY_REUSED",
+      "REQUEST_INVALID",
       "INTERNAL_ERROR",
     ],
   }),

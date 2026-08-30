@@ -531,16 +531,25 @@ begin
       'blocking_operations', coalesce((
         select jsonb_agg(operations.operation_json(o) order by o.created_at, o.id)
         from operations.operations o
-        where o.user_id = v_user_id
-          and o.use_case <> 'gacha.open'
-          and (
-            o.status in ('pending', 'unknown')
-            or (
-              o.use_case = 'inventory.evolve'
-              and o.status in ('succeeded', 'failed')
-              and o.result_acknowledged_at is null
-            )
-          )
+        join (
+          select candidate.id
+          from operations.operations candidate
+          where candidate.user_id = v_user_id
+            and candidate.use_case <> 'gacha.open'
+            and candidate.status in ('pending', 'unknown')
+          union all
+          select terminal.id
+          from (
+            select candidate.id
+            from operations.operations candidate
+            where candidate.user_id = v_user_id
+              and candidate.use_case = 'inventory.evolve'
+              and candidate.status in ('succeeded', 'failed')
+              and candidate.result_acknowledged_at is null
+            order by candidate.created_at, candidate.id
+            limit 1
+          ) terminal
+        ) recoverable on recoverable.id = o.id
       ), '[]'::jsonb),
       'payment_recovery_orders', coalesce((
         select jsonb_agg(payments.order_json(p) order by p.created_at desc)

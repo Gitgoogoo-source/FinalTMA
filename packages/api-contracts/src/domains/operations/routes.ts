@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-import { operationSummarySchema } from "../../common/models.ts";
+import {
+  operationSummarySchema,
+  recoverableOperationListSchema,
+} from "../../common/models.ts";
 import { defineRoute } from "../../common/route.ts";
 import {
   identifierSchema,
@@ -21,7 +24,7 @@ export const operationRoutes = [
       .strict(),
     output: z
       .object({
-        operations: z.array(operationSummarySchema),
+        operations: recoverableOperationListSchema,
         authority_refresh_routes: z.array(identifierSchema),
         next_authority_cursor: nonNegativeBigintStringSchema,
       })

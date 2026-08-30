@@ -2,6 +2,8 @@
 
 ## 决定
 
+每位用户固定只有一个进化阻塞槽，覆盖 `pending/unknown` 与尚未确认的 `succeeded/failed`。数据库条件唯一索引是最终不变量；进化路由的新 key 在用户事务锁内、写入 operation 前检查旧槽，命中返回 `ACK_REQUIRED`，旧 key 同请求仍先回放、同 key 异请求仍先返回 `IDEMPOTENCY_KEY_REUSED`。确认 RPC 取得同一用户锁后才写入首次确认时间，确认提交前禁止新建，提交后立即允许下一次进化。`identity.initial`、`operations.recoverable` 的数据库查询均显式最多返回一条阻塞进化，API 输出共享响应 Schema 后执行同一上限检查，不限制其他用例的合法未决项。未确认结果没有 TTL，必须一直保留到用户确认；确认后恢复既有 7/30/37 天清理语义。
+
 操作具有 `pending`、`succeeded`、`failed`、`unknown` 四个持久状态。同步业务在提交事务内形成终态；支付和 Mint 允许由外部事实推进。随机结果在第一次裁决时持久化，不得重新生成。
 
 前端只在用户完成领域确认后生成并保存 UUID，随后立即进入 `confirming`，下一帧进入 `submitting`，但不提前宣告业务成功。网络中断只进入 `unknown`，恢复只查询原操作。默认只锁定同一 `use_case` 的再次提交；`gacha.open` 与 `wheel.spin` 从 `confirming` 开始禁用本领域操作按钮和五个底部导航，经过 `submitting`、`pending`、`unknown` 持续锁定，并在服务端成功或失败结果弹窗中保持锁定，直到用户通过弹窗规定动作处理结果。`inventory.evolve` 从 `confirming` 到 `unknown` 锁定新进化提交和五个底部导航，终态由覆盖界面的专用弹窗处理。弹窗内的结果处理和原操作查询按钮不被这些锁禁用。`identity.initial.recovery` 在入口建立时一次返回阻塞操作、待处理支付、休眠 Mint 与 Battle 参与状态，以便重新进入后继续恢复；该快照只存在于当前 session generation 内存，不参加 React Query 刷新。
