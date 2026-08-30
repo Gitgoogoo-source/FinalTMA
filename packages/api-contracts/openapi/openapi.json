@@ -9999,7 +9999,7 @@
                         },
                         "max_active_templates": {
                           "type": "number",
-                          "const": 10
+                          "const": 30
                         },
                         "fee_bps": { "type": "number", "const": 500 },
                         "vip_rebate_bps": { "type": "number", "const": 2000 }
@@ -10452,7 +10452,7 @@
                       "type": "object",
                       "properties": {
                         "listings": {
-                          "maxItems": 10,
+                          "maxItems": 30,
                           "type": "array",
                           "items": {
                             "type": "object",
@@ -11136,7 +11136,7 @@
           },
           "MARKET_ACTIVE_TEMPLATE_LIMIT": {
             "status": 409,
-            "message": "最多同时出售 10 种藏品，请先售罄或下架一种藏品",
+            "message": "最多同时出售 30 种藏品，请先售罄或下架一种藏品",
             "retryable": false,
             "refreshScope": "inventory",
             "recoveryAction": "refresh"

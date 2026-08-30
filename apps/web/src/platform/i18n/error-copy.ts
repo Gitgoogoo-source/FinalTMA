@@ -64,7 +64,7 @@ export const englishErrorCopy: Readonly<Record<string, string>> = {
   INVENTORY_RESERVED: "This collectible is currently in use.",
   JOB_NOT_FOUND: "That action couldn't be found.",
   MARKET_ACTIVE_TEMPLATE_LIMIT:
-    "You can list up to 10 collectible types at once. Sell out or delist one first.",
+    "You can list up to 30 collectible types at once. Sell out or delist one first.",
   MARKET_DAILY_LISTING_LIMIT: "You've reached today's listing limit.",
   MARKET_LIFETIME_LISTING_LIMIT:
     "This account has reached its total listing limit.",

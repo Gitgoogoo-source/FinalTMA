@@ -111,7 +111,7 @@ export const marketRoutes = [
         ),
         vip: vipStatusSchema,
         listing_quota: listingQuotaSchema,
-        max_active_templates: z.literal(10),
+        max_active_templates: z.literal(30),
         fee_bps: z.literal(500),
         vip_rebate_bps: z.literal(2000),
       })
@@ -141,7 +141,7 @@ export const marketRoutes = [
       .strict(),
     output: z
       .object({
-        listings: z.array(managedTemplateSchema).max(10),
+        listings: z.array(managedTemplateSchema).max(30),
         sold_events: z.array(soldEventSchema).max(100),
         sale_cursor: saleSequenceSchema,
         has_more: z.boolean(),

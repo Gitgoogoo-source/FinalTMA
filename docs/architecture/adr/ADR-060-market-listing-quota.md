@@ -5,7 +5,7 @@
 
 ## 背景
 
-市场每次成功上架都会创建独立 FIFO `market.listings`、`inventory.reservations` 和幂等 operation。全部下架只把挂单与 reservation 终态化并释放藏品，玩家可以持有一份可出售藏品后反复上架和下架。十种在售模板上限只约束同时在售种类；ADR-059 的通用 operation 准入约束全部新 key，但既不只统计成功上架，也没有市场账号生命周期上限，因此两者都不能阻止单账号无限积累市场历史。
+市场每次成功上架都会创建独立 FIFO `market.listings`、`inventory.reservations` 和幂等 operation。全部下架只把挂单与 reservation 终态化并释放藏品，玩家可以持有一份可出售藏品后反复上架和下架。三十种在售模板上限只约束同时在售种类；ADR-059 的通用 operation 准入约束全部新 key，但既不只统计成功上架，也没有市场账号生命周期上限，因此两者都不能阻止单账号无限积累市场历史。
 
 ## 决策
 
@@ -13,7 +13,7 @@
 
 `market.seller_listing_quotas` 是唯一计数事实，每个用户最多一行，保存 `business_date`、`daily_count`、`lifetime_count` 和 `updated_at`。数据库约束固定 `daily_count` 为 `0..200`、`lifetime_count` 为 `0..20000` 且每日次数不得大于生命周期次数。每日日期只使用 `identity.utc_day()`；读接口遇到旧日期时把当日已用次数呈现为 0，首次新上架尝试在用户配额行锁内把日期更新为当前日期并把每日次数归零。
 
-`api.market_create_listing` 对新 operation 保持以下顺序：`operations.begin_command` 先处理旧 key 回放和通用准入；旧 key 完成结果立即返回；新 key 在进入业务异常捕获块前调用 `market.lock_listing_quota`，锁定用户配额行并按“生命周期优先、每日其次”检查余量。超限错误发生在业务捕获块之外，使本次数据库语句整体回滚，不能留下新的 operation。通过预检查后，现有用户级市场 advisory lock、十种模板上限、价格和库存裁决继续保持原顺序。
+`api.market_create_listing` 对新 operation 保持以下顺序：`operations.begin_command` 先处理旧 key 回放和通用准入；旧 key 完成结果立即返回；新 key 在进入业务异常捕获块前调用 `market.lock_listing_quota`，锁定用户配额行并按“生命周期优先、每日其次”检查余量。超限错误发生在业务捕获块之外，使本次数据库语句整体回滚，不能留下新的 operation。通过预检查后，现有用户级市场 advisory lock、三十种模板上限、价格和库存裁决继续保持原顺序。
 
 `market.listings` 的 `BEFORE INSERT` 行级 trigger 是最终消耗边界。trigger 再调用同一配额锁定函数，并在插入挂单的同一事务内把每日和生命周期计数各加一。API 已持有的行锁可在同一事务中安全复用；任何并发新上架必须等待该行，最后一个名额只能被一个事务消耗。trigger 也覆盖未来其他受控服务端插入路径。挂单插入后的 reservation、任务进度或其他业务步骤失败时，PL/pgSQL 子事务同时回滚挂单和计数，operation 按既有失败语义完成；配额拒绝本身不创建失败 operation。
 
@@ -25,6 +25,6 @@
 
 ## 验收
 
-数据库影响域验证必须覆盖第 200/201 次每日边界、UTC 跨日重置、第 20,000/20,001 次生命周期边界、两项同时达到时的错误优先级、相同幂等键回放、同键异请求、并发争抢最后一个名额、模板/数量/库存/十种模板失败不计数、下架和成交不增减、失败事务连同计数回滚，以及应用角色不能直接访问配额对象。配额拒绝必须没有新增 operation、listing 或 reservation。
+数据库影响域验证必须覆盖第 200/201 次每日边界、UTC 跨日重置、第 20,000/20,001 次生命周期边界、两项同时达到时的错误优先级、相同幂等键回放、同键异请求、并发争抢最后一个名额、模板/数量/库存/三十种模板失败不计数、下架和成交不增减、失败事务连同计数回滚，以及应用角色不能直接访问配额对象。配额拒绝必须没有新增 operation、listing 或 reservation。
 
 契约、OpenAPI、Web、声明式 Schema、原始 baseline、架构静态门禁、事务与安全文档、验收与事故恢复文档必须在同一提交一致更新。真实 Telegram Mini App 验证出售页配额、立即禁用、两条业务化错误、成功后的权威刷新和单次请求；Safari Web Inspector 不得出现数据库、服务器、请求、operation 或其他后端处理文案。

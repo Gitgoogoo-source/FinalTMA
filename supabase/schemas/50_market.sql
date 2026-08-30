@@ -481,7 +481,7 @@ begin
       'lifetime_limit', 20000,
       'lifetime_remaining', 20000 - v_lifetime_used
     ),
-    'max_active_templates', 10,
+    'max_active_templates', 30,
     'fee_bps', 500,
     'vip_rebate_bps', 2000
   );
@@ -633,11 +633,11 @@ begin
     select count(*) into v_active_count
     from market.seller_template_supply
     where seller_id = v_user_id;
-    if v_active_count >= 10 and not exists (
+    if v_active_count >= 30 and not exists (
       select 1 from market.seller_template_supply
       where seller_id = v_user_id and template_id = p_template_id
     ) then
-      perform api.raise_business_error('MARKET_ACTIVE_TEMPLATE_LIMIT', '最多同时出售 10 种藏品，请先售罄或下架一种藏品');
+      perform api.raise_business_error('MARKET_ACTIVE_TEMPLATE_LIMIT', '最多同时出售 30 种藏品，请先售罄或下架一种藏品');
     end if;
     insert into market.seller_sale_sequences (seller_id)
     values (v_user_id)

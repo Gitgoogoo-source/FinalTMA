@@ -283,7 +283,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
           listingQuota.daily_remaining <= 0)
       )
         return;
-      const limit = sellable.data?.max_active_templates ?? 10;
+      const limit = sellable.data?.max_active_templates ?? 30;
       if (
         mine.data &&
         activeTemplateIds.size >= limit &&

@@ -262,7 +262,7 @@ export const errorRegistry = {
   JOB_NOT_FOUND: error(404, "后台任务不存在"),
   MARKET_ACTIVE_TEMPLATE_LIMIT: error(
     409,
-    "最多同时出售 10 种藏品，请先售罄或下架一种藏品",
+    "最多同时出售 30 种藏品，请先售罄或下架一种藏品",
     false,
     "inventory",
     "refresh",
