@@ -63,6 +63,115 @@ def rendered_baseline() -> str:
     return "".join(sections)
 
 
+def sql_function(source: str, name: str) -> str:
+    matches = re.findall(
+        rf"create or replace function {re.escape(name)}\(.*?\n\$\$;",
+        source,
+        re.DOTALL | re.IGNORECASE,
+    )
+    if len(matches) != 1:
+        raise SystemExit(f"Expected exactly one {name} definition")
+    return matches[0].lower()
+
+
+def verify_battle_operation_admission_contract() -> None:
+    operations_sql = (SCHEMAS / "30_operations.sql").read_text(encoding="utf-8")
+    battle_sql = (SCHEMAS / "44_battle.sql").read_text(encoding="utf-8")
+    admission = sql_function(
+        operations_sql, "operations.admit_new_command"
+    )
+    if re.search(r"\breturn\s*;", admission):
+        raise SystemExit("Generic operation admission cannot contain an early return")
+    if (
+        admission.count("p_use_case") != 2
+        or admission.count("use_case") != 3
+        or "if p_use_case = 'inventory.evolve' and exists (" not in admission
+        or "and o.use_case = 'inventory.evolve'" not in admission
+    ):
+        raise SystemExit(
+            "Operation admission may branch by use case only for the inventory "
+            "evolution acknowledgement guard"
+        )
+    operations_lower = operations_sql.lower()
+    for index_name in ("operations_open_user_idx", "operations_failed_user_idx"):
+        index_definitions = re.findall(
+            rf"create index {index_name}\b.*?;", operations_lower, re.DOTALL
+        )
+        if len(index_definitions) != 1 or "use_case" in index_definitions[0]:
+            raise SystemExit(
+                f"{index_name} must use the generic status predicate without a "
+                "use-case exclusion"
+            )
+    admission_order = [
+        admission.find("pg_advisory_xact_lock(hashtextextended('operations.admission:'"),
+        admission.find("insert into operations.user_admission_counters"),
+        admission.find("status = 'failed'"),
+        admission.find("status in ('pending', 'unknown')"),
+        admission.find("update operations.user_admission_counters"),
+    ]
+    if (
+        any(position < 0 for position in admission_order)
+        or admission_order != sorted(admission_order)
+    ):
+        raise SystemExit("Generic operation admission lock and capacity order is incomplete")
+
+    rpc_contracts = {
+        "api.battle_prepare_room": (
+            "battle.create",
+            "perform battle.consume_rate_limit(v_user_id, 'create');",
+        ),
+        "api.battle_cancel_room": ("battle.cancel", None),
+        "api.battle_accept_room": (
+            "battle.accept",
+            "perform battle.consume_rate_limit(v_operation.user_id, 'accept', v_invite_hash);",
+        ),
+        "api.battle_matchmake": (
+            "battle.matchmake",
+            "perform battle.consume_rate_limit(v_operation.user_id, 'matchmake');",
+        ),
+        "api.battle_submit_action": (
+            "battle.action",
+            "perform battle.consume_rate_limit(v_operation.user_id, 'combat_action');",
+        ),
+    }
+    for rpc_name, (use_case, limiter) in rpc_contracts.items():
+        function = sql_function(battle_sql, rpc_name)
+        begin_matches = list(
+            re.finditer(
+                rf"operations\.begin_command\(\s*p_session_id\s*,\s*'{re.escape(use_case)}'\s*,",
+                function,
+            )
+        )
+        if len(begin_matches) != 1:
+            raise SystemExit(
+                f"{rpc_name} must reserve exactly one {use_case} operation"
+            )
+        begin_command = begin_matches[0].start()
+        if (
+            "for update" in function[:begin_command]
+            or "pg_advisory_xact_lock" in function[:begin_command]
+        ):
+            raise SystemExit(
+                f"{rpc_name} cannot acquire row or advisory locks before operation admission"
+            )
+        replay = function.find("operations.replay_if_finished", begin_command)
+        business_block = function.find("\n  begin\n", replay)
+        if replay < 0 or business_block < 0:
+            raise SystemExit(
+                f"{rpc_name} must replay before its business transaction block"
+            )
+        limiter_calls = function.count("perform battle.consume_rate_limit(")
+        if limiter is None:
+            if limiter_calls:
+                raise SystemExit(
+                    f"{rpc_name} cannot add an independent cancel action limit"
+                )
+        elif limiter_calls != 1 or function.find(limiter) <= business_block:
+            raise SystemExit(
+                f"{rpc_name} action limit must occur once after replay inside its business block"
+            )
+
+
 def verify_security(path: Path) -> None:
     sql = path.read_text(encoding="utf-8").lower()
     required = (
@@ -173,6 +282,8 @@ def verify_database_boundaries() -> None:
         "create table operations.user_admission_counters",
         "create or replace function operations.assert_new_operation_id",
         "create or replace function operations.admit_new_command",
+        "create index operations_open_user_idx",
+        "create index operations_failed_user_idx",
         "perform operations.assert_new_operation_id(p_operation_id)",
         "perform operations.admit_new_command(v_user_id, p_use_case)",
         "result = operations.strip_pet_urls(p_result)",
@@ -193,6 +304,20 @@ def verify_database_boundaries() -> None:
     missing = [fragment for fragment in operations_required if fragment not in operations_sql]
     if missing:
         raise SystemExit(f"Operation pet URL presentation boundary is incomplete: {missing}")
+    forbidden_operation_bypasses = (
+        "if p_use_case like 'battle.%' then",
+        "use_case not like 'battle.%'",
+        "operations_non_battle_open_user_idx",
+        "operations_non_battle_failed_user_idx",
+    )
+    present_bypasses = [
+        fragment for fragment in forbidden_operation_bypasses if fragment in operations_sql
+    ]
+    if present_bypasses:
+        raise SystemExit(
+            "Operation admission must include Battle in every generic capacity limit: "
+            f"{present_bypasses}"
+        )
 
     jobs_sql = (SCHEMAS / "95_jobs.sql").read_text(encoding="utf-8").lower()
     jobs_required = (
@@ -1105,6 +1230,7 @@ def main() -> None:
     verify_security(security)
     verify_database_error_codes()
     verify_database_boundaries()
+    verify_battle_operation_admission_contract()
     verify_evolution_recovery_contract()
     verify_inventory_read_model()
     verify_market_listing_quota_contract()

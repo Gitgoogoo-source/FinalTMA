@@ -11,7 +11,7 @@ operation 同时承担命令幂等、未知结果恢复、权威状态追赶与�
 
 浏览器使用 Web Crypto 生成 RFC 9562 UUIDv7，全部幂等 HTTP 路由只接受规范小写 UUIDv7。`operations.begin_command` 固定按以下顺序执行：验证会话；按 operation ID 取得事务 advisory lock；查询并锁定旧记录；旧记录同请求直接回放、不同请求拒绝；只有不存在旧记录时才验证 UUIDv7 时间、执行用户准入并插入。新 key 的时间不得早于数据库当前时间 24 小时，也不得晚于当前时间 5 分钟。旧记录查询在新鲜度校验之前，因此同 key 重试不计入新请求配额，并可在记录仍保留时继续回放。
 
-非 Battle 新 operation 采用一行一个用户的固定容量计数器与当前 operation 状态共同裁决：每 60 秒最多 60 个新 key，每 24 小时最多 1000 个新 key，最近 24 小时最多 100 个失败终态，同时最多 20 个 `pending/unknown`。用户级事务 advisory lock 串行执行计数、状态统计和插入；任一上限命中均在插入前返回 `RATE_LIMITED`。失败与未决统计使用与谓词一致的部分索引。Battle 命令不进入该通用配额，继续由 Battle 规则中的动作级、房间级和账号级限流裁决；所有 operation 仍必须使用 UUIDv7。
+全部新 operation 采用一行一个用户的固定容量计数器与当前 operation 状态共同裁决：每 60 秒最多 60 个新 key，每 24 小时最多 1000 个新 key，最近 24 小时最多 100 个失败终态，同时最多 20 个 `pending/unknown`。用户级事务 advisory lock 串行执行计数、状态统计和插入；任一上限命中均在插入前返回 `RATE_LIMITED`。失败与未决统计及其部分索引覆盖所有 use case，包括 `battle.create`、`battle.matchmake`、`battle.cancel`、`battle.accept` 和 `battle.action`。Battle 规则中的动作级、房间级和账号级限制继续叠加执行，不替代通用 operation 准入；heartbeat/offline 不创建 operation，因此只受 Battle 自身边界约束。
 
 `inventory.evolve` 在通用准入之外固定每位用户最多一条阻塞记录：`pending/unknown` 或尚未确认的 `succeeded/failed` 都占用同一槽位。新 key 在旧 key 回放后、operation 插入前严格验证模板 ID 形状与数量的 bigint、正数、3 的倍数边界，再在同一用户锁内检查槽位；槽位已占用时返回该路由专用的 `ACK_REQUIRED` 且零 operation 副作用。条件唯一索引防止任何并发或内部路径制造第二条记录，确认 RPC 使用同一用户锁线性化释放槽位。
 
@@ -27,6 +27,6 @@ operation 同时承担命令幂等、未知结果恢复、权威状态追赶与�
 
 ## 验收
 
-静态门禁证明 UUIDv7 版本位与 variant 位、API Schema、数据库新鲜度、回放先于准入、四项非 Battle 上限、Battle 独立限流、引用清单完整、7/30/37 天边界、5000 条批次和 `SKIP LOCKED` 均存在。数据库影响域验证覆盖同 key 同请求不计数、同 key 不同请求拒绝、UUIDv4/过旧/未来越界拒绝、各上限边界、并发同 key 只插入一行、清理引用保护、无引用删除及删除后不可重放。真实 Telegram Mini App 只验证用户动作仍能得到原业务结果、限流只显示既有业务化反馈、网络未知继续查询原 operation；不得在玩家界面显示 operation、数据库、请求或清理细节。
+静态门禁证明 UUIDv7 版本位与 variant 位、API Schema、数据库新鲜度、回放先于准入、四项通用上限覆盖 Battle、Battle 动作级限流继续叠加、引用清单完整、7/30/37 天边界、5000 条批次和 `SKIP LOCKED` 均存在，并明确拒绝任何 `battle.%` 提前返回或统计排除谓词。数据库影响域验证覆盖同 key 同请求不计数、同 key 不同请求拒绝、UUIDv4/过旧/未来越界拒绝、各上限边界、五个 Battle operation 入口、并发同 key 只插入一行、准入拒绝零 operation 副作用、清理引用保护、无引用删除及删除后不可重放。真实 Telegram Mini App 验证用户动作仍能得到原业务结果、限流只显示既有业务化反馈、网络未知继续查询原 operation；不得在玩家界面显示 operation、数据库、请求或清理细节。
 
 进化影响域还必须验证：格式或数量无效时零 operation；第一条阻塞记录存在时新 key 稳定拒绝且总数不变；旧 key 同请求仍回放、异请求仍拒绝；并发新建最多一条；确认与新建并发满足确认提交前拒绝、提交后允许；两个恢复读取和契约均最多返回一条进化且不丢失其他未决项；未确认结果跨清理窗口仍保留，确认后按既有周期清理。

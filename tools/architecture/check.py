@@ -223,6 +223,7 @@ def main() -> None:
     verify_battle_legacy_removal()
     verify_battle_session_rollover_authority_gate()
     verify_battle_terminal_refresh_semantics()
+    verify_battle_operation_admission()
     verify_battle_accept_operation_ordering()
     verify_battle_countdown_lock_semantics()
     verify_battle_switch_atomicity()
@@ -1827,7 +1828,8 @@ def verify_security_finding_closures() -> None:
         "v_counter.day_count >= 1000",
         "v_failed_count >= 100",
         "v_open_count >= 20",
-        "if p_use_case like 'battle.%' then",
+        "create index operations_open_user_idx",
+        "create index operations_failed_user_idx",
         "pg_advisory_xact_lock(hashtextextended('operations.command:'",
         "create unique index operations_one_blocking_evolution_per_user_idx",
         "where use_case = 'inventory.evolve' and result_acknowledged_at is null",
@@ -1837,6 +1839,15 @@ def verify_security_finding_closures() -> None:
         "mod(v_evolution_quantity, 3) <> 0",
     )
     missing = [term for term in operation_required if term not in operations]
+    forbidden_operation_bypasses = (
+        "if p_use_case like 'battle.%' then",
+        "use_case not like 'battle.%'",
+        "operations_non_battle_open_user_idx",
+        "operations_non_battle_failed_user_idx",
+    )
+    present_bypasses = [
+        term for term in forbidden_operation_bypasses if term in operations
+    ]
     begin_command = operations[operations.index("create or replace function operations.begin_command") :]
     ordering = [
         begin_command.find("select * into v_operation"),
@@ -1845,10 +1856,17 @@ def verify_security_finding_closures() -> None:
         begin_command.find("perform operations.admit_new_command"),
         begin_command.find("insert into operations.operations"),
     ]
-    if missing or any(index < 0 for index in ordering) or ordering != sorted(ordering):
+    if (
+        missing
+        or present_bypasses
+        or any(index < 0 for index in ordering)
+        or ordering != sorted(ordering)
+    ):
         raise SystemExit(
-            "Operation admission must replay before UUIDv7 freshness, quota, and insert: "
-            f"missing={missing}, ordering={ordering}"
+            "Operation admission must cover Battle, preserve Battle action limits, and "
+            "replay before UUIDv7 freshness, quota, and insert: "
+            f"missing={missing}, bypasses={present_bypasses}, "
+            f"ordering={ordering}"
         )
     if "on conflict (id) do nothing" in begin_command.partition("$$;")[0]:
         raise SystemExit("Operation admission cannot count a racing same-key retry")
@@ -2505,6 +2523,183 @@ def verify_battle_terminal_refresh_semantics() -> None:
         raise SystemExit(detail or "Battle terminal refresh structure check failed")
 
 
+def verify_battle_operation_admission() -> None:
+    sources = {
+        relative(BATTLE_SCHEMA): (
+            (ROOT / "supabase/schemas/30_operations.sql").read_text(encoding="utf-8"),
+            BATTLE_SCHEMA.read_text(encoding="utf-8"),
+        ),
+        relative(BATTLE_BASELINE_MIGRATION): (
+            BATTLE_BASELINE_MIGRATION.read_text(encoding="utf-8"),
+            BATTLE_BASELINE_MIGRATION.read_text(encoding="utf-8"),
+        ),
+    }
+    for label, (operations_source, battle_source) in sources.items():
+        try:
+            verify_battle_operation_admission_source(
+                label, operations_source, battle_source
+            )
+        except ValueError as error:
+            raise SystemExit(str(error)) from error
+
+    label, (operations_source, battle_source) = next(iter(sources.items()))
+    admission = extract_sql_function(
+        label, operations_source, "operations.admit_new_command"
+    )
+    bypass_admission = admission.replace(
+        "begin\n",
+        "begin\n  if starts_with(p_use_case, 'battle.') then\n    return;\n  end if;\n",
+        1,
+    )
+    bypass_source = operations_source.replace(admission, bypass_admission, 1)
+    try:
+        verify_battle_operation_admission_source(
+            "in-memory equivalent Battle bypass", bypass_source, battle_source
+        )
+    except ValueError:
+        pass
+    else:
+        raise SystemExit("Battle admission checker accepted an equivalent early return")
+
+    create_limit = "perform battle.consume_rate_limit(v_user_id, 'create');"
+    missing_limit_source = battle_source.replace(create_limit, "perform 1;", 1)
+    try:
+        verify_battle_operation_admission_source(
+            "in-memory misplaced Battle action limit",
+            operations_source,
+            missing_limit_source,
+        )
+    except ValueError:
+        pass
+    else:
+        raise SystemExit("Battle admission checker accepted a missing create limit")
+
+    cancel = extract_sql_function(label, battle_source, "api.battle_cancel_room")
+    cancel_begin = re.search(
+        r"\n  v_operation := operations\.begin_command\(.*?\n  \);\n",
+        cancel,
+        re.DOTALL,
+    )
+    if cancel_begin is None:
+        raise SystemExit("Battle admission self-test cannot locate cancel begin_command")
+    missing_begin_source = battle_source.replace(
+        cancel,
+        cancel.replace(cancel_begin.group(), "\n", 1),
+        1,
+    )
+    try:
+        verify_battle_operation_admission_source(
+            "in-memory missing Battle begin_command",
+            operations_source,
+            missing_begin_source,
+        )
+    except ValueError:
+        pass
+    else:
+        raise SystemExit("Battle admission checker accepted a missing begin_command")
+
+
+def verify_battle_operation_admission_source(
+    label: str, operations_source: str, battle_source: str
+) -> None:
+    admission = extract_sql_function(
+        label, operations_source, "operations.admit_new_command"
+    ).lower()
+    if re.search(r"\breturn\s*;", admission):
+        raise ValueError(f"{label}: generic operation admission cannot return early")
+    if (
+        admission.count("p_use_case") != 2
+        or admission.count("use_case") != 3
+        or "if p_use_case = 'inventory.evolve' and exists (" not in admission
+        or "and o.use_case = 'inventory.evolve'" not in admission
+    ):
+        raise ValueError(
+            f"{label}: operation admission use-case branching is not the single "
+            "inventory evolution acknowledgement guard"
+        )
+    operations_lower = operations_source.lower()
+    for index_name in ("operations_open_user_idx", "operations_failed_user_idx"):
+        index_definitions = re.findall(
+            rf"create index {index_name}\b.*?;", operations_lower, re.DOTALL
+        )
+        if len(index_definitions) != 1 or "use_case" in index_definitions[0]:
+            raise ValueError(
+                f"{label}: {index_name} must index the generic status predicate "
+                "without a use-case exclusion"
+            )
+    admission_order = [
+        admission.find("pg_advisory_xact_lock(hashtextextended('operations.admission:'"),
+        admission.find("insert into operations.user_admission_counters"),
+        admission.find("from operations.user_admission_counters"),
+        admission.find("status = 'failed'"),
+        admission.find("status in ('pending', 'unknown')"),
+        admission.find("update operations.user_admission_counters"),
+    ]
+    if (
+        any(position < 0 for position in admission_order)
+        or admission_order != sorted(admission_order)
+    ):
+        raise ValueError(f"{label}: generic operation admission order is incomplete")
+
+    rpc_contracts = {
+        "api.battle_prepare_room": (
+            "battle.create",
+            "perform battle.consume_rate_limit(v_user_id, 'create');",
+        ),
+        "api.battle_cancel_room": ("battle.cancel", None),
+        "api.battle_accept_room": (
+            "battle.accept",
+            "perform battle.consume_rate_limit(v_operation.user_id, 'accept', v_invite_hash);",
+        ),
+        "api.battle_matchmake": (
+            "battle.matchmake",
+            "perform battle.consume_rate_limit(v_operation.user_id, 'matchmake');",
+        ),
+        "api.battle_submit_action": (
+            "battle.action",
+            "perform battle.consume_rate_limit(v_operation.user_id, 'combat_action');",
+        ),
+    }
+    for rpc_name, (use_case, limiter) in rpc_contracts.items():
+        function = extract_sql_function(label, battle_source, rpc_name).lower()
+        begin_matches = list(
+            re.finditer(
+                rf"operations\.begin_command\(\s*p_session_id\s*,\s*'{re.escape(use_case)}'\s*,",
+                function,
+            )
+        )
+        if len(begin_matches) != 1:
+            raise ValueError(
+                f"{label}: {rpc_name} must reserve exactly one {use_case} operation"
+            )
+        begin_command = begin_matches[0].start()
+        pre_admission = function[:begin_command]
+        if "for update" in pre_admission or "pg_advisory_xact_lock" in pre_admission:
+            raise ValueError(
+                f"{label}: {rpc_name} cannot acquire row or advisory locks before "
+                "operation admission"
+            )
+        replay = function.find("operations.replay_if_finished", begin_command)
+        business_block = function.find("\n  begin\n", replay)
+        if replay < 0 or business_block < 0:
+            raise ValueError(
+                f"{label}: {rpc_name} must replay before its business transaction block"
+            )
+        limiter_calls = function.count("perform battle.consume_rate_limit(")
+        if limiter is None:
+            if limiter_calls != 0:
+                raise ValueError(
+                    f"{label}: {rpc_name} cannot invent a cancel-specific action limit"
+                )
+        else:
+            limiter_position = function.find(limiter)
+            if limiter_calls != 1 or limiter_position <= business_block:
+                raise ValueError(
+                    f"{label}: {rpc_name} action limit must occur once after replay "
+                    "inside its business block"
+                )
+
+
 def verify_battle_accept_operation_ordering() -> None:
     sources = {
         relative(BATTLE_SCHEMA): BATTLE_SCHEMA.read_text(encoding="utf-8"),
@@ -2517,34 +2712,49 @@ def verify_battle_accept_operation_ordering() -> None:
 
     label, source = next(iter(sources.items()))
     function = extract_battle_accept_function(label, source)
-    begin_command = re.search(
-        r"\n  v_operation := operations\.begin_command\(.*?\n  \);\n",
-        function,
-        re.DOTALL,
-    )
-    if begin_command is None:
-        raise SystemExit("Battle accept ordering self-test cannot locate begin_command")
-    negative_function = function.replace(begin_command.group(), "", 1).replace(
-        "  select s.battle_invite_token_hash into v_invite_hash\n",
-        begin_command.group().lstrip("\n")
-        + "  select s.battle_invite_token_hash into v_invite_hash\n",
+    unsafe_prelock_function = function.replace(
+        "    and s.revoked_at is null and s.expires_at > now();\n",
+        "    and s.revoked_at is null and s.expires_at > now()\n  for update;\n",
         1,
     )
-    negative_source = source.replace(function, negative_function, 1)
-    if negative_source == source:
-        raise SystemExit("Battle accept ordering negative variant did not mutate")
+    unsafe_prelock_source = source.replace(function, unsafe_prelock_function, 1)
+    if unsafe_prelock_source == source:
+        raise SystemExit("Battle accept pre-admission lock negative variant did not mutate")
     try:
-        verify_battle_accept_source("in-memory operation-before-self-guard", negative_source)
+        verify_battle_accept_source(
+            "in-memory accept pre-admission row lock", unsafe_prelock_source
+        )
     except ValueError as error:
-        if "before operation reserve" not in str(error):
+        if "before operation admission" not in str(error):
             raise SystemExit(
-                "Battle accept ordering negative variant failed for an unrelated reason: "
+                "Battle accept pre-admission lock variant failed for an unrelated reason: "
                 f"{error}"
             ) from error
     else:
-        raise SystemExit(
-            "Battle accept ordering checker accepted operation-before-self-guard"
+        raise SystemExit("Battle accept checker accepted a pre-admission row lock")
+
+    post_guard = re.search(
+        r"\n    if v_room\.creator_user_id = v_operation\.user_id then.*?\n    end if;\n",
+        function,
+        re.DOTALL,
+    )
+    if post_guard is None:
+        raise SystemExit("Battle accept ordering self-test cannot locate locked self guard")
+    missing_guard_source = source.replace(
+        function, function.replace(post_guard.group(), "\n", 1), 1
+    )
+    try:
+        verify_battle_accept_source(
+            "in-memory missing locked accept self guard", missing_guard_source
         )
+    except ValueError as error:
+        if "authoritative locked self guard" not in str(error):
+            raise SystemExit(
+                "Battle accept locked self-guard variant failed for an unrelated reason: "
+                f"{error}"
+            ) from error
+    else:
+        raise SystemExit("Battle accept checker accepted a missing locked self guard")
 
 
 def extract_battle_accept_function(label: str, source: str) -> str:
@@ -2562,49 +2772,85 @@ def verify_battle_accept_source(label: str, source: str) -> None:
     session_user = normalized.find(
         "v_user_id uuid := api.session_user(p_session_id);"
     )
-    session_lock = normalized.find(
+    pre_session_read = normalized.find(
         "select s.battle_invite_token_hash into v_invite_hash "
         "from identity.sessions s where s.id = p_session_id "
         "and s.user_id = v_user_id and s.revoked_at is null "
-        "and s.expires_at > now() for update;"
+        "and s.expires_at > now();"
     )
-    room_lock = normalized.find(
+    pre_room_read = normalized.find(
         "select * into v_room from battle.rooms r "
         "where r.room_mode = 'friend_invite' "
-        "and r.invite_token_hash = v_invite_hash for update;"
+        "and r.invite_token_hash = v_invite_hash;"
     )
-    self_guard = BATTLE_ACCEPT_SELF_GUARD_PATTERN.search(function)
+    pre_self_guard = BATTLE_ACCEPT_SELF_GUARD_PATTERN.search(function)
     begin_command = normalized.find("v_operation := operations.begin_command(")
+    replay = normalized.find("v_replay := operations.replay_if_finished", begin_command)
+    inner_session_lock = normalized.find(
+        "select s.battle_invite_token_hash into v_invite_hash "
+        "from identity.sessions s where s.id = p_session_id "
+        "and s.user_id = v_operation.user_id and s.revoked_at is null "
+        "and s.expires_at > now() for update;",
+        replay,
+    )
+    inner_room_lock = normalized.find(
+        "select * into v_room from battle.rooms r "
+        "where r.room_mode = 'friend_invite' "
+        "and r.invite_token_hash = v_invite_hash for update;",
+        inner_session_lock,
+    )
+    locked_self_guard = normalized.find(
+        "if v_room.creator_user_id = v_operation.user_id then "
+        "perform api.raise_business_error( "
+        "'BATTLE_SELF_ACCEPT_FORBIDDEN', '不能接受自己创建的挑战' ); end if;",
+        inner_room_lock,
+    )
     rate_limit = normalized.find(
         "perform battle.consume_rate_limit(v_operation.user_id, 'accept', v_invite_hash);"
     )
+    if begin_command >= 0:
+        pre_admission = normalized[:begin_command]
+        if "for update" in pre_admission or "pg_advisory_xact_lock" in pre_admission:
+            raise ValueError(
+                f"{label}: Battle accept cannot acquire locks before operation admission"
+            )
     if (
         session_user < 0
-        or session_lock < 0
-        or room_lock < 0
-        or self_guard is None
+        or pre_session_read < 0
+        or pre_room_read < 0
+        or pre_self_guard is None
         or begin_command < 0
+        or replay < 0
+        or inner_session_lock < 0
+        or inner_room_lock < 0
+        or locked_self_guard < 0
         or rate_limit < 0
     ):
         raise ValueError(
-            f"{label}: Battle accept trusted self guard structure is incomplete"
+            f"{label}: Battle accept authoritative locked self guard structure is incomplete"
         )
-    normalized_self_guard = len(re.sub(r"\s+", " ", function[: self_guard.start()]))
+    normalized_pre_self_guard = len(
+        re.sub(r"\s+", " ", function[: pre_self_guard.start()])
+    )
     if not (
         session_user
-        < session_lock
-        < room_lock
-        < normalized_self_guard
+        < pre_session_read
+        < pre_room_read
+        < normalized_pre_self_guard
         < begin_command
+        < replay
+        < inner_session_lock
+        < inner_room_lock
+        < locked_self_guard
         < rate_limit
     ):
         raise ValueError(
-            f"{label}: Battle valid-self guard must run before operation reserve "
-            "and accept rate-limit writes"
+            f"{label}: Battle accept must use a non-locking fast self guard, then "
+            "operation admission, replay, authoritative locks, self guard, and limit"
         )
-    if function.count("BATTLE_SELF_ACCEPT_FORBIDDEN") != 1:
+    if function.count("BATTLE_SELF_ACCEPT_FORBIDDEN") != 2:
         raise ValueError(
-            f"{label}: Battle accept must have exactly one pre-operation self guard"
+            f"{label}: Battle accept must have one fast and one authoritative self guard"
         )
 
 

@@ -3605,13 +3605,11 @@ begin
   select s.battle_invite_token_hash into v_invite_hash
   from identity.sessions s
   where s.id = p_session_id and s.user_id = v_user_id
-    and s.revoked_at is null and s.expires_at > now()
-  for update;
+    and s.revoked_at is null and s.expires_at > now();
   select * into v_room
   from battle.rooms r
   where r.room_mode = 'friend_invite'
-    and r.invite_token_hash = v_invite_hash
-  for update;
+    and r.invite_token_hash = v_invite_hash;
   if v_room.status = 'waiting'
     and v_room.expires_at > now()
     and v_room.creator_user_id = v_user_id
@@ -3647,6 +3645,11 @@ begin
     for update;
     if v_room.id is null then
       perform api.raise_business_error('BATTLE_INVITE_INVALID', 'Battle 邀请无效');
+    end if;
+    if v_room.creator_user_id = v_operation.user_id then
+      perform api.raise_business_error(
+        'BATTLE_SELF_ACCEPT_FORBIDDEN', '不能接受自己创建的挑战'
+      );
     end if;
     perform battle.consume_rate_limit(v_operation.user_id, 'accept', v_invite_hash);
     select * into v_creator

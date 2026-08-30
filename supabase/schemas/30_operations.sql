@@ -57,12 +57,12 @@ create table operations.operations (
 
 create index operations_user_created_idx on operations.operations (user_id, created_at desc);
 create index operations_pending_idx on operations.operations (created_at) where status in ('pending', 'unknown');
-create index operations_non_battle_open_user_idx
+create index operations_open_user_idx
 on operations.operations (user_id, created_at, id)
-where status in ('pending', 'unknown') and use_case not like 'battle.%';
-create index operations_non_battle_failed_user_idx
+where status in ('pending', 'unknown');
+create index operations_failed_user_idx
 on operations.operations (user_id, completed_at desc)
-where status = 'failed' and use_case not like 'battle.%';
+where status = 'failed';
 create unique index operations_user_authority_sequence_idx
 on operations.operations (user_id, authority_sequence)
 where authority_sequence is not null;
@@ -142,10 +142,6 @@ declare
   v_open_count integer;
   v_now timestamptz := clock_timestamp();
 begin
-  if p_use_case like 'battle.%' then
-    return;
-  end if;
-
   perform pg_advisory_xact_lock(hashtextextended('operations.admission:' || p_user_id::text, 0));
   insert into operations.user_admission_counters (
     user_id, minute_window_started_at, day_window_started_at
@@ -184,7 +180,6 @@ begin
   select count(*)::integer into v_failed_count
   from operations.operations
   where user_id = p_user_id
-    and use_case not like 'battle.%'
     and status = 'failed'
     and completed_at >= v_now - interval '24 hours';
   if v_failed_count >= 100 then
@@ -194,7 +189,6 @@ begin
   select count(*)::integer into v_open_count
   from operations.operations
   where user_id = p_user_id
-    and use_case not like 'battle.%'
     and status in ('pending', 'unknown');
   if v_open_count >= 20 then
     perform api.raise_business_error('RATE_LIMITED', '操作过于频繁，请稍后重试');

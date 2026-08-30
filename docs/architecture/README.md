@@ -25,6 +25,7 @@ ec8d89aec0a700bfb504285401bf6327ed2a4c48c94d4d8bb92559bdae2ee61e
 - Tg.app：目录打开链接附带的精确 `listed_on_tg_app` 来源值在 Telegram `initData` 验签后折叠为现有 `direct`，不创建渠道入口类型、邀请候选、邀请奖励或 Battle 状态；其他未知参数继续拒绝，完整边界见 [ADR-090](adr/ADR-090-tgapp-catalog-source-entry.md)。
 - 市场购买：单次数量固定为 `1..100`，普通购买与充值补差共用契约；数据库在任何挂单锁前复核上限，同模板串行后只锁定最多 100 条 FIFO 原始挂单并仅结算该候选集合，完整边界见 [ADR-097](adr/ADR-097-market-bounded-purchase-settlement.md)。
 - Telegram SDK：入口只加载官方当前 `telegram-web-app.js?63`，使用批准的 SHA-384 SRI 与匿名 CORS，失败时关闭认证且没有未固定回退；URL、字节哈希、静态门禁与真实 WebView 验收按 [ADR-098](adr/ADR-098-telegram-sdk-subresource-integrity.md) 同步升级。
+- Battle operation 准入：创建、随机匹配、取消、接受和行动与其他幂等命令共用四项用户容量上限，既有 Battle 动作级限流继续叠加，完整边界见 [ADR-099](adr/ADR-099-battle-operation-admission.md)。
 - 按钮音效：文字、图标、底部导航、页签、弹窗与按钮式卡片在可信主指针按下时，通过单份预解码 Web Audio 缓冲立即播放同一短音；原始 MP3 只保留为母版，运行时使用去除前导与尾部静音的 PCM WAV，键盘与辅助功能由可信 `click` 后备且同一次指针操作不得重播。禁用控件和普通游戏画面按压静默，音效失败不阻塞按钮动作，完整边界见 [ADR-092](adr/ADR-092-low-latency-button-press-audio.md)。
 - Battle 行动时限：数据库继续裁决完整 15 秒；响应使用实际构造时刻，Web 在倒计时归零后同步关闭操作并阻止新 action POST，预截止在途请求继续由数据库裁决，`BATTLE_STATE_CONFLICT` 不重提动作且只合并读取一次权威状态，完整边界见 [ADR-094](adr/ADR-094-battle-action-deadline-client-gating.md)。
 
@@ -93,7 +94,7 @@ Telegram 发现页和公开信息按 [ADR-088](adr/ADR-088-telegram-discovery-pr
 
 市场购买按 [ADR-030](adr/ADR-030-market-purchase-inline-progress.md) 在未决阶段只保留确认弹窗内的“购买中”按钮状态，不显示全局操作状态；当前前台运行期的权威刷新完成后才显示不含服务器、请求和 operation ID 的专用购买结果。离开前台后只恢复原 operation 与权威状态，不恢复旧购买结果弹窗。成功上架按 [ADR-060](adr/ADR-060-market-listing-quota.md) 在数据库挂单插入事务内原子消耗 UTC 每日 200 次与账号生命周期 20,000 次配额；失败、回放、下架和成交不改变计数，任一配额用尽时出售页立即禁用且服务端继续权威拒绝。
 
-operation 准入与保留按 [ADR-059](adr/ADR-059-bounded-operation-admission-and-retention.md) 固定：所有幂等命令使用 UUIDv7，旧 key 回放不计入新请求配额；非 Battle 新 key 有用户级四项上限。无业务引用的失败/成功终态分别在 7/37 天删除，被业务事实引用的终态在 30 天后只保留最小锚点。
+operation 准入与保留按 [ADR-059](adr/ADR-059-bounded-operation-admission-and-retention.md) 与 [ADR-099](adr/ADR-099-battle-operation-admission.md) 固定：所有幂等命令使用 UUIDv7，旧 key 回放不计入新请求配额；全部 use case 的新 key 聚合进入用户级四项上限，Battle 动作级限流继续叠加。无业务引用的失败/成功终态分别在 7/37 天删除，被业务事实引用的终态在 30 天后只保留最小锚点。
 
 ## 生成物
 
@@ -204,3 +205,4 @@ operation 准入与保留按 [ADR-059](adr/ADR-059-bounded-operation-admission-a
 - [Battle 会话换代权威恢复门禁](adr/ADR-096-battle-session-rollover-authority-gate.md)
 - [市场单次购买上限与有界 FIFO 结算](adr/ADR-097-market-bounded-purchase-settlement.md)
 - [Telegram 官方 SDK 子资源完整性与受控升级](adr/ADR-098-telegram-sdk-subresource-integrity.md)
+- [Battle operation 通用准入与动作限流叠加](adr/ADR-099-battle-operation-admission.md)

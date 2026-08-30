@@ -5,7 +5,7 @@
 
 ## 背景
 
-市场每次成功上架都会创建独立 FIFO `market.listings`、`inventory.reservations` 和幂等 operation。全部下架只把挂单与 reservation 终态化并释放藏品，玩家可以持有一份可出售藏品后反复上架和下架。十种在售模板上限只约束同时在售种类；ADR-059 的通用 operation 准入约束所有非 Battle 新 key，但既不只统计成功上架，也没有市场账号生命周期上限，因此两者都不能阻止单账号无限积累市场历史。
+市场每次成功上架都会创建独立 FIFO `market.listings`、`inventory.reservations` 和幂等 operation。全部下架只把挂单与 reservation 终态化并释放藏品，玩家可以持有一份可出售藏品后反复上架和下架。十种在售模板上限只约束同时在售种类；ADR-059 的通用 operation 准入约束全部新 key，但既不只统计成功上架，也没有市场账号生命周期上限，因此两者都不能阻止单账号无限积累市场历史。
 
 ## 决策
 

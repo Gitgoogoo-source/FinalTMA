@@ -4,7 +4,7 @@
 
 前端不得直接访问数据库。读取使用具名查询 RPC，写入使用具名命令 RPC。玩家 RPC 接收 `session_id` 并在数据库内重新验证身份、账号、归属和前置条件。
 
-创建 operation 的玩家命令使用同一个客户端 UUIDv7 作为幂等键与 `operation_id`。数据库先按 key 取得事务 advisory lock并查询旧记录；旧记录同请求回放且不占新请求配额，不同请求固定拒绝。只有 key 不存在时才校验版本与时间：不得早于 24 小时，也不得晚于当前时间 5 分钟。随后非 Battle 命令按用户锁执行每 60 秒最多 60 个、每 24 小时最多 1000 个新 key、最近 24 小时最多 100 个失败终态、同时最多 20 个 `pending/unknown` 的固定上限；拒绝发生在 operation 插入前。Battle 保留自身独立限流。数据库从真实 RPC 参数构造规范化请求并计算 SHA-256。每个 operation 首次进入 `succeeded` 或 `failed` 时，行触发器在同一业务事务内锁定用户权威序号行、递增序号并写回 operation；业务事务回滚时序号同步回滚。
+创建 operation 的玩家命令使用同一个客户端 UUIDv7 作为幂等键与 `operation_id`。数据库先按 key 取得事务 advisory lock并查询旧记录；旧记录同请求回放且不占新请求配额，不同请求固定拒绝。只有 key 不存在时才校验版本与时间：不得早于 24 小时，也不得晚于当前时间 5 分钟。随后全部新 operation 按用户锁执行每 60 秒最多 60 个、每 24 小时最多 1000 个新 key、最近 24 小时最多 100 个失败终态、同时最多 20 个 `pending/unknown` 的固定上限；拒绝发生在 operation 插入前。Battle 的动作级限流继续叠加执行，不替代通用准入。数据库从真实 RPC 参数构造规范化请求并计算 SHA-256。每个 operation 首次进入 `succeeded` 或 `failed` 时，行触发器在同一业务事务内锁定用户权威序号行、递增序号并写回 operation；业务事务回滚时序号同步回滚。
 
 市场成功上架另按 [ADR-060](ADR-060-market-listing-quota.md) 使用独立用户行锁，固定 UTC 每日 200 次和账号生命周期 20,000 次。旧 operation 回放不重新检查或消耗配额；新 key 超限使本次 RPC 连同刚建立的 operation 一起回滚，真正插入挂单时再由 BEFORE INSERT trigger 原子消耗一次，失败事务不计数。
 
