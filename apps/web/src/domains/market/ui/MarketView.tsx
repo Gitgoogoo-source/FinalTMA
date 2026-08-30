@@ -23,6 +23,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { MARKET_PURCHASE_MAX_QUANTITY } from "@evomypet/api-contracts/app-client";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { useCatalogQuery } from "../../../platform/query/useCatalogQuery.ts";
@@ -414,7 +415,14 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
               );
               if (item && item.available > 0) {
                 setParams({});
-                submit(item, Math.min(item.available, requestedQuantity));
+                submit(
+                  item,
+                  Math.min(
+                    item.available,
+                    MARKET_PURCHASE_MAX_QUANTITY,
+                    requestedQuantity,
+                  ),
+                );
               }
             }}
           >
@@ -1265,6 +1273,7 @@ function MarketCard({
   const [confirming, setConfirming] = useState(false);
   const [purchaseSubmitted, setPurchaseSubmitted] = useState(false);
   const available = item.available;
+  const purchaseLimit = Math.min(available, MARKET_PURCHASE_MAX_QUANTITY);
   const price = item.unit_price;
   const purchaseDialogOpen =
     confirming && (!purchaseSubmitted || purchaseInProgress);
@@ -1330,7 +1339,10 @@ function MarketCard({
       )}
       <Button
         disabled={
-          blocked || !imageReady || available < 1 || quantity > available
+          blocked ||
+          !imageReady ||
+          available < 1 ||
+          quantity > (tab === "buy" ? purchaseLimit : available)
         }
         onPointerDown={() =>
           onPrepare(tab === "buy" ? "market.purchase" : "market.create_listing")
@@ -1400,15 +1412,20 @@ function MarketCard({
                 <strong>{quantity}</strong>
                 <Button
                   aria-label={t("增加购买数量")}
-                  disabled={purchaseInProgress}
+                  disabled={purchaseInProgress || quantity >= purchaseLimit}
                   onClick={() =>
-                    setQuantity((value) => Math.min(available, value + 1))
+                    setQuantity((value) => Math.min(purchaseLimit, value + 1))
                   }
                 >
                   ＋
                 </Button>
               </div>
             </div>
+            {available > MARKET_PURCHASE_MAX_QUANTITY && (
+              <p className="market-purchase-limit">
+                {tp("单次最多购买 {{0}} 个", [MARKET_PURCHASE_MAX_QUANTITY])}
+              </p>
+            )}
             <div className="market-purchase-totals">
               <span>
                 {t("预计总价")}
@@ -1428,7 +1445,7 @@ function MarketCard({
             )}
             <Button
               className={`market-purchase-submit${purchaseInProgress ? " is-pending" : ""}`}
-              disabled={blocked || quantity > available}
+              disabled={blocked || quantity > purchaseLimit}
               aria-busy={purchaseInProgress}
               aria-live="polite"
               onPointerDown={() => onPrepare("market.purchase")}

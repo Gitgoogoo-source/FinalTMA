@@ -171,6 +171,7 @@ declare
   v_stale payments.orders%rowtype;
   v_result jsonb;
   v_normalized_intent jsonb := coalesce(p_intent, '{}'::jsonb);
+  v_market_quantity bigint;
   v_detail text;
 begin
   v_operation := operations.begin_command(p_session_id, 'topup.create_order', p_operation_id, jsonb_strip_nulls(jsonb_build_object('mode', p_mode, 'amount', p_amount, 'intent', p_intent)));
@@ -211,10 +212,24 @@ begin
           select 1 from economy.entitlements where user_id = v_user_id and kind = case v_tier when 'normal' then 'free_normal_box' else 'free_rare_box' end and status = 'unused'
         ) then v_required := 0; end if;
       elsif p_intent->>'kind' = 'market' then
+        if jsonb_typeof(p_intent->'quantity') is distinct from 'number'
+           or (p_intent->>'quantity') !~ '^[1-9][0-9]{0,2}$'
+        then
+          perform api.raise_business_error('TOPUP_AMOUNT_INVALID', '市场补差意图无效');
+        end if;
+        v_market_quantity := (p_intent->>'quantity')::bigint;
+        if v_market_quantity > market.purchase_quantity_limit() then
+          perform api.raise_business_error('TOPUP_AMOUNT_INVALID', '市场补差意图无效');
+        end if;
+        v_count := v_market_quantity::integer;
         select * into v_template from catalog.templates where id = p_intent->>'template_id';
-        v_count := (p_intent->>'quantity')::integer;
-        if v_template.id is null or v_count <= 0 then perform api.raise_business_error('TOPUP_AMOUNT_INVALID', '市场补差意图无效'); end if;
+        if v_template.id is null then perform api.raise_business_error('TOPUP_AMOUNT_INVALID', '市场补差意图无效'); end if;
         v_required := v_template.market_price * v_count;
+        v_normalized_intent := jsonb_build_object(
+          'kind', 'market',
+          'template_id', v_template.id,
+          'quantity', v_count
+        );
       elsif p_intent->>'kind' = 'wheel' then
         v_count := (p_intent->>'count')::integer;
         if v_count not in (1, 10) then perform api.raise_business_error('TOPUP_AMOUNT_INVALID', '转盘补差意图无效'); end if;

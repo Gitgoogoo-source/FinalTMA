@@ -24,6 +24,7 @@ import type {
 } from "./domains/battle/models.ts";
 
 export { standardErrorSchema };
+export { MARKET_PURCHASE_MAX_QUANTITY } from "./domains/market/policy.ts";
 export type {
   AppRoute,
   ErrorCode,

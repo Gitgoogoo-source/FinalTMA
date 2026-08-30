@@ -13,6 +13,10 @@ import {
 } from "../../common/schemas.ts";
 import { inventoryItemSchema } from "../inventory/models.ts";
 import { vipStatusSchema } from "../vip/models.ts";
+import {
+  MARKET_PURCHASE_MAX_QUANTITY,
+  marketPurchaseQuantitySchema,
+} from "./policy.ts";
 
 const marketTemplateSchema = z
   .object({
@@ -68,7 +72,7 @@ const soldEventSchema = z
   .strict();
 const tradeDetailSchema = z
   .object({
-    quantity: z.number().int().positive(),
+    quantity: marketPurchaseQuantitySchema,
     unit_price: z.number().int().positive(),
     gross: z.number().int().positive(),
     fee: z.number().int().min(0),
@@ -199,17 +203,20 @@ export const marketRoutes = [
     input: z
       .object({
         template_id: identifierSchema,
-        quantity: z.number().int().positive(),
+        quantity: marketPurchaseQuantitySchema,
       })
       .strict(),
     output: z
       .object({
         trade_id: uuidSchema,
         template_id: z.string(),
-        quantity: z.number().int().positive(),
+        quantity: marketPurchaseQuantitySchema,
         unit_price: z.number().int().positive(),
         total_price: z.number().int().positive(),
-        details: z.array(tradeDetailSchema).min(1),
+        details: z
+          .array(tradeDetailSchema)
+          .min(1)
+          .max(MARKET_PURCHASE_MAX_QUANTITY),
         assets: assetsSchema,
       })
       .strict(),

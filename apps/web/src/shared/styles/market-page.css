@@ -856,6 +856,13 @@
   font-size: 9px;
   text-align: left;
 }
+
+.app-shell .market-purchase-limit {
+  margin: -2px 2px 0;
+  color: var(--muted);
+  font-size: 9px;
+  text-align: left;
+}
 .app-shell .market-sell-heading {
   min-height: 54px;
   display: flex;

@@ -7,32 +7,36 @@ import {
   uuidSchema,
 } from "../../common/schemas.ts";
 import { battleTeamSelectionSchema } from "../battle/bootstrap-models.ts";
+import { marketPurchaseQuantitySchema } from "../market/policy.ts";
+
+const oneOrTenSchema = z.union([z.literal(1), z.literal(10)]);
+const battleEntryTierSchema = z.enum(["tier-20", "tier-100", "tier-500"]);
 
 export const paymentIntentSchema = z.discriminatedUnion("kind", [
   z
     .object({
       kind: z.literal("gacha"),
       tier: boxTierSchema,
-      draw_count: z.union([z.literal(1), z.literal(10)]),
+      draw_count: oneOrTenSchema,
     })
     .strict(),
   z
     .object({
       kind: z.literal("market"),
       template_id: z.string().min(1),
-      quantity: z.number().int().positive(),
+      quantity: marketPurchaseQuantitySchema,
     })
     .strict(),
   z
     .object({
       kind: z.literal("wheel"),
-      count: z.union([z.literal(1), z.literal(10)]),
+      count: oneOrTenSchema,
     })
     .strict(),
   z
     .object({
       kind: z.literal("battle_create"),
-      tier: z.enum(["tier-20", "tier-100", "tier-500"]),
+      tier: battleEntryTierSchema,
       template_ids: battleTeamSelectionSchema,
     })
     .strict(),
@@ -46,7 +50,7 @@ export const paymentIntentSchema = z.discriminatedUnion("kind", [
   z
     .object({
       kind: z.literal("battle_matchmaking"),
-      tier: z.enum(["tier-20", "tier-100", "tier-500"]),
+      tier: battleEntryTierSchema,
       template_ids: battleTeamSelectionSchema,
     })
     .strict(),

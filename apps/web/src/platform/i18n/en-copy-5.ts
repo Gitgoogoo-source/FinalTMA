@@ -63,6 +63,7 @@ export const englishCopy5: Readonly<Record<string, string>> = {
   "已锁定入场费 {{0}} Stars": "Admission fee {{0}} Stars locked",
   "开启{{0}}？": "Turn on {{0}}?",
   "当前可买 {{0}} 个": "Currently {{0}} available for purchase",
+  "单次最多购买 {{0}} 个": "Purchase up to {{0}} at a time",
   "当前可用 {{0}}": "Currently available {{0}}",
   "当前可用 ×{{0}} · 每次使用 3 个": "Currently available ×{{0}} · 3 per use",
   "当前显示 {{0}} 件藏品": "Currently showing {{0}} collections",

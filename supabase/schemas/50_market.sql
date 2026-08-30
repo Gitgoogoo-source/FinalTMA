@@ -67,6 +67,18 @@ create index listings_fifo_idx on market.listings (template_id, created_at, id) 
 create index listings_seller_active_idx on market.listings (seller_id, template_id, created_at) where status = 'active';
 create index listings_operation_idx on market.listings (operation_id);
 
+create or replace function market.purchase_quantity_limit()
+returns bigint
+language sql
+immutable
+security invoker
+set search_path = ''
+as $$
+  select 100::bigint
+$$;
+
+revoke execute on function market.purchase_quantity_limit() from public, anon, authenticated, service_role;
+
 create or replace function market.consume_listing_quota()
 returns trigger
 language plpgsql
@@ -715,6 +727,7 @@ declare
   v_user_id uuid;
   v_template catalog.templates%rowtype;
   v_listing market.listings%rowtype;
+  v_candidate_ids uuid[] := array[]::uuid[];
   v_trade_id uuid;
   v_available bigint;
   v_remaining bigint;
@@ -734,22 +747,35 @@ begin
   if v_replay is not null then return v_replay; end if;
   v_user_id := v_operation.user_id;
   begin
+    if p_quantity is null
+      or p_quantity < 1
+      or p_quantity > market.purchase_quantity_limit()
+    then
+      perform api.raise_business_error('MARKET_STOCK_INSUFFICIENT', '市场单次购买数量必须在 1 到 100 之间');
+    end if;
     select * into v_template from catalog.templates where id = p_template_id;
     if v_template.id is null then perform api.raise_business_error('TEMPLATE_NOT_FOUND', '藏品模板不存在'); end if;
-    perform 1 from market.listings l join identity.users u on u.id = l.seller_id
-    where l.template_id = p_template_id and l.status = 'active' and l.remaining > 0 and l.seller_id <> v_user_id and u.status = 'normal'
-    order by l.created_at, l.id for update of l;
-    select coalesce(sum(l.remaining), 0) into v_available from market.listings l join identity.users u on u.id = l.seller_id
-    where l.template_id = p_template_id and l.status = 'active' and l.remaining > 0 and l.seller_id <> v_user_id and u.status = 'normal';
-    if p_quantity <= 0 or v_available < p_quantity then perform api.raise_business_error('MARKET_STOCK_INSUFFICIENT', '市场可购买数量不足'); end if;
+    perform pg_advisory_xact_lock(hashtextextended('market.purchase:' || p_template_id, 0));
+    v_available := 0;
+    for v_listing in
+      select l.* from market.listings l join identity.users u on u.id = l.seller_id
+      where l.template_id = p_template_id and l.status = 'active' and l.remaining > 0 and l.seller_id <> v_user_id and u.status = 'normal'
+      order by l.created_at, l.id
+      limit p_quantity
+      for update of l
+    loop
+      v_candidate_ids := array_append(v_candidate_ids, v_listing.id);
+      v_available := v_available + v_listing.remaining;
+    end loop;
+    if v_available < p_quantity then perform api.raise_business_error('MARKET_STOCK_INSUFFICIENT', '市场可购买数量不足'); end if;
     v_total := v_template.market_price * p_quantity;
     perform economy.change_balance(v_user_id, 'KCOIN', -v_total, 'market_buy', p_operation_id, p_template_id);
     insert into market.trades (buyer_id, template_id, quantity, total_price, operation_id)
     values (v_user_id, p_template_id, p_quantity, v_total, p_operation_id) returning id into v_trade_id;
     v_remaining := p_quantity;
     for v_listing in
-      select l.* from market.listings l join identity.users u on u.id = l.seller_id
-      where l.template_id = p_template_id and l.status = 'active' and l.remaining > 0 and l.seller_id <> v_user_id and u.status = 'normal'
+      select l.* from market.listings l
+      where l.id = any(v_candidate_ids)
       order by l.created_at, l.id
     loop
       exit when v_remaining = 0;
@@ -772,6 +798,9 @@ begin
       perform tasks.progress(v_listing.seller_id, 'market_sold');
       v_remaining := v_remaining - v_take;
     end loop;
+    if v_remaining <> 0 then
+      perform api.raise_business_error('MARKET_STOCK_INSUFFICIENT', '市场可购买数量不足');
+    end if;
     for v_sale in
       select seller_id, sum(quantity)::bigint quantity
       from market.trade_details

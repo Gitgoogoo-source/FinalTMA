@@ -30,8 +30,16 @@ BATTLE_BASELINE_MIGRATION = (
     ROOT / "supabase/migrations/20260719104533_baseline.sql"
 )
 MARKET_SCHEMA = ROOT / "supabase/schemas/50_market.sql"
+PAYMENTS_SCHEMA = ROOT / "supabase/schemas/60_payments.sql"
 MARKET_CONTRACT = ROOT / "packages/api-contracts/src/domains/market/routes.ts"
+MARKET_POLICY = ROOT / "packages/api-contracts/src/domains/market/policy.ts"
+TOPUP_MODELS = ROOT / "packages/api-contracts/src/domains/topup/models.ts"
 MARKET_VIEW = WEB_ROOT / "domains/market/ui/MarketView.tsx"
+WEB_INDEX = ROOT / "apps/web/index.html"
+TELEGRAM_SDK_URL = "https://telegram.org/js/telegram-web-app.js?63"
+TELEGRAM_SDK_INTEGRITY = (
+    "sha384-UIU2aXwkvBIU//NSd8KQvPQc3/EvwMoKj+m2qYgtQAtF1u3Vvhf5+pjstVoLvU3i"
+)
 IMPORT_PATTERN = re.compile(r"(?:from\s+|import\()\s*[\"']([^\"']+)[\"']")
 MODULE_IMPORT_PATTERN = re.compile(r"(?:from\s+|import\s*(?:\(\s*)?)[\"']([^\"']+)[\"']")
 BATTLE_ACCEPT_FUNCTION_PATTERN = re.compile(
@@ -85,6 +93,8 @@ REQUIRED_PATHS = (
     "docs/architecture/adr/ADR-086-evomypet-production-cutover.md",
     "docs/architecture/adr/ADR-087-telegram-chat-list-onboarding.md",
     "docs/architecture/adr/ADR-096-battle-session-rollover-authority-gate.md",
+    "docs/architecture/adr/ADR-097-market-bounded-purchase-settlement.md",
+    "docs/architecture/adr/ADR-098-telegram-sdk-subresource-integrity.md",
     "apps/web/public/maintenance.html",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
@@ -379,6 +389,58 @@ def verify_browser_csp_boundaries() -> None:
         if name in directives:
             raise SystemExit(f"Content-Security-Policy repeats directive: {name}")
         directives[name] = sources
+
+    expected_script_sources = {"'self'", "https://telegram.org"}
+    script_sources = directives.get("script-src", [])
+    if (
+        set(script_sources) != expected_script_sources
+        or len(script_sources) != len(expected_script_sources)
+    ):
+        raise SystemExit(
+            "CSP script-src must remain same-origin plus the Telegram SDK origin only"
+        )
+
+    index_html = WEB_INDEX.read_text(encoding="utf-8")
+    script_tags = re.findall(
+        r"<script\b[^>]*>.*?</script>", index_html, re.IGNORECASE | re.DOTALL
+    )
+    parsed_scripts: list[tuple[str, dict[str, str]]] = []
+    for tag in script_tags:
+        attributes = {
+            name.lower(): value
+            for name, value in re.findall(
+                r'([a-zA-Z][a-zA-Z0-9:_-]*)\s*=\s*"([^"]*)"', tag
+            )
+        }
+        parsed_scripts.append((tag, attributes))
+
+    telegram_scripts = [
+        (tag, attributes)
+        for tag, attributes in parsed_scripts
+        if attributes.get("src", "").startswith("https://telegram.org/")
+    ]
+    external_scripts = [
+        attributes.get("src", "")
+        for _, attributes in parsed_scripts
+        if attributes.get("src", "").startswith(("http://", "https://"))
+    ]
+    if len(telegram_scripts) != 1 or external_scripts != [TELEGRAM_SDK_URL]:
+        raise SystemExit(
+            "The Telegram SDK must be the only external script and use the approved URL"
+        )
+    telegram_tag, telegram_attributes = telegram_scripts[0]
+    if (
+        telegram_attributes.get("src") != TELEGRAM_SDK_URL
+        or telegram_attributes.get("integrity") != TELEGRAM_SDK_INTEGRITY
+        or telegram_attributes.get("crossorigin") != "anonymous"
+        or "onerror" in telegram_attributes
+    ):
+        raise SystemExit(
+            "The Telegram SDK requires the approved SHA-384 SRI and anonymous CORS without fallback"
+        )
+    module_position = index_html.find('src="/src/main.tsx"')
+    if module_position < 0 or index_html.find(telegram_tag) > module_position:
+        raise SystemExit("The integrity-pinned Telegram SDK must load before the app module")
 
     expected_image_sources = {
         "'self'",
@@ -2714,10 +2776,74 @@ def verify_market_transactional_supply_read_model() -> None:
         "create trigger listings_quota_consume",
         "before insert on market.listings",
         "set daily_count = daily_count + 1,\n      lifetime_count = lifetime_count + 1",
+        "create or replace function market.purchase_quantity_limit()",
+        "select 100::bigint",
+        "revoke execute on function market.purchase_quantity_limit() from public, anon, authenticated, service_role",
     )
     missing = [fragment for fragment in required_sql if fragment not in sql]
     if missing:
         raise SystemExit(f"Market transactional supply model is incomplete: {missing}")
+
+    policy_source = MARKET_POLICY.read_text(encoding="utf-8")
+    contract_source = MARKET_CONTRACT.read_text(encoding="utf-8")
+    topup_source = TOPUP_MODELS.read_text(encoding="utf-8")
+    view_source = MARKET_VIEW.read_text(encoding="utf-8")
+    payments_sql = PAYMENTS_SCHEMA.read_text(encoding="utf-8").lower()
+    topup_quantity_ordering = (
+        payments_sql.find("jsonb_typeof(p_intent->'quantity') is distinct from 'number'"),
+        payments_sql.find("(p_intent->>'quantity') !~ '^[1-9][0-9]{0,2}$'"),
+        payments_sql.find("v_market_quantity := (p_intent->>'quantity')::bigint"),
+        payments_sql.find("v_market_quantity > market.purchase_quantity_limit()"),
+        payments_sql.find("v_count := v_market_quantity::integer"),
+    )
+    if (
+        "export const MARKET_PURCHASE_MAX_QUANTITY = 100;" not in policy_source
+        or contract_source.count("marketPurchaseQuantitySchema") < 4
+        or "quantity: marketPurchaseQuantitySchema" not in topup_source
+        or view_source.count("MARKET_PURCHASE_MAX_QUANTITY") < 5
+        or any(index < 0 for index in topup_quantity_ordering)
+        or topup_quantity_ordering != tuple(sorted(topup_quantity_ordering))
+    ):
+        raise SystemExit(
+            "Market purchase quantity 1..100 must share one TypeScript policy and a database backstop"
+        )
+
+    purchase_match = re.search(
+        r"create\s+or\s+replace\s+function\s+api\.market_purchase\s*\(.*?\n\$\$;",
+        sql,
+        re.DOTALL,
+    )
+    if purchase_match is None:
+        raise SystemExit("Market purchase RPC is missing")
+    purchase = purchase_match.group(0)
+    purchase_ordering = (
+        purchase.find("operations.replay_if_finished"),
+        purchase.find("p_quantity > market.purchase_quantity_limit()"),
+        purchase.find("pg_advisory_xact_lock(hashtextextended('market.purchase:'"),
+        purchase.find("limit p_quantity\n      for update of l"),
+        purchase.find("if v_available < p_quantity"),
+        purchase.find("economy.change_balance(v_user_id"),
+    )
+    required_purchase_terms = (
+        "p_quantity is null",
+        "v_candidate_ids uuid[] := array[]::uuid[]",
+        "v_candidate_ids := array_append(v_candidate_ids, v_listing.id)",
+        "where l.id = any(v_candidate_ids)",
+        "if v_remaining <> 0 then",
+    )
+    missing_purchase_terms = [
+        term for term in required_purchase_terms if term not in purchase
+    ]
+    if (
+        any(index < 0 for index in purchase_ordering)
+        or purchase_ordering != tuple(sorted(purchase_ordering))
+        or missing_purchase_terms
+        or "order by l.created_at, l.id for update of l" in purchase
+    ):
+        raise SystemExit(
+            "Market purchase must reject over-limit work before locking and settle only bounded FIFO candidates: "
+            f"ordering={purchase_ordering}, missing={missing_purchase_terms}"
+        )
 
     def function_block(name: str) -> str:
         match = re.search(
