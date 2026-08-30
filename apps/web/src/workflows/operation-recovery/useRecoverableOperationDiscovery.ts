@@ -2,10 +2,10 @@ import { useEffect, useEffectEvent, useRef, useState } from "react";
 import {
   isRecoverableRouteId,
   loadClientRoute,
-  parseRecoveredOperation,
   type RecoverableRouteId,
   type TypedOperationSummary,
 } from "@evomypet/api-contracts/app-client";
+import { parseRecoveredOperation } from "@evomypet/api-contracts/app-client/recovery";
 
 import { apiRequest } from "../../platform/api/client.ts";
 import { refreshScopes } from "../../platform/query/index.ts";

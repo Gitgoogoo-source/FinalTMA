@@ -139,15 +139,6 @@ export function parseRecoverableOperationSummary(
   return summary as RecoverableOperationSummary;
 }
 
-export async function parseRecoveredOperation(
-  value: unknown,
-): Promise<TypedOperationSummary> {
-  const summary = parseRecoverableOperationSummary(value);
-  if (summary.status === "succeeded" && summary.result !== null)
-    await parseRouteOutput(summary.use_case, summary.result);
-  return summary as TypedOperationSummary;
-}
-
 export async function parseBattleRealtimeInvalidation(
   value: unknown,
 ): Promise<BattleRealtimeInvalidation> {

@@ -154,10 +154,23 @@ begin
     if p_draw_count not in (1, 10) then
       perform api.raise_business_error('DRAW_COUNT_INVALID', '开盒次数无效');
     end if;
-    lock table catalog.versions, catalog.chains, catalog.templates, gacha.boxes in share mode;
+    lock table
+      catalog.versions,
+      catalog.chains,
+      catalog.templates,
+      gacha.boxes,
+      catalog.asset_delivery_config,
+      catalog.asset_objects,
+      catalog.asset_releases,
+      catalog.asset_release_templates,
+      catalog.current_asset_release
+    in share mode;
     select * into v_box from gacha.boxes where tier = p_tier;
     if v_box.tier is null then perform api.raise_business_error('BOX_TIER_INVALID', '盲盒档次无效'); end if;
     if not gacha.rules_complete() then perform api.raise_business_error('CATALOG_INVALID', '开盒规则加载失败，请重新加载'); end if;
+    if not catalog.asset_release_ready() then
+      perform api.raise_business_error('CATALOG_UNAVAILABLE', '图鉴数据暂时不可用');
+    end if;
 
     if p_draw_count = 1 and p_tier in ('normal', 'rare') then
       v_entitlement_kind := case p_tier when 'normal' then 'free_normal_box' else 'free_rare_box' end;

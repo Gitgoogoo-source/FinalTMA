@@ -2,6 +2,8 @@
 
 ## 1. 硬前提
 
+- Vercel production 的 `pnpm build` 必须先执行 `tools/assets/assert-deploy-ready.mjs`；该门禁只在 `VERCEL=1`、`VERCEL_ENV=production` 且 `APP_ENV=production` 时运行当前 v2 manifest 的 `assets:release status`。当前 v2、历史 v1、产品指针、两批 210 映射、URL 或目录密钥任一缺失即使部署非零失败；本地与 Preview 构建不访问远端目录。
+
 在执行任何外部写入前，由负责人逐项记录证据：
 
 - 唯一外部写入目标已核对为 Supabase `final-tma-real-test`（ref `ebewtjerusxcioegpzjd`）、Vercel `final-tma`、稳定域名 `https://final-tma-pi.vercel.app` 与生产 Bot `@EvoMyPet_bot`；不新建第二套生产环境。

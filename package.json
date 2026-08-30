@@ -12,6 +12,7 @@
     "pnpm": "11.1.3"
   },
   "scripts": {
+    "prebuild": "node tools/assets/assert-deploy-ready.mjs",
     "predev": "pnpm --filter @evomypet/api-contracts build && pnpm --filter @evomypet/api build",
     "dev": "vercel dev",
     "predev:web": "pnpm --filter @evomypet/api-contracts build",

@@ -6,6 +6,10 @@ import {
 } from "../common/registry.ts";
 import type { RouteDefinition } from "../common/route.ts";
 import { operationSummarySchema } from "../common/models.ts";
+import {
+  hasUnavailableGachaPresentation,
+  withGachaPresentationValidationUrls,
+} from "../common/operation-presentation.ts";
 import { albumRoutes } from "../domains/album/routes.ts";
 import { battleRoutes } from "../domains/battle/routes.ts";
 import { catalogRoutes } from "../domains/catalog/routes.ts";
@@ -104,6 +108,19 @@ export function parseRecoverableOperationSummary(
 export function parseRecoveredOperation(value: unknown): TypedOperationSummary {
   const summary = parseRecoverableOperationSummary(value);
   const route = routeById(summary.use_case);
+  if (
+    summary.use_case === "gacha.open" &&
+    summary.status === "succeeded" &&
+    summary.result !== null &&
+    hasUnavailableGachaPresentation(summary.result)
+  ) {
+    route.output.parse(withGachaPresentationValidationUrls(summary.result));
+    return {
+      ...summary,
+      result: null,
+      error_code: "CATALOG_UNAVAILABLE",
+    } as TypedOperationSummary;
+  }
   if (summary.status === "succeeded" && summary.result !== null)
     route.output.parse(summary.result);
   return summary as TypedOperationSummary;

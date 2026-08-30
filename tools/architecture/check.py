@@ -95,6 +95,7 @@ REQUIRED_PATHS = (
     "docs/architecture/adr/ADR-096-battle-session-rollover-authority-gate.md",
     "docs/architecture/adr/ADR-097-market-bounded-purchase-settlement.md",
     "docs/architecture/adr/ADR-098-telegram-sdk-subresource-integrity.md",
+    "docs/architecture/adr/ADR-100-gacha-settlement-presentation-fail-closed.md",
     "apps/web/public/maintenance.html",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
@@ -217,6 +218,7 @@ def main() -> None:
     verify_adaptive_page_warmup()
     verify_evolution_refresh_semantics()
     verify_operation_recovery_discovery()
+    verify_gacha_settlement_presentation()
     verify_security_finding_closures()
     verify_game_page_boundary()
     verify_battle_staged_runtime_loading()
@@ -1778,6 +1780,128 @@ def verify_operation_recovery_discovery() -> None:
     ):
         raise SystemExit(
             "Operation discovery lifecycle documentation is incomplete"
+        )
+
+
+def verify_gacha_settlement_presentation() -> None:
+    catalog_schema = (ROOT / "supabase/schemas/20_catalog.sql").read_text(
+        encoding="utf-8"
+    )
+    gacha_schema = (ROOT / "supabase/schemas/40_gacha.sql").read_text(
+        encoding="utf-8"
+    )
+    presentation = (
+        CONTRACT_ROOT / "common/operation-presentation.ts"
+    ).read_text(encoding="utf-8")
+    registry = (CONTRACT_ROOT / "registries/app.ts").read_text(encoding="utf-8")
+    client_recovery = (CONTRACT_ROOT / "app-client-recovery.ts").read_text(
+        encoding="utf-8"
+    )
+    gacha_handler = (API_ROOT / "domains/gacha/routes.ts").read_text(
+        encoding="utf-8"
+    )
+    provider = OPERATION_REGISTRY_RUNTIME_PROVIDER.read_text(encoding="utf-8")
+    package = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
+    deploy_gate = (ROOT / "tools/assets/assert-deploy-ready.mjs").read_text(
+        encoding="utf-8"
+    )
+
+    catalog_terms = (
+        "create or replace function catalog.asset_release_ready()",
+        "release.status = 'active'",
+        "select count(*) = 210",
+        "thumbnail.width <> 256",
+        "detail.width <> 768",
+        "master.width <> 768",
+    )
+    missing_catalog = [term for term in catalog_terms if term not in catalog_schema]
+    if missing_catalog:
+        raise SystemExit(
+            f"Catalog presentation readiness is incomplete: {missing_catalog}"
+        )
+
+    gacha_terms = (
+        "catalog.asset_delivery_config",
+        "catalog.asset_objects",
+        "catalog.asset_releases",
+        "catalog.asset_release_templates",
+        "catalog.current_asset_release",
+        "if not catalog.asset_release_ready()",
+        "'CATALOG_UNAVAILABLE'",
+    )
+    missing_gacha = [term for term in gacha_terms if term not in gacha_schema]
+    if missing_gacha:
+        raise SystemExit(
+            f"Gacha Catalog readiness gate is incomplete: {missing_gacha}"
+        )
+    readiness_index = gacha_schema.index("if not catalog.asset_release_ready()")
+    first_asset_effect = min(
+        gacha_schema.index("update economy.entitlements set status = 'used'"),
+        gacha_schema.index("perform economy.change_balance"),
+        gacha_schema.index("perform inventory.change_holding"),
+    )
+    if readiness_index > first_asset_effect:
+        raise SystemExit(
+            "Gacha Catalog readiness must fail before entitlement, balance, or holding effects"
+        )
+
+    contract_presentation_terms = (
+        "hasUnavailableGachaPresentation",
+        "withGachaPresentationValidationUrls",
+    )
+    if any(term not in presentation for term in contract_presentation_terms):
+        raise SystemExit("Operation presentation status contract is incomplete")
+    for label, source in (("server", registry), ("client", client_recovery)):
+        if (
+            "hasUnavailableGachaPresentation(summary.result)" not in source
+            or "withGachaPresentationValidationUrls(summary.result)" not in source
+            or 'error_code: "CATALOG_UNAVAILABLE"' not in source
+        ):
+            raise SystemExit(
+                f"{label} recovery parser must preserve succeeded Gacha authority with an unavailable presentation"
+            )
+    if (
+        'parseRouteOutput(\n        "gacha.open"' not in gacha_handler
+        or "withGachaPresentationValidationUrls(operation.result)"
+        not in gacha_handler
+        or '"CATALOG_UNAVAILABLE"' not in gacha_handler
+        or 'presentation_status: "unavailable"' not in gacha_handler
+    ):
+        raise SystemExit(
+            "Direct Gacha responses must expose retryable presentation unavailability with the operation id"
+        )
+
+    provider_terms = (
+        "const delays = [1_000, 2_000, 3_000, 5_000] as const",
+        "attempt >= delays.length",
+        "autoRecoveryExhausted: true",
+        "结果仍在确认，请稍后查看",
+        "奖励已存入藏品",
+        'presentationStatus === "unavailable"',
+        "画面暂时无法显示",
+    )
+    missing_provider = [term for term in provider_terms if term not in provider]
+    if missing_provider or "delays[Math.min" in provider:
+        raise SystemExit(
+            f"Gacha settlement recovery is not terminal and bounded: {missing_provider}"
+        )
+
+    if package.get("scripts", {}).get("prebuild") != (
+        "node tools/assets/assert-deploy-ready.mjs"
+    ):
+        raise SystemExit("Production build must run the Catalog readiness gate")
+    deploy_terms = (
+        'process.env.VERCEL === "1"',
+        'process.env.VERCEL_ENV === "production"',
+        'process.env.APP_ENV !== "production"',
+        '"tools/assets/release.mjs"',
+        '"status"',
+        '"generated/assets/art-assets-v2.json"',
+    )
+    missing_deploy = [term for term in deploy_terms if term not in deploy_gate]
+    if missing_deploy:
+        raise SystemExit(
+            f"Production Catalog deployment gate is incomplete: {missing_deploy}"
         )
 
 
@@ -3633,6 +3757,9 @@ def verify_contract_boundaries() -> None:
         CONTRACT_ROOT / "registries/dormant-app.ts"
     ).read_text(encoding="utf-8")
     app_client = (CONTRACT_ROOT / "app-client.ts").read_text(encoding="utf-8")
+    app_client_recovery = (
+        CONTRACT_ROOT / "app-client-recovery.ts"
+    ).read_text(encoding="utf-8")
     jobs_registry = (
         CONTRACT_ROOT / "registries/jobs.ts"
     ).read_text(encoding="utf-8")
@@ -3649,7 +3776,8 @@ def verify_contract_boundaries() -> None:
         not in dormant_registry
         or 'import("./client-routes/first-screen.ts")' not in app_client
         or "export async function loadClientRoute" not in app_client
-        or "export async function parseRecoveredOperation" not in app_client
+        or "export async function parseRecoveredOperation"
+        not in app_client_recovery
         or 'route.id !== "jobs.reconcile_mints"' not in jobs_registry
         or "return findRouteIn(activeRoutes" not in jobs_registry
         or "return findRouteByPathIn(activeRoutes" not in jobs_registry
@@ -3957,6 +4085,7 @@ def verify_package_exports() -> None:
         "./app",
         "./app-client",
         "./app-client/errors",
+        "./app-client/recovery",
         "./common",
         "./dormant-app",
         "./integrations",

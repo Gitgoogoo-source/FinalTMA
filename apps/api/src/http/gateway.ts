@@ -109,6 +109,13 @@ export function createGateway<Route extends RouteDefinition>(
         route_id: route?.id ?? null,
         code: error.code,
         status: error.status,
+        operation_id: error.operationId,
+        ...(error.code === "RESPONSE_INVALID"
+          ? { validation_issues: error.details?.issues }
+          : {}),
+        ...(error.code === "CATALOG_UNAVAILABLE"
+          ? { presentation_status: error.details?.presentation_status }
+          : {}),
         elapsed_ms: Date.now() - startedAt,
         ...(telemetry?.snapshot() ?? {}),
       });

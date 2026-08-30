@@ -963,6 +963,59 @@ as $$
   where current_release.singleton and item.template_id = p_template_id
 $$;
 
+create or replace function catalog.asset_release_ready()
+returns boolean
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select coalesce((
+    select
+      release.status = 'active'
+      and (
+        select count(*) = 210
+        from catalog.asset_release_templates mapped
+        where mapped.release_id = release.id
+      )
+      and not exists (
+        select 1
+        from catalog.templates template
+        left join catalog.asset_release_templates mapped
+          on mapped.release_id = release.id
+          and mapped.template_id = template.id
+        where template.catalog_version = 'v1'
+          and mapped.template_id is null
+      )
+      and not exists (
+        select 1
+        from catalog.asset_release_templates mapped
+        join catalog.asset_objects master on master.id = mapped.master_object_id
+        join catalog.asset_objects thumbnail on thumbnail.id = mapped.thumbnail_object_id
+        join catalog.asset_objects detail on detail.id = mapped.detail_object_id
+        where mapped.release_id = release.id
+          and (
+            master.object_class <> 'master'
+            or master.bucket <> 'art-masters'
+            or master.status <> 'active'
+            or master.width <> 768
+            or thumbnail.object_class <> 'runtime'
+            or thumbnail.bucket <> config.public_bucket
+            or thumbnail.status <> 'active'
+            or thumbnail.width <> 256
+            or detail.object_class <> 'runtime'
+            or detail.bucket <> config.public_bucket
+            or detail.status <> 'active'
+            or detail.width <> 768
+          )
+      )
+    from catalog.current_asset_release current_release
+    join catalog.asset_releases release on release.id = current_release.release_id
+    cross join catalog.asset_delivery_config config
+    where current_release.singleton and config.singleton
+  ), false)
+$$;
+
 create or replace function catalog.register_asset_object(
   p_object_class text,
   p_bucket text,
@@ -2749,10 +2802,23 @@ begin
     if p_draw_count not in (1, 10) then
       perform api.raise_business_error('DRAW_COUNT_INVALID', '开盒次数无效');
     end if;
-    lock table catalog.versions, catalog.chains, catalog.templates, gacha.boxes in share mode;
+    lock table
+      catalog.versions,
+      catalog.chains,
+      catalog.templates,
+      gacha.boxes,
+      catalog.asset_delivery_config,
+      catalog.asset_objects,
+      catalog.asset_releases,
+      catalog.asset_release_templates,
+      catalog.current_asset_release
+    in share mode;
     select * into v_box from gacha.boxes where tier = p_tier;
     if v_box.tier is null then perform api.raise_business_error('BOX_TIER_INVALID', '盲盒档次无效'); end if;
     if not gacha.rules_complete() then perform api.raise_business_error('CATALOG_INVALID', '开盒规则加载失败，请重新加载'); end if;
+    if not catalog.asset_release_ready() then
+      perform api.raise_business_error('CATALOG_UNAVAILABLE', '图鉴数据暂时不可用');
+    end if;
 
     if p_draw_count = 1 and p_tier in ('normal', 'rare') then
       v_entitlement_kind := case p_tier when 'normal' then 'free_normal_box' else 'free_rare_box' end;

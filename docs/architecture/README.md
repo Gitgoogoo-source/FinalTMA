@@ -68,7 +68,7 @@ Telegram 聊天列表引导按 [ADR-087](adr/ADR-087-telegram-chat-list-onboardi
 
 Telegram 发现页和公开信息按 [ADR-088](adr/ADR-088-telegram-discovery-profile-and-public-info.md) 使用生产 Bot 的金龙头像方向、真实 iPhone 游戏截图、同源 Privacy/Terms 静态页及 `/start`、`/paysupport`、`/privacy`、`/terms` 四个全局命令。发现页素材不替换游戏内 UI；公开页面不进行 Telegram 登录、API 或数据库访问；9 个游戏 Stars 的普通盲盒入口不得与 Telegram Stars 付款金额合并。
 
-目录交付按 [ADR-042](adr/ADR-042-catalog-pointer-immutable-release.md) 分成动态小指针与不可变完整内容。资源切换只改变 `catalog.current`；checksum + release key URL 永不原地改写或清除缓存。`useCatalogQuery()` 在新内容读取期间保留上一份成功快照，只有全新 WebView 没有快照时才进入原有初始错误状态。空库 migration 不恢复 Storage 对象登记或当前指针；数据库重建后必须按 [ADR-050](adr/ADR-050-catalog-post-rebuild-readiness-gate.md) 先发布历史 v1、再发布当前 v2，并由失效即失败的 `assets:release status` 与无运行中变更租约共同放行。
+目录交付按 [ADR-042](adr/ADR-042-catalog-pointer-immutable-release.md) 分成动态小指针与不可变完整内容。资源切换只改变 `catalog.current`；checksum + release key URL 永不原地改写或清除缓存。`useCatalogQuery()` 在新内容读取期间保留上一份成功快照，只有全新 WebView 没有快照时才进入原有初始错误状态。空库 migration 不恢复 Storage 对象登记或当前指针；数据库重建后必须按 [ADR-050](adr/ADR-050-catalog-post-rebuild-readiness-gate.md) 先发布历史 v1、再发布当前 v2，并由失效即失败的 `assets:release status` 与无运行中变更租约共同放行。开盒另按 [ADR-100](adr/ADR-100-gacha-settlement-presentation-fail-closed.md) 在任何资产变更前校验完整的当前资源发布；历史成功但画面信息不完整时保留业务成功并进入明确、可退出的结算画面降级。
 
 ## 可信边界
 

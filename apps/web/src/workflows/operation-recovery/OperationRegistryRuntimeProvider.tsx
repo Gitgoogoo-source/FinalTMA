@@ -12,12 +12,12 @@ import {
   isRecoverableRouteId,
   loadClientRoute,
   parseEvolutionRejectedResult,
-  parseRecoveredOperation,
   type RecoverableOperationSummary,
   type RecoverableRouteId,
   type RouteInput,
   type RouteOutput,
 } from "@evomypet/api-contracts/app-client";
+import { parseRecoveredOperation } from "@evomypet/api-contracts/app-client/recovery";
 import {
   errorDefinition,
   isErrorCode,
@@ -76,6 +76,8 @@ type RegisteredOperation = {
   message: string;
   result: unknown;
   errorCode: string | null;
+  presentationStatus: "ready" | "unavailable";
+  autoRecoveryExhausted: boolean;
   persistent: boolean;
   input: unknown;
   presentation: OperationPresentation | null;
@@ -345,6 +347,7 @@ export function OperationRegistryRuntimeProvider({
   const invalidGachaSuccess = Boolean(
     active?.routeId === "gacha.open" &&
     active.phase === "succeeded" &&
+    active.presentationStatus !== "unavailable" &&
     !validationPending &&
     !gachaResult,
   );
@@ -404,6 +407,15 @@ export function OperationRegistryRuntimeProvider({
   const gachaImagesReady = activeGachaImagePreparation?.status === "ready";
   const gachaImageRetryEpoch = activeGachaImagePreparation?.retryEpoch ?? 0;
   const gachaImageHasFailed = activeGachaImagePreparation?.hasFailed === true;
+  const gachaPresentationUnavailable = Boolean(
+    active?.routeId === "gacha.open" &&
+    active.presentationStatus === "unavailable",
+  );
+  const gachaRecoveryPaused = Boolean(
+    active?.routeId === "gacha.open" &&
+    unresolvedPhases.has(active.phase) &&
+    active.autoRecoveryExhausted,
+  );
   const gachaRevealRarity =
     gachaResult && gachaImagesReady
       ? highestGachaResultRarity(gachaResult)
@@ -421,6 +433,8 @@ export function OperationRegistryRuntimeProvider({
   );
   const showGachaAnimation = Boolean(
     active?.routeId === "gacha.open" &&
+    !gachaPresentationUnavailable &&
+    !gachaRecoveryPaused &&
     (!gachaPresentationReady ||
       unresolvedPhases.has(active.phase) ||
       (gachaResult && !gachaImagesReady && !gachaImageHasFailed)),
@@ -811,6 +825,8 @@ export function OperationRegistryRuntimeProvider({
           message: t("正在确认本次操作"),
           result: null,
           errorCode: null,
+          presentationStatus: "ready",
+          autoRecoveryExhausted: false,
           persistent: false,
           input,
           presentation: options?.presentation ?? null,
@@ -864,6 +880,8 @@ export function OperationRegistryRuntimeProvider({
               ? t("结果仍在确认，请勿重复操作")
               : confirmedMessage(routeId, response.data),
             result: response.data,
+            presentationStatus: "ready",
+            autoRecoveryExhausted: false,
             persistent: true,
           });
         if (!pending)
@@ -914,6 +932,7 @@ export function OperationRegistryRuntimeProvider({
             "NETWORK_ERROR",
             "OPERATION_RESULT_INVALID",
             "RESPONSE_INVALID",
+            "CATALOG_UNAVAILABLE",
           ].includes(failure.code) ||
             !(cause instanceof ApiFailure));
         if (options?.dialog === false && !options.retainOnFailure && !unknown)
@@ -927,6 +946,7 @@ export function OperationRegistryRuntimeProvider({
                 : t("结果详情暂时无法确认，请勿重复操作")
               : failure.message,
             errorCode: failure.code,
+            autoRecoveryExhausted: false,
             persistent: Boolean(failure.operationId),
           });
         const suppressTerminalPresentation =
@@ -1028,6 +1048,12 @@ export function OperationRegistryRuntimeProvider({
           message: recoveredMessage(operation),
           result: operation.result,
           errorCode: operation.error_code,
+          presentationStatus:
+            operation.status === "succeeded" &&
+            operation.error_code === "CATALOG_UNAVAILABLE"
+              ? "unavailable"
+              : "ready",
+          autoRecoveryExhausted: false,
           persistent: true,
           input: null,
           presentation: next[operation.operation_id]?.presentation ?? null,
@@ -1078,6 +1104,23 @@ export function OperationRegistryRuntimeProvider({
           return;
         }
         if (recovered.status === "succeeded") {
+          if (
+            operation.routeId === "gacha.open" &&
+            recovered.error_code === "CATALOG_UNAVAILABLE" &&
+            recovered.result === null
+          ) {
+            update(operation.id, {
+              phase: "succeeded",
+              message: t("奖励已存入藏品"),
+              result: null,
+              errorCode: null,
+              presentationStatus: "unavailable",
+              autoRecoveryExhausted: false,
+              persistent: true,
+            });
+            await refreshRouteScopes(operation.routeId).catch(() => undefined);
+            return;
+          }
           const suppressTerminalPresentation =
             !serverAcknowledgementRouteIds.has(operation.routeId) &&
             operationsRef.current[operation.id]?.terminalPresentationAllowed !==
@@ -1125,6 +1168,8 @@ export function OperationRegistryRuntimeProvider({
               message: confirmedMessage(operation.routeId, recovered.result),
               result: recovered.result,
               errorCode: null,
+              presentationStatus: "ready",
+              autoRecoveryExhausted: false,
               persistent: true,
             });
           markOperationNewTemplates(
@@ -1164,6 +1209,8 @@ export function OperationRegistryRuntimeProvider({
             message: definition?.message ?? t("操作未完成"),
             result: recovered.result,
             errorCode: recovered.error_code,
+            presentationStatus: "ready",
+            autoRecoveryExhausted: false,
             persistent: true,
           });
           if (serverAcknowledgementRouteIds.has(operation.routeId))
@@ -1176,6 +1223,7 @@ export function OperationRegistryRuntimeProvider({
               recovered.status === "unknown"
                 ? t("结果仍在确认，请稍后查看")
                 : t("操作仍在处理中，请勿重复操作"),
+            presentationStatus: "ready",
           });
         }
       } catch (cause) {
@@ -1196,11 +1244,13 @@ export function OperationRegistryRuntimeProvider({
   const pollingOperationId =
     active &&
     autoPollingRouteIds.has(active.routeId) &&
+    !active.autoRecoveryExhausted &&
     ["pending", "unknown"].includes(active.phase)
       ? active.id
       : (Object.values(operations).find(
           (operation) =>
             autoPollingRouteIds.has(operation.routeId) &&
+            !operation.autoRecoveryExhausted &&
             ["pending", "unknown"].includes(operation.phase),
         )?.id ?? null);
 
@@ -1219,7 +1269,8 @@ export function OperationRegistryRuntimeProvider({
         !["pending", "unknown"].includes(operation.phase)
       )
         return;
-      const delay = delays[Math.min(attempt, delays.length - 1)] ?? 5_000;
+      const delay = delays[attempt];
+      if (delay === undefined) return;
       attempt += 1;
       timer = window.setTimeout(async () => {
         const current = operationsRef.current[operationId];
@@ -1230,6 +1281,19 @@ export function OperationRegistryRuntimeProvider({
         )
           return;
         await recover(current);
+        const recovered = operationsRef.current[operationId];
+        if (
+          !cancelled &&
+          recovered &&
+          ["pending", "unknown"].includes(recovered.phase) &&
+          attempt >= delays.length
+        ) {
+          update(operationId, {
+            autoRecoveryExhausted: true,
+            message: t("结果仍在确认，请稍后查看"),
+          });
+          return;
+        }
         poll();
       }, delay);
     };
@@ -1238,7 +1302,7 @@ export function OperationRegistryRuntimeProvider({
       cancelled = true;
       if (timer !== undefined) window.clearTimeout(timer);
     };
-  }, [pollingOperationId, recover]);
+  }, [pollingOperationId, recover, update]);
 
   const controller = useMemo<OperationRuntimeController>(
     () => ({
@@ -1727,6 +1791,29 @@ export function OperationRegistryRuntimeProvider({
               }
             />
           ) : active.routeId === "gacha.open" &&
+            gachaPresentationUnavailable ? (
+            <div className="modal gacha-operation-modal phase-succeeded">
+              <div className="operation-mark succeeded">✓</div>
+              <h2 id="operation-dialog-title">{t("操作已完成")}</h2>
+              <p>{t("奖励已存入藏品")}</p>
+              <p>{t("画面暂时无法显示")}</p>
+              <Button
+                onClick={() => {
+                  remove(active.id);
+                  preparePage("/inventory");
+                  navigate("/inventory");
+                }}
+              >
+                {t("查看藏品")}
+              </Button>
+              <Button
+                className="secondary"
+                onClick={() => void recover(active)}
+              >
+                {t("查看最新结果")}
+              </Button>
+            </div>
+          ) : active.routeId === "gacha.open" &&
             gachaResult &&
             GachaResultDialog &&
             gachaResultStageReady ? (
@@ -2093,6 +2180,11 @@ function recoveredMessage(operation: RecoverableOperationSummary): string {
 }
 
 function operationDialogTitle(operation: RegisteredOperation): string {
+  if (
+    operation.routeId === "gacha.open" &&
+    operation.presentationStatus === "unavailable"
+  )
+    return t("操作已完成");
   if (operation.phase === "succeeded") {
     if (operation.routeId === "market.cancel_template_listings")
       return t("已下架");

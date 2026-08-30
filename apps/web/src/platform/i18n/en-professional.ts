@@ -74,6 +74,7 @@ export const professionalEnglishCopy: Readonly<Record<string, string>> = {
     "The latest Mystery Box result couldn't load. Try again.",
   "开盒结果详情暂时无法确认，请查看最新结果":
     "Review the latest Mystery Box result.",
+  奖励已存入藏品: "Your reward is in your Collection.",
   "十连召唤结果，左右滑动查看": "10-pull results. Swipe to browse.",
   "进化仪式暂时无法开始，请稍后重试":
     "Evolution couldn't begin. Try again in a moment.",

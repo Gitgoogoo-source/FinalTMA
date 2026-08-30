@@ -4317,6 +4317,14 @@
                 "schema": { "$ref": "#/components/schemas/StandardError" }
               }
             }
+          },
+          "503": {
+            "description": "Errors: CATALOG_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
           }
         },
         "x-idempotency-required": true,
@@ -4341,6 +4349,7 @@
           "BOX_TIER_INVALID",
           "DRAW_COUNT_INVALID",
           "CATALOG_INVALID",
+          "CATALOG_UNAVAILABLE",
           "INSUFFICIENT_BALANCE",
           "FREE_ENTITLEMENT_UNAVAILABLE",
           "IDEMPOTENCY_KEY_REUSED"
@@ -4468,6 +4477,13 @@
           "CATALOG_INVALID": {
             "status": 500,
             "message": "开盒规则加载失败，请重新加载",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
+          },
+          "CATALOG_UNAVAILABLE": {
+            "status": 503,
+            "message": "图鉴数据暂时不可用",
             "retryable": true,
             "refreshScope": "all",
             "recoveryAction": "refresh"

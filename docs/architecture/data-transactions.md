@@ -8,6 +8,8 @@
 
 ## 写入规则
 
+`api.gacha_open` 在 operation 准入和同键回放之后、任何免费资格、余额、保底、holding、图鉴或任务变更之前，以共享表锁稳定目录规则、当前资源指针、映射和对象状态，并调用 `catalog.asset_release_ready()`。当前 active release 未完整覆盖 210 个模板，或者任一母版、缩略图、详情图不处于规定的 active 交付状态时，operation 以 `CATALOG_UNAVAILABLE` 失败，业务子事务零资产副作用。历史 `succeeded` 结果在读取时仍由 `operations.operation_json` 注入当前 URL；注入结果缺失只形成 API presentation unavailable，不改变数据库业务终态。
+
 进化使用单用户阻塞槽作为跨请求数据库不变量：任一 `pending/unknown`，或 `succeeded/failed` 且 `result_acknowledged_at` 为空的 `inventory.evolve` 都占用同一槽位。旧 operation key 的同请求回放和异请求冲突先裁决；只有新 key 才在落库前校验正式模板 ID 形状、bigint 正数及 3 的倍数，并在用户事务锁内检查槽位。条件唯一索引阻止并发绕过；确认 RPC 取得同一用户锁后幂等写入首次确认时间。未确认结果没有 TTL，单用户最多一条；确认后继续执行普通 7/30/37 天清理。
 
 `identity_initial` 和 `operations_recoverable` 各自保留其他合法未决操作，同时以独立终态子查询显式最多选择一条阻塞进化；API 服务端在输出共享响应 Schema 后再对同一不变量二次校验。Web 收到进化路由的 `ACK_REQUIRED` 时不得保留本次未落库的临时 operation；删除临时项会立即重新启用统一发现，由其读取恢复接口并水合原进化结果。

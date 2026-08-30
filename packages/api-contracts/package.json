@@ -13,6 +13,10 @@
       "types": "./src/app-client.ts",
       "default": "./dist/app-client.js"
     },
+    "./app-client/recovery": {
+      "types": "./src/app-client-recovery.ts",
+      "default": "./dist/app-client-recovery.js"
+    },
     "./app-client/errors": {
       "types": "./src/app-client-errors.ts",
       "default": "./dist/app-client-errors.js"

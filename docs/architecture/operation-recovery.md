@@ -1,5 +1,9 @@
 # 操作恢复
 
+operation 的业务终态与当前 Web 是否能呈现完整结算画面是两个事实。只有 `gacha.open` 的历史成功结果在注入当前资源 URL 后出现空缩略图或详情图时，服务端才把既有 operation 契约规范化为 `status = succeeded`、`result = null`、`error_code = CATALOG_UNAVAILABLE` 并保留原 operation ID；`succeeded` 明确业务已经完成，非空 presentation error code 只说明当前结算画面不可呈现。其他契约错误不得走该分支。Web 收到该组合立即停止开盒动画，刷新权威资产/藏品，并提供查看藏品或重新查询原 operation，不重提开盒。
+
+当前前台 operation 的自动结果查询固定在 1 秒、2 秒、3 秒、5 秒后各执行一次。第四次仍为 `pending/unknown` 或查询仍失败时，记录转为 `autoRecoveryExhausted`，自动定时器停止，开盒动画退出，用户可手动“查看最新结果”或稍后处理；人工查询仍复用原 operation ID，未决时保持暂停，不重新启动无限轮询。页面隐藏、Telegram `deactivated`、Session generation 改变或记录删除仍立即中止定时器与在途恢复。
+
 开盒表现模块的空闲准备按 [ADR-069](adr/ADR-069-gacha-renderer-prewarm-and-static-stage.md) 创建并保留脱离文档流的 Canvas/WebGL 程序资源和首帧，WebGL 路径以一次 `finish()` 确认预热绘制及驱动延迟工作已经完成后才发布 `warm`；演出只把同一 Canvas 放入既有宿主并按实际尺寸对齐，不显隐独立的全屏合成 surface。所有设备另按 [ADR-082](adr/ADR-082-gacha-unified-electronic-heartbeat-sound.md) 以有界空闲任务准备 Web Audio 双拍电子心跳自动化曲线与短有色噪声纹理，并在舞台发布 `ready` 的同一回调启动与 13 轮黑洞同步加速的统一电子心跳；最后 `700ms` 的统一揭晓声不读取盲盒档次或稀有度。四核及以下设备仍不触发演出期 Telegram `HapticFeedback`，但必须播放自定义 Web Audio；核心数不得关闭音效。首轮可见呼吸不得承担 GPU 程序资源冷创建、延迟 GPU 提交、四秒成品音频生成、自动化曲线同步生成或原生触觉桥接。
 
 用户确认会创建 operation 的写操作时，操作注册中心先使用 Web Crypto 生成 UUIDv7 并写入内存记录，再在下一动画帧提交请求。同一 operation 的会话恢复重试和结果查询始终复用该 UUIDv7；旧记录查询先于数据库新鲜度与配额，因此同 key 重试不创建或计数第二条 operation。Battle heartbeat 和 offline 不进入操作注册中心、不生成 UUID，也不通过 operations 查询恢复；Battle 结果按钮不发送请求。
