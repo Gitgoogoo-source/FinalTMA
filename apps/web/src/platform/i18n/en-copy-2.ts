@@ -194,7 +194,7 @@ export const englishCopy2: Readonly<Record<string, string>> = {
     "Unboxing rules failed to load, please reload.",
   正在重新加载: "Reloading",
   开盒中: "In the box",
-  "开 1 次": "Opened 1 time",
+  "开 1 次": "Open 1 time",
   加载失败: "Loading failed",
   "免费 · 剩余": "Free · Remaining",
   "9折": "10% off",

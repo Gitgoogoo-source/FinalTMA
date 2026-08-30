@@ -47,7 +47,6 @@ type Options = {
   recoverSession?: boolean;
   keepalive?: boolean;
 };
-let recoveryAttempted = false;
 let recovery: Promise<void> | null = null;
 
 class SessionInitialStateFailure extends Error {
@@ -84,20 +83,24 @@ export async function apiRequest<Id extends RouteId>(
     routeId !== "identity.authenticate"
   ) {
     if (getSession()?.accountStatus !== "normal") throw result;
-    if (
-      requestGeneration &&
-      getSession()?.generation !== requestGeneration &&
-      getSession()?.accountStatus === "normal"
-    )
-      return apiRequest(routeId, input, { ...options, recoverSession: false });
     try {
-      if (!recovery) {
-        if (recoveryAttempted) {
-          clearSession();
-          throw result;
-        }
-        markSessionRecovering();
+      if (recovery) {
+        await recovery;
+        return apiRequest(routeId, input, {
+          ...options,
+          recoverSession: false,
+        });
       }
+      if (
+        requestGeneration &&
+        getSession()?.generation !== requestGeneration &&
+        getSession()?.accountStatus === "normal"
+      )
+        return apiRequest(routeId, input, {
+          ...options,
+          recoverSession: false,
+        });
+      markSessionRecovering();
       await recoverSession();
       return apiRequest(routeId, input, { ...options, recoverSession: false });
     } catch (cause) {
@@ -136,7 +139,6 @@ export function newIdempotencyKey(): string {
 }
 
 export function resetSessionRecovery(): void {
-  recoveryAttempted = false;
   recovery = null;
 }
 
@@ -297,7 +299,6 @@ async function send<Id extends RouteId>(
 }
 
 async function recoverSession(): Promise<void> {
-  recoveryAttempted = true;
   const expiredGeneration = getSession()?.generation;
   recovery ??= (async () => {
     const initData = telegram()?.initData;

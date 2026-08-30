@@ -11,7 +11,7 @@
 
 ## 裁决
 
-会话自然恢复成功时固定按“清除旧 generation 敏感状态 → 为仍处于 `recovering` 的新 generation 写入 `identity.summary` 与 `identity.initial.recovery` → 将同一 generation 的 `recovering` 设为 `false`”发布。页面只能在恢复快照与摘要均已属于当前 generation 后重新挂载。15 分钟绝对有效期、单次自动恢复、内存令牌、无 Refresh Token、旧 generation 清除和不自动重做资产操作全部保持不变。
+会话自然恢复成功时固定按“清除旧 generation 敏感状态 → 为仍处于 `recovering` 的新 generation 写入 `identity.summary` 与 `identity.initial.recovery` → 将同一 generation 的 `recovering` 设为 `false`”发布。页面只能在恢复快照与摘要均已属于当前 generation 后重新挂载。15 分钟绝对有效期、每个过期 session generation 最多一次自动恢复（新 session 到期后可再次换代）、内存令牌、无 Refresh Token、旧 generation 清除和不自动重做资产操作全部保持不变。同一到期点的并发旧凭证请求必须共享同一次认证交换，等待新 generation 发布后各自只重放一次原请求，并保留原幂等键。
 
 Battle 把“当前 generation 的 `battle_participation` 非空且本地尚无同 generation room snapshot”定义为传输层权威恢复门禁。门禁不是第九种业务页面状态，根节点不得写入 `data-battle-page-state`，不得渲染 `home`、档位、业务按钮、错误、Toast、Alert、手工重试或“恢复当前 Battle”；只显示既有“正在找回冒险”“请稍候，伙伴们正在重新集合”反馈。只有以下任一数据库权威事实到达后才能退出门禁：
 
@@ -37,4 +37,4 @@ Battle 首页只表示数据库已经确认当前账号没有进行中 participa
 
 静态门禁必须证明恢复快照先于 `recovering = false` 发布、Battle 权威门禁先于八状态根节点渲染、门禁期间 presence 不发起并行刷新，并证明源码不存在“恢复当前 Battle”和旧 participation notice。
 
-同一 deployment SHA 的真实 iPhone Telegram 与 Safari Web Inspector 必须在真实 `active_turn` 中跨过访问令牌绝对到期点，保存到期前后 DOM、Network、Console 和数据库 room 引用。只允许一次旧令牌 401、一次认证交换及新 generation 的权威 Battle 读取；从恢复页到原 `battle` 的整个区间不得出现 `data-battle-page-state="home"`、“恢复当前 Battle”、可点击档位或业务按钮，不得重放旧动作，也不得产生新的 `battle.action`。恢复后 room ID、双方、当前行动方、round、ordinal、HP、deadline 和最新 action sequence 必须与数据库权威快照一致，并能继续完成后续合法行动。等待房和 lobby 作为影响域重验，必须分别自动回到原状态并恢复新 lease；网络暂时失败时保持门禁，恢复联网后自动回正。静态检查、桌面浏览器或等待房结果不能替代真实 active-turn 结论。
+同一 deployment SHA 的真实 iPhone Telegram 与 Safari Web Inspector 必须在真实 `active_turn` 中连续跨过两个访问令牌绝对到期点，保存每次到期前后的 DOM、Network、Console 和数据库 room 引用。每个到期点只允许一次认证交换；并发旧令牌请求必须等待同一次交换，并在新 generation 发布后各自只重放一次。从恢复页到原 `battle` 的整个区间不得出现 `data-battle-page-state="home"`、“恢复当前 Battle”、可点击档位或业务按钮，不得重放旧动作，也不得产生新的 `battle.action`。两次恢复后 room ID、双方、当前行动方、round、ordinal、HP、deadline 和最新 action sequence 必须与数据库权威快照一致，并能继续完成后续合法行动。等待房和 lobby 作为影响域重验，必须分别自动回到原状态并恢复新 lease；网络暂时失败时保持门禁，恢复联网后自动回正。静态检查、桌面浏览器或等待房结果不能替代真实 active-turn 结论。
