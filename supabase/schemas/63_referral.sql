@@ -39,7 +39,7 @@ begin
   return jsonb_build_object(
     'referral_code', v_code,
     'link', 'https://t.me/' || p_bot_username || '/' || p_mini_app_short_name || '?startapp=' || v_code,
-    'share_text', '邀请好友一起开盲盒。好友通过你的链接加入并完成首次有效充值后，你可获得500 Gems；累计邀请5位有效充值好友可额外获得1次免费普通盲盒资格，累计邀请10位有效充值好友可额外获得1次免费稀有盲盒资格。',
+    'share_text', 'Invite friends to play EvoMyPet. When a friend joins through your link and completes their first qualifying top-up, you earn 500 Gems. When 5 invited friends complete their first qualifying top-up, you unlock 1 free Standard Mystery Box opening. When 10 invited friends do so, you unlock 1 free Rare Mystery Box opening.',
     'bound_friends', (select count(*) from referral.relationships where inviter_id = v_user_id),
     'valid_recharge_friends', (select count(*) from referral.relationships where inviter_id = v_user_id and first_recharge_at is not null),
     'reward_fgems_total', (select coalesce(sum(reward_fgems), 0) from referral.relationships where inviter_id = v_user_id),
