@@ -331,12 +331,6 @@ export function TopupDialog({
       onClose={locked ? undefined : closeDialog}
     >
       <div className="modal topup topup-sheet">
-        <img
-          className="topup-sheet-coins"
-          src="/assets/topup/kcoin-cluster.webp"
-          alt=""
-          aria-hidden="true"
-        />
         <Minus className="topup-sheet-handle" aria-hidden="true" />
         <header className="topup-sheet-heading">
           <Sparkles aria-hidden="true" />

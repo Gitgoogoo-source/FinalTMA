@@ -114,24 +114,25 @@
 /* Stars recharge sheet --------------------------------------------------- */
 .app-shell.topup-sheet-backdrop {
   place-items: end center;
-  padding: max(var(--safe-top), 10px) 0 0;
+  padding: calc(max(var(--safe-top), var(--content-safe-top)) + 96px) 0 0;
   overflow: hidden;
-  background: rgba(34, 37, 38, 0.48);
-  -webkit-backdrop-filter: blur(11px) saturate(90%);
-  backdrop-filter: blur(11px) saturate(90%);
+  background: transparent !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 .app-shell.topup-sheet-backdrop .topup-sheet {
   position: relative;
   width: min(100%, var(--app-width));
-  min-height: min(55dvh, 480px);
+  min-height: 0;
   max-height: calc(
-    var(--tg-viewport-stable-height, 100dvh) - max(var(--safe-top), 10px)
+    var(--tg-viewport-stable-height, 100dvh) -
+      max(var(--safe-top), var(--content-safe-top)) - 96px
   );
   align-content: start;
-  gap: 14px;
-  padding: 34px 18px calc(var(--safe-bottom) + 22px);
-  overflow: visible;
+  gap: 11px;
+  padding: 16px 18px calc(var(--safe-bottom) + 14px);
+  overflow-y: auto;
   border: 1px solid rgba(255, 255, 255, 0.97);
   border-bottom: 0;
   border-radius: 34px 34px 0 0;
@@ -147,21 +148,6 @@
     0 -24px 70px rgba(31, 29, 22, 0.24),
     inset 0 1px 0 #fff;
   animation: topup-sheet-rise 0.34s cubic-bezier(0.22, 0.78, 0.24, 1);
-}
-
-.app-shell .topup-sheet-coins {
-  position: absolute;
-  z-index: 0;
-  bottom: calc(100% - 7px);
-  left: 50%;
-  width: min(105vw, 448px);
-  max-width: none;
-  display: block;
-  object-fit: contain;
-  transform: translateX(-50%);
-  filter: drop-shadow(0 14px 18px rgba(255, 145, 0, 0.16));
-  pointer-events: none;
-  user-select: none;
 }
 
 .app-shell .topup-sheet-handle {
@@ -351,15 +337,9 @@
 
 @media (max-height: 700px) {
   .app-shell.topup-sheet-backdrop .topup-sheet {
-    min-height: 0;
     gap: 9px;
-    padding-top: 24px;
+    padding-top: 13px;
     padding-bottom: calc(var(--safe-bottom) + 10px);
-  }
-
-  .app-shell .topup-sheet-coins {
-    bottom: calc(100% - 5px);
-    width: min(92vw, 390px);
   }
 
   .app-shell .topup-sheet-heading h2 {
