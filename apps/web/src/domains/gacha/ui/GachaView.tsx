@@ -96,18 +96,10 @@ export function GachaView(): ReactNode {
       ? requestedTier
       : null;
   const remembered = session ? viewStates.get(session.userId) : undefined;
-  const autoSelectRare =
-    Number(boxes.data?.entitlements.free_rare_box) > 0 &&
-    (!targetRarity || gachaDisplayProbabilityByTier.rare[targetRarity] > 0);
-  const [selection, setSelection] = useState(() => ({
-    tier: remembered?.selectedTier ?? "rare",
-    touched: false,
-  }));
-  const selectedTier = isBoxTier(requestedTier)
-    ? requestedTier
-    : !selection.touched && autoSelectRare
-      ? "rare"
-      : selection.tier;
+  const [selection, setSelection] = useState<BoxTier>(
+    () => remembered?.selectedTier ?? "normal",
+  );
+  const selectedTier = isBoxTier(requestedTier) ? requestedTier : selection;
   const selectedTierRef = useRef(selectedTier);
   const rememberedScrollY = remembered?.scrollY ?? 0;
   const restoreScrollY = useRef(rememberedScrollY);
@@ -185,7 +177,7 @@ export function GachaView(): ReactNode {
     Boolean(boxes.error) || Boolean(selectedPity && !validPity);
   const selectTier = useCallback(
     (tier: BoxTier) => {
-      setSelection({ tier, touched: true });
+      setSelection(tier);
     },
     [setSelection],
   );
