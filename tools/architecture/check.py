@@ -97,6 +97,7 @@ REQUIRED_PATHS = (
     "docs/architecture/adr/ADR-098-telegram-sdk-subresource-integrity.md",
     "docs/architecture/adr/ADR-100-gacha-settlement-presentation-fail-closed.md",
     "docs/architecture/adr/ADR-102-new-user-free-normal-box.md",
+    "docs/architecture/adr/ADR-103-new-user-free-normal-box-tutorial.md",
     "apps/web/public/maintenance.html",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
@@ -618,6 +619,9 @@ def verify_telegram_chat_list_onboarding() -> None:
             / "workflows/telegram-chat-onboarding/TelegramChatOnboarding.tsx"
         ).read_text(encoding="utf-8"),
         "app": (WEB_ROOT / "app/App.tsx").read_text(encoding="utf-8"),
+        "entry coordinator": (
+            WEB_ROOT / "workflows/entry-experience/EntryExperienceCoordinator.tsx"
+        ).read_text(encoding="utf-8"),
         "page readiness": "\n".join(
             (
                 (WEB_ROOT / path).read_text(encoding="utf-8")
@@ -666,12 +670,18 @@ def verify_telegram_chat_list_onboarding() -> None:
             "requestTelegramWriteAccessOnce()",
             'app.isVersionAtLeast("6.9")',
             "writeAccessRequestAttempted = true",
+            "deferred ||",
         ),
         "app": (
-            "const TelegramChatOnboarding = lazy",
-            "workflows/telegram-chat-onboarding/TelegramChatOnboarding.tsx",
+            "const EntryExperienceCoordinator = lazy",
+            "workflows/entry-experience/EntryExperienceCoordinator.tsx",
             "<AppRouter />",
-            "<TelegramChatOnboarding />",
+            "<EntryExperienceCoordinator",
+        ),
+        "entry coordinator": (
+            "telegram-chat-onboarding/TelegramChatOnboarding.tsx",
+            "<TelegramChatOnboarding",
+            "deferred={tutorialPending && !tutorialLoadFailed}",
         ),
         "page readiness": (
             "markFirstScreenReady(session.generation)",
@@ -3798,8 +3808,26 @@ def verify_new_user_welcome_boundary() -> None:
     gacha = (WEB_ROOT / "domains/gacha/ui/GachaView.tsx").read_text(
         encoding="utf-8"
     )
+    coordinator = (
+        WEB_ROOT / "workflows/entry-experience/EntryExperienceCoordinator.tsx"
+    ).read_text(encoding="utf-8")
+    tutorial = (
+        WEB_ROOT / "workflows/entry-experience/NewUserGachaTutorial.tsx"
+    ).read_text(encoding="utf-8")
+    tutorial_storage = (
+        WEB_ROOT
+        / "workflows/entry-experience/new-user-gacha-tutorial-storage.ts"
+    ).read_text(encoding="utf-8")
+    telegram_chat_onboarding = (
+        WEB_ROOT
+        / "workflows/telegram-chat-onboarding/TelegramChatOnboarding.tsx"
+    ).read_text(encoding="utf-8")
     adr = (
         ROOT / "docs/architecture/adr/ADR-102-new-user-free-normal-box.md"
+    ).read_text(encoding="utf-8")
+    tutorial_adr = (
+        ROOT
+        / "docs/architecture/adr/ADR-103-new-user-free-normal-box-tutorial.md"
     ).read_text(encoding="utf-8")
     product = (ROOT / "docs/product/功能说明文档.md").read_text(
         encoding="utf-8"
@@ -3819,16 +3847,44 @@ def verify_new_user_welcome_boundary() -> None:
             "amount: 1",
         ),
         "bootstrap": (
-            "login.data.welcome_reward",
-            "mergeEntryNotices(",
-            "免费普通盲盒已到账",
+            "welcomeReward: login.data.welcome_reward",
+            "notice: referralNotice(login.data.entry_handoff_result)",
         ),
-        "gacha": ('remembered?.selectedTier ?? "normal"',),
+        "gacha": (
+            'remembered?.selectedTier ?? "normal"',
+            'new CustomEvent("evomypet:gacha-open"',
+            'result?.entitlement_used === "free_normal_box"',
+        ),
+        "coordinator": (
+            "initializeTutorialStatus(",
+            'writeTutorialStatus(userId, "completed")',
+            "deferred={tutorialPending && !tutorialLoadFailed}",
+        ),
+        "tutorial": (
+            'useApiQuery("gacha.bootstrap")',
+            "useOperationNavigationLocked()",
+            "entitlements.free_normal_box",
+            'window.addEventListener("evomypet:gacha-open"',
+            'finish("dismissed")',
+        ),
+        "tutorial storage": (
+            '"evomypet.onboarding.free-normal.v1"',
+            '"pending"',
+            '"completed"',
+            '"dismissed"',
+        ),
+        "Telegram chat onboarding": ("deferred ||",),
         "ADR-102": (
             "new_user_welcome",
             "不回填",
             "welcome_reward",
             "免费普通盲盒",
+        ),
+        "ADR-103": (
+            "只由首次认证的权威",
+            "不代替用户点击",
+            "entitlement_used",
+            "不新增数据库字段",
         ),
         "product": (
             "新用户首次注册赠礼",
@@ -3840,6 +3896,7 @@ def verify_new_user_welcome_boundary() -> None:
             "`welcome_reward`",
             "存量账号",
             "不自动开盒",
+            "失败恢复引导",
         ),
     }
     sources = {
@@ -3847,7 +3904,12 @@ def verify_new_user_welcome_boundary() -> None:
         "handlers": handlers,
         "bootstrap": bootstrap,
         "gacha": gacha,
+        "coordinator": coordinator,
+        "tutorial": tutorial,
+        "tutorial storage": tutorial_storage,
+        "Telegram chat onboarding": telegram_chat_onboarding,
         "ADR-102": adr,
+        "ADR-103": tutorial_adr,
         "product": product,
         "acceptance": acceptance,
     }

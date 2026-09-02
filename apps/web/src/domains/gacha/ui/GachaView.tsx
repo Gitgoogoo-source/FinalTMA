@@ -175,12 +175,7 @@ export function GachaView(): ReactNode {
     freeSingleCount > 0;
   const pityFailed =
     Boolean(boxes.error) || Boolean(selectedPity && !validPity);
-  const selectTier = useCallback(
-    (tier: BoxTier) => {
-      setSelection(tier);
-    },
-    [setSelection],
-  );
+  const selectTier = setSelection;
   const prepareTier = useCallback(
     (tier: BoxTier) => {
       if (tier !== selectedBox?.tier) preloadBoxHeroArt(tier);
@@ -263,7 +258,7 @@ export function GachaView(): ReactNode {
       return;
     }
     prepareGachaRitualAudio();
-    void run(
+    const operation = run(
       count === 10 ? t("正在准备十连开盒") : t("正在开启盲盒"),
       "gacha.open",
       {
@@ -271,6 +266,14 @@ export function GachaView(): ReactNode {
         draw_count: count,
       },
     );
+    if (tier === "normal" && count === 1 && session)
+      void operation.then((result) =>
+        window.dispatchEvent(
+          new CustomEvent("evomypet:gacha-open", {
+            detail: result?.entitlement_used === "free_normal_box",
+          }),
+        ),
+      );
   };
   return (
     <main className="page gacha-page">

@@ -45,6 +45,7 @@ export function BottomNavigation(): ReactNode {
         return (
           <button
             key={path}
+            data-app-nav-path={path}
             className={active ? "active" : ""}
             aria-current={active ? "page" : undefined}
             aria-label={tp("前往{{0}}", [label])}

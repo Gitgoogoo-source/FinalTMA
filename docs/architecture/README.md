@@ -124,6 +124,7 @@ operation 准入与保留按 [ADR-059](adr/ADR-059-bounded-operation-admission-a
 - [Vercel 函数打包与配置隔离](adr/ADR-008-vercel-packaging-and-config-isolation.md)
 - [开盒页运行期视图状态](adr/ADR-009-gacha-runtime-view-state.md)
 - [新用户免费普通盲盒](adr/ADR-102-new-user-free-normal-box.md)
+- [新用户免费普通盲盒前端引导](adr/ADR-103-new-user-free-normal-box-tutorial.md)
 - [正式藏品图片资源](adr/ADR-010-catalog-image-assets.md)
 - [进化共享藏品操作底部确认弹窗](adr/ADR-012-evolution-bottom-sheet-confirmation.md)
 - [登录会话内页面保活与事件驱动刷新](adr/ADR-013-session-page-lifecycle.md)

@@ -44,6 +44,16 @@ export const professionalEnglishCopy3: Readonly<Record<string, string>> = {
   "正在登录，请稍候": "Entering EvoMyPet…",
   "正在领取 VIP 每日 100 Gems": "Claiming 100 Daily VIP Gems",
   免费普通盲盒已到账: "Free Standard Mystery Box ready!",
+  新手引导: "New Player Guide",
+  开启你的第一只伙伴: "Meet Your First Companion",
+  "点击“开 1 次”，本次免费，不会消耗 Stars。":
+    "Tap “Open 1” — this one is free and won't use Stars.",
+  "点击底部“开盒”，去开启你的第一只伙伴。":
+    "Tap “Open” below to meet your first companion.",
+  跳过引导: "Skip Guide",
+  免费盲盒暂时未准备好: "Your Free Mystery Box Isn't Ready Yet",
+  "重新尝试，或跳过引导后继续冒险。":
+    "Try again, or skip the guide and continue your adventure.",
   "该地址是当前账号唯一经过 TON Proof 验证的主钱包。":
     "This is the primary TON wallet verified for your EvoMyPet account.",
   "该藏品已经是最终形态，无法继续进化":

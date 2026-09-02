@@ -38,6 +38,10 @@ export type BootstrapPhase =
   | "banned";
 
 type RetryTarget = "login" | "referral" | "initial_state";
+export type WelcomeReward = Extract<
+  RouteOutput<"identity.authenticate">,
+  { account_status: "normal" }
+>["welcome_reward"];
 type BootstrapState = {
   phase: BootstrapPhase;
   message: string;
@@ -46,6 +50,7 @@ type BootstrapState = {
   failed: boolean;
   retryLabel: string;
   notice: string | null;
+  welcomeReward: WelcomeReward;
 };
 type LoginContext = {
   session: Session;
@@ -54,6 +59,7 @@ type LoginContext = {
   entryHandoffResult: EntryHandoffResult | null;
   initialState: RouteOutput<"identity.initial"> | null;
   notice: string | null;
+  welcomeReward: WelcomeReward;
 };
 
 const initialState: BootstrapState = localized({
@@ -64,6 +70,7 @@ const initialState: BootstrapState = localized({
   failed: false,
   retryLabel: "重新尝试",
   notice: null,
+  welcomeReward: null,
 });
 
 export function useBootstrap(): BootstrapState & { retry(): void } {
@@ -159,10 +166,8 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
             entryHandoffCode: login.data.entry_handoff_code,
             entryHandoffResult: login.data.entry_handoff_result,
             initialState: login.data.initial_state,
-            notice: mergeEntryNotices(
-              login.data.welcome_reward ? t("免费普通盲盒已到账") : null,
-              referralNotice(login.data.entry_handoff_result),
-            ),
+            notice: referralNotice(login.data.entry_handoff_result),
+            welcomeReward: login.data.welcome_reward,
           };
         }
 
@@ -259,6 +264,7 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
           phase: "ready",
           session: currentSession,
           notice: context.notice,
+          welcomeReward: context.welcomeReward,
         });
       } catch (cause) {
         if (!active()) return;
@@ -283,6 +289,7 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
             entryHandoffResult: null,
             initialState: null,
             notice: null,
+            welcomeReward: null,
           };
           retryTarget.current = "referral";
           setState({
@@ -367,7 +374,9 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
       if (session.entryHandoffState === "complete") {
         const notice = referralNotice(session.entryHandoffResult);
         setState((current) =>
-          current.phase === "ready" ? { ...current, session, notice } : current,
+          current.phase === "ready"
+            ? { ...current, session, notice, welcomeReward: null }
+            : current,
         );
         return;
       }
@@ -391,6 +400,7 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
         entryHandoffResult: null,
         initialState: null,
         notice: null,
+        welcomeReward: null,
       };
       referralOperation.current = newIdempotencyKey();
       referralResubmitted.current = false;

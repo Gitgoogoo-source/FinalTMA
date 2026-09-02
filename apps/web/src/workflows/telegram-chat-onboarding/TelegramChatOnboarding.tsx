@@ -15,12 +15,17 @@ import type { MainPagePath } from "../../shared/navigation/pageActivity.tsx";
 
 let writeAccessRequestAttempted = false;
 
-export default function TelegramChatOnboarding(): ReactNode {
+export default function TelegramChatOnboarding({
+  deferred = false,
+}: {
+  deferred?: boolean;
+}): ReactNode {
   const session = useSession();
   const location = useAppLocation();
   useEffect(() => {
     if (
       !session ||
+      deferred ||
       session.accountStatus !== "normal" ||
       session.entryHandoffState !== "complete" ||
       !isMainPagePath(location.pathname)
@@ -45,7 +50,7 @@ export default function TelegramChatOnboarding(): ReactNode {
     );
     if (isFirstPlayablePageReady(generation, path)) request();
     return unsubscribe;
-  }, [location.pathname, session]);
+  }, [deferred, location.pathname, session]);
   return null;
 }
 

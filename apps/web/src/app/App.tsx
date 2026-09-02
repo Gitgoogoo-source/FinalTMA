@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
+import { lazy, Suspense, useState, type ReactNode } from "react";
 
 import { retryRecoveredInitialState } from "../platform/api/client.ts";
 import {
@@ -15,9 +15,8 @@ import { AuthenticatedRuntimeProviders } from "./providers/AuthenticatedRuntimeP
 import { AppRouter } from "./router/AppRouter.tsx";
 import { StartupScreen } from "./StartupScreen.tsx";
 
-const TelegramChatOnboarding = lazy(
-  () =>
-    import("../workflows/telegram-chat-onboarding/TelegramChatOnboarding.tsx"),
+const EntryExperienceCoordinator = lazy(
+  () => import("../workflows/entry-experience/EntryExperienceCoordinator.tsx"),
 );
 
 export function App(): ReactNode {
@@ -115,23 +114,15 @@ function LocalizedApp(): ReactNode {
       <AuthenticatedRuntimeProviders>
         <AppRouter />
         <Suspense fallback={null}>
-          <TelegramChatOnboarding />
+          <EntryExperienceCoordinator
+            key={session.generation}
+            notice={bootstrap.notice}
+            welcomeReward={bootstrap.welcomeReward}
+          />
         </Suspense>
-        {bootstrap.notice ? (
-          <EntryNotice key={bootstrap.notice} message={bootstrap.notice} />
-        ) : null}
       </AuthenticatedRuntimeProviders>
     </AccountGate>
   );
-}
-
-function EntryNotice({ message }: { message: string }): ReactNode {
-  const [visible, setVisible] = useState(true);
-  useEffect(() => {
-    const timer = window.setTimeout(() => setVisible(false), 5_000);
-    return () => window.clearTimeout(timer);
-  }, [message]);
-  return visible ? <div className="entry-notice">{message}</div> : null;
 }
 
 function RecoveredInitialStateFailure(): ReactNode {
