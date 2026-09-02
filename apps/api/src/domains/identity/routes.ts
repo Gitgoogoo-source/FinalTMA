@@ -24,6 +24,7 @@ import {
 import { assertEvolutionRecoveryCeiling } from "../../workflows/operation-recovery/invariants.ts";
 
 const TG_APP_LISTING_START_PARAM = "listed_on_tg_app";
+const ACQUISITION_SOURCE_START_PARAM = /^SRC_[A-F0-9]{20}$/;
 
 export const identityHandlers = {
   "identity.authenticate": async (context) => {
@@ -79,6 +80,7 @@ export const identityHandlers = {
         p_entry_kind: entry.kind,
         p_entry_referral_code: entry.referralCode,
         p_battle_invite_token_hash: entry.battleInviteTokenHash,
+        p_entry_source_param: entry.sourceParam,
       },
     );
     if ("error_code" in result) throw loginResultError(result.error_code);
@@ -153,29 +155,44 @@ function classifyEntry(startParam: string | null): {
   kind: "direct" | "referral" | "battle" | "invalid";
   referralCode: string | null;
   battleInviteTokenHash: string | null;
+  sourceParam: string | null;
 } {
-  if (startParam === null || startParam === TG_APP_LISTING_START_PARAM)
+  if (startParam === null)
     return {
       kind: "direct",
       referralCode: null,
       battleInviteTokenHash: null,
+      sourceParam: null,
+    };
+  if (
+    startParam === TG_APP_LISTING_START_PARAM ||
+    ACQUISITION_SOURCE_START_PARAM.test(startParam)
+  )
+    return {
+      kind: "direct",
+      referralCode: null,
+      battleInviteTokenHash: null,
+      sourceParam: startParam,
     };
   if (/^TMA[A-F0-9]{20}$/.test(startParam))
     return {
       kind: "referral",
       referralCode: startParam,
       battleInviteTokenHash: null,
+      sourceParam: null,
     };
   if (/^BTL_[A-Za-z0-9_-]{32}$/.test(startParam))
     return {
       kind: "battle",
       referralCode: null,
       battleInviteTokenHash: hashToken(startParam),
+      sourceParam: null,
     };
   return {
     kind: "invalid",
     referralCode: null,
     battleInviteTokenHash: null,
+    sourceParam: null,
   };
 }
 

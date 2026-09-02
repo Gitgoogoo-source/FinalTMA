@@ -23,7 +23,7 @@ Supabase Data API 的 Exposed schemas 固定为 `public,graphql_public,api`。Ve
 
 Web 公开构建不读取 `VITE_*`。API 配置名称以根 `.env.example` 为唯一清单，真实值只进入 Vercel Production Secret。`SUPABASE_SERVICE_ROLE_KEY` 可以承载 legacy `service_role` JWT 或新式 Supabase secret key；服务端 HTTP 工具始终发送 `apikey`，只有 legacy JWT 同时发送 Bearer，新式 secret key 禁止作为 Bearer token。`IDENTITY_SECURITY_SECRET`、`REFERRAL_CODE_SECRET`、`CRON_SECRET`、`BATTLE_INVITE_SECRET`、`BATTLE_OUTBOX_SECRET` 和 `TELEGRAM_WEBHOOK_SECRET` 必须各自独立；`ABLY_API_KEY` 只用于五分钟 subscribe-only token 与 outbox 发布。任何 Bot token、数据库 key、会话 secret、Battle secret、Ably key、TON key 或私钥均不得进入 Git、聊天、日志、截图或浏览器环境。
 
-Supabase 固定安装 `pg_cron`、`pg_net`、Vault 和 `pgcrypto`。三条 migration 提交后由 owner 独立执行 `pg_reload_conf()`；`battle-tick-v1` 每秒执行，`battle.tick_health()` 与 `monitor-invariants` 监控配置、停滞和失败。Supabase Vault 的 Battle share callback URL、Battle outbox callback URL 和 `BATTLE_OUTBOX_SECRET` 必须与当前 Vercel Production 完全一致。运行明细保留 7 天并由既有每日 cleanup 清理。
+Supabase 固定安装 `pg_cron`、`pg_net`、Vault 和 `pgcrypto`。最初三份 migration 提交后的 `pg_reload_conf()` 属于首次建库记录；后续前向 migration 不重建 scheduler。`battle-tick-v1` 每秒执行，`battle.tick_health()` 与 `monitor-invariants` 监控配置、停滞和失败。Supabase Vault 的 Battle share callback URL、Battle outbox callback URL 和 `BATTLE_OUTBOX_SECRET` 必须与当前 Vercel Production 完全一致。运行明细保留 7 天并由既有每日 cleanup 清理。
 
 Vercel Production 固定配置 `APP_BASE_URL=https://final-tma-pi.vercel.app`、`TELEGRAM_BOT_USERNAME=EvoMyPet_bot` 与 `TELEGRAM_MINI_APP_SHORT_NAME=evomypet`。推荐链接固定为 `https://t.me/EvoMyPet_bot/evomypet?startapp=<当前用户邀请码>`，Battle prepared-share deep link 固定追加 `startapp=BTL_<32位base64url>`；环境变量变更必须由新的 `main` Production deployment 生效。
 

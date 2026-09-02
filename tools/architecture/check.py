@@ -3514,8 +3514,11 @@ def verify_telegram_catalog_start_param_allowlist() -> None:
     )
     required_route_terms = (
         'const TG_APP_LISTING_START_PARAM = "listed_on_tg_app";',
-        "startParam === null ||",
+        "const ACQUISITION_SOURCE_START_PARAM = /^SRC_[A-F0-9]{20}$/;",
+        "if (startParam === null)",
         "startParam === TG_APP_LISTING_START_PARAM",
+        "ACQUISITION_SOURCE_START_PARAM.test(startParam)",
+        "p_entry_source_param: entry.sourceParam",
         "/^TMA[A-F0-9]{20}$/",
         "/^BTL_[A-Za-z0-9_-]{32}$/",
         'kind: "invalid"',
@@ -3548,16 +3551,45 @@ def verify_telegram_catalog_start_param_allowlist() -> None:
     ).lower()
     required_identity_terms = (
         "p_entry_kind not in ('direct', 'referral', 'battle', 'invalid')",
-        "p_entry_kind = 'direct' and (p_entry_referral_code is not null or p_battle_invite_token_hash is not null)",
+        "p_entry_source_param text default null",
+        "p_entry_source_param <> 'listed_on_tg_app'",
+        "p_entry_source_param !~ '^src_[a-f0-9]{20}$'",
+        "from acquisition.sources source",
+        "source.start_param = p_entry_source_param",
+        "first_source_code",
+        "source_code",
         "v_new_user and p_entry_kind = 'referral'",
     )
     missing_identity_terms = [
         term for term in required_identity_terms if term not in identity_sql
     ]
-    if missing_identity_terms or "listed_on_tg_app" in identity_sql:
+    if missing_identity_terms:
         raise SystemExit(
-            "Tg.app source must collapse to direct before the database boundary: "
+            "Telegram source attribution database boundary is incomplete: "
             f"missing={missing_identity_terms}"
+        )
+
+    acquisition_sql = (ROOT / "supabase/schemas/05_acquisition.sql").read_text(
+        encoding="utf-8"
+    ).lower()
+    required_acquisition_terms = (
+        "create table acquisition.sources",
+        "create trigger acquisition_sources_immutable",
+        "start_param text unique",
+        "'^src_[a-f0-9]{20}$'",
+        "'legacy_unknown'",
+        "'telegram_direct'",
+        "'tgapp_listing'",
+        "'player_referral'",
+        "'battle_share'",
+    )
+    missing_acquisition_terms = [
+        term for term in required_acquisition_terms if term not in acquisition_sql
+    ]
+    if missing_acquisition_terms:
+        raise SystemExit(
+            "Acquisition source registry is incomplete: "
+            f"missing={missing_acquisition_terms}"
         )
 
     documentation_requirements = {
@@ -3567,11 +3599,15 @@ def verify_telegram_catalog_start_param_allowlist() -> None:
         ),
         "ADR-090": (
             ROOT / "docs/architecture/adr/ADR-090-tgapp-catalog-source-entry.md",
-            ("`listed_on_tg_app`", "`direct`", "任何其他未知"),
+            ("`listed_on_tg_app`", "`tgapp_listing`", "ADR-101"),
+        ),
+        "ADR-101": (
+            ROOT / "docs/architecture/adr/ADR-101-acquisition-source-attribution.md",
+            ("`SRC_[A-F0-9]{20}`", "first_source_code", "legacy_unknown"),
         ),
         "product": (
             ROOT / "docs/product/功能说明文档.md",
-            ("`listed_on_tg_app`", "Tg.app", "邀请候选"),
+            ("`listed_on_tg_app`", "`SRC_[A-F0-9]{20}`", "邀请候选"),
         ),
         "acceptance": (
             ROOT / "docs/operations/acceptance.md",
@@ -3579,7 +3615,12 @@ def verify_telegram_catalog_start_param_allowlist() -> None:
                 "https://t.me/EvoMyPet_bot/evomypet?startapp=listed_on_tg_app",
                 "Safari Web Inspector",
                 "identity.entry_candidates",
+                "first_source_code",
             ),
+        ),
+        "operations": (
+            ROOT / "docs/operations/acquisition-attribution.md",
+            ("admin.acquisition_source_register", "admin.acquisition_report", "startapp="),
         ),
     }
     incomplete_documents: dict[str, list[str]] = {}

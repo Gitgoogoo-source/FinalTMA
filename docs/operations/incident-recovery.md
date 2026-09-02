@@ -43,14 +43,14 @@
 
 玩家请求中禁止自动修复市场汇总。先运行 `monitor-invariants`，分别核对 `MARKET_SELLER_SUPPLY_MISMATCH` 与 `MARKET_TEMPLATE_SUPPLY_MISMATCH` 的开放记录；前者比较原始有效挂单与卖家模板汇总，后者比较全部 `normal` 卖家汇总与全市场模板汇总。任一不一致都暂停市场新写入，保存原始挂单、两级汇总、用户状态、相关 operation 和事务错误证据，不得通过手工改一行汇总掩盖根因。
 
-只有数据库 owner 可在受控维护窗口执行 `market.rebuild_supply()`。执行前停止市场写流量并确认目标环境；函数在同一事务锁定 `identity.users`、`market.listings` 与两张汇总表，从有效原始挂单完整重建后返回卖家模板行数和市场模板行数。重建后再次运行两项不变量并用三个市场读取 RPC 对照原始有效挂单；`service_role`、`anon`、`authenticated` 和 Data API 均不得拥有该函数执行权。若根因来自声明式定义，正式上线前直接修正原始 Schema/baseline 并从空真实开发数据库重建三条迁移，不追加补丁 migration。
+只有数据库 owner 可在受控维护窗口执行 `market.rebuild_supply()`。执行前停止市场写流量并确认目标环境；函数在同一事务锁定 `identity.users`、`market.listings` 与两张汇总表，从有效原始挂单完整重建后返回卖家模板行数和市场模板行数。重建后再次运行两项不变量并用三个市场读取 RPC 对照原始有效挂单；`service_role`、`anon`、`authenticated` 和 Data API 均不得拥有该函数执行权。若根因来自声明式定义，只能通过审计过且兼容现有数据的前向 migration 修正；禁止修改原始 migration、清空数据库或重建 history。
 
 ## 市场上架配额
 
 玩家报告无法上架时，先通过 `api.market_bootstrap` 对照当前 UTC 日期、每日已用/剩余和生命周期已用/剩余，再由数据库 owner 只读核对 `market.seller_listing_quotas`、该用户成功挂单数量、相关 operation 与 reservation。每日达到 200 次必须等待下一个 UTC 自然日；生命周期达到 20,000 次是永久业务终态。不得通过删除挂单、删除 operation、下架、清理 reservation、修改日期、减少计数或重建供给汇总恢复上架能力。
 
-配额行缺失但已有成功挂单、计数越界、每日次数大于生命周期次数、bootstrap 与计数行不一致、失败请求增加计数、成功请求未增加计数或配额拒绝仍留下 operation/listing/reservation 都属于完整性事故。立即暂停市场新写入，保存用户配额行、相关挂单、operation、reservation、UTC 日期和事务错误证据；不得在玩家请求中自动修正。当前项目正式上线前必须修正声明式 Schema/baseline 并从空真实开发数据库重建；正式上线后只能使用另行审计的前向恢复程序，且永远不能降低已经发生的生命周期成功次数。
+配额行缺失但已有成功挂单、计数越界、每日次数大于生命周期次数、bootstrap 与计数行不一致、失败请求增加计数、成功请求未增加计数或配额拒绝仍留下 operation/listing/reservation 都属于完整性事故。立即暂停市场新写入，保存用户配额行、相关挂单、operation、reservation、UTC 日期和事务错误证据；不得在玩家请求中自动修正。只能使用另行审计且兼容现有数据的前向恢复程序，且永远不能降低已经发生的生命周期成功次数。
 
 ## 不变量
 
-运行 `monitor-invariants`，处理 `BALANCE_LEDGER_MISMATCH`、`DUPLICATE_PAYMENT_DELIVERY`、`RESERVATION_OVERFLOW`、`ILLEGAL_RESERVATION`、`OPEN_OPERATION_WITHOUT_SUBJECT`、`MARKET_SELLER_SUPPLY_MISMATCH`、`MARKET_TEMPLATE_SUPPLY_MISMATCH` 及正式 Battle 契约声明的 room/stake/settlement/outbox 不变量。正式生产上线前的结构修复直接修改原始声明式 Schema，并从空真实开发数据库重建三条迁移；正式生产上线后的数据修复使用审计过的前向 SQL 或既有 RPC。任何阶段都保存变更前后证据且不直接改写账本历史或 Battle 私有审计。
+运行 `monitor-invariants`，处理 `BALANCE_LEDGER_MISMATCH`、`DUPLICATE_PAYMENT_DELIVERY`、`RESERVATION_OVERFLOW`、`ILLEGAL_RESERVATION`、`OPEN_OPERATION_WITHOUT_SUBJECT`、`MARKET_SELLER_SUPPLY_MISMATCH`、`MARKET_TEMPLATE_SUPPLY_MISMATCH` 及正式 Battle 契约声明的 room/stake/settlement/outbox 不变量。结构或数据修复只使用审计过的前向 SQL、前向 migration 或既有 RPC。任何阶段都保存变更前后证据且不直接改写账本历史或 Battle 私有审计。

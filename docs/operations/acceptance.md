@@ -9,7 +9,7 @@
 环境：production
 Git commit：
 Vercel deployment id / status / source SHA：
-Migration：填写 `supabase/migrations` 中按文件名排序的三条实际迁移及校验和
+Migration：填写 `supabase/migrations` 中按文件名排序的全部实际迁移及校验和，并单独证明最初三份校验和未变
 OpenAPI / Catalog manifest / Battle checksum：
 设备、Telegram 版本、浅色/深色：
 开始时间（UTC）：
@@ -34,7 +34,7 @@ Battle stake / settlement / outbox event（脱敏）：
 
 - 开盒结算完整性与恢复：当前目录指针、210 条映射、active 母版、256px 缩略图或 768px 详情图任一缺失时，新的 `gacha.open` 必须在资格、余额、保底、holding、图鉴和任务变化前以 `CATALOG_UNAVAILABLE` 失败；同键回放保持同一失败且零资产副作用。对已经 `succeeded` 但历史图片 URL 为空的 operation，`operations.get` 必须返回 HTTP 200、`status=succeeded`、`result=null` 和 `error_code=CATALOG_UNAVAILABLE`，真实 iPhone Telegram 必须停止黑洞并显示“操作已完成”“奖励已存入藏品”和“画面暂时无法显示”，进入藏品与查看原结果均不得产生新 `gacha.open`。断网、5xx 或未决 operation 的自动查询固定只有 1、2、3、5 秒四次，随后网络保持静默并展示人工查看入口；恢复后手动查看可消费同一终态。只有获得新的明确付费授权后才执行正常付费开盒验收。
 
-应用契约与数据库双向不兼容的开发切换必须保存版本对齐证据：活动 Battle、未发布 outbox 与未决 operation 为 0；`main` 的单一完整提交经 Git Integration 自动创建的 Production deployment 为 `READY`，source SHA 等于发布单元 Git commit；远端三条 migration、OpenAPI、Catalog manifest 与 `battle-v1` checksum 均来自同一提交。Vercel Production 在入口开放前保持启用，不需要项目暂停、`503 DEPLOYMENT_PAUSED`、`BLOCKED` deployment、空触发提交或部署后重新暂停的证据。开始验收时 Telegram 入口、webhook 与 Vercel Cron 仍保持关闭，所有受控账号均已关闭旧 Mini App 并从 Telegram 重新加载当前 deployment；应用与数据库已经对齐，且 `/api/health`、受控 API 与运行日志没有 `RESPONSE_INVALID` 后才恢复调度和入口。任一必要证据缺失都不得把切换记为 PASS。
+生产数据库已经承载不可丢失用户，发布必须保存版本与数据保全证据：`main` 的单一完整提交经 Git Integration 自动创建的 Production deployment 为 `READY`，source SHA 等于发布单元 Git commit；远端按时间排序的全部 migration、OpenAPI、Catalog manifest 与 `battle-v1` checksum 均来自同一提交。最初三份 migration 的 SHA-256 必须等于仓库冻结值；前向 migration 执行前后分别记录各受影响表的行数和关键业务聚合，证明没有清空、删除或重建。开始验收时应用与数据库必须兼容对齐，且 `/api/health`、受控 API 与运行日志没有 `RESPONSE_INVALID`。任一必要证据缺失都不得把切换记为 PASS。
 
 执行 Telegram 登录场景前，先保存入口配置证据：Bot API `getMe.result.username` 必须等于当前环境 Bot，`getMe.result.has_main_web_app` 必须为 `true`，默认菜单按钮必须为 `web_app` 类型并指向当前环境 named Mini App 链接；随后只能从该 Bot 的 Main Mini App、菜单按钮或 named Mini App 链接启动，不得用浏览器直接访问部署 URL 代替 Telegram 真机验收。
 
@@ -115,7 +115,7 @@ Battle stake / settlement / outbox event（脱敏）：
 
 ## 用户与登录第 16.11 节验收
 
-以下 22 项逐项保存独立证据，不能合并为单一“登录通过”结论：
+以下 23 项逐项保存独立证据，不能合并为单一“登录通过”结论：
 
 1. 首次有效 Telegram 登录先显示加载反馈，只创建一个 `normal` 账号并进入首屏。
 2. 再次或长期离开后登录复用原账号、资产、权益、进度和邀请码。
@@ -139,8 +139,9 @@ Battle stake / settlement / outbox event（脱敏）：
 20. UI 不存在密码、邮箱、手机号、手动用户号、钱包登录、退出、注销、删除或归档入口。
 21. iOS、Android、Telegram Desktop、Telegram Web 的浅色、深色、刘海安全区和视口变化下，登录结果一致且全部启动控件可见可操作。
 22. 在真实 iPhone Telegram 中打开 `https://t.me/EvoMyPet_bot/evomypet?startapp=listed_on_tg_app`，并同时使用 Safari Web Inspector 记录认证请求、Console 与页面结果：本次 session 必须为 `direct` 并进入默认开盒页，推荐码与 Battle token hash 均为空；干净账号不得新增 `identity.entry_candidates`、`referral.bind` 操作、邀请关系或邀请奖励。随后分别打开无参数 named 链接、真实推荐链接、真实 Battle 链接以及大小写改变、增加前后缀和任意未知参数的链接，前三类保持原行为，所有近似或未知值仍返回入口参数错误；已有 `pending` 推荐候选的账号从 Tg.app 重认证时必须继承原候选，不能新增、删除或绕过。
+23. 由 Owner 注册两条互不相同的测试推广来源，在真实 iPhone Telegram 中分别打开完整 `startapp=SRC_...` 链接：全新受控账号的 `first_source_code`、session 与 login request 必须对应第一条来源；同账号再从第二条来源登录时 `first_source_code` 保持第一条而新 session/login request 对应第二条。相同认证幂等重放不得重复创建，未知、大小写改变及已停用参数不得创建账号或 session；两条来源都必须保持 `entry_kind = direct`，且邀请候选、关系、奖励与 Battle 状态前后无变化。Owner 报表只返回匿名聚合并准确区分两条链接。
 
-邀请交接场景必须额外记录会话 `referral_processed_at`、候选状态和门禁接口结果；存在绑定操作时记录原 `operation_id`，老用户静默进入场景确认候选与绑定操作均不存在；Tg.app 干净账号场景额外记录 session 与 login request 的 `entry_kind = direct`、空推荐码、空 Battle token hash，以及候选、绑定、邀请关系和邀请奖励的前后数据库差异；封禁竞态记录封禁前请求 generation、封禁后 generation、缓存键及最终空白界面截图；邀请信息记录 `/api/referrals` 为 200 且链接包含生产 Bot、`evomypet` 与当前用户邀请码。
+邀请交接场景必须额外记录会话 `referral_processed_at`、候选状态和门禁接口结果；存在绑定操作时记录原 `operation_id`，老用户静默进入场景确认候选与绑定操作均不存在；Tg.app 与推广来源场景额外记录 `first_source_code`、session/login request 的 `source_code`、`entry_kind = direct`、空推荐码、空 Battle token hash，以及候选、绑定、邀请关系和邀请奖励的前后数据库差异；封禁竞态记录封禁前请求 generation、封禁后 generation、缓存键及最终空白界面截图；邀请信息记录 `/api/referrals` 为 200 且链接包含生产 Bot、`evomypet` 与当前用户邀请码。
 
 ## 账号语言与 en-US 本地化验收
 

@@ -42,4 +42,4 @@ Telegram `write_access_allowed` 不属于玩家 operation。`api.telegram_chat_o
 
 ## 迁移
 
-初始空库只有三个迁移：`*_baseline.sql`、`*_product_data_v1.sql`、`*_api_security.sql`。baseline 由声明式 Schema 确定，product data 由 `tools/product_data/build.py` 统一生成，安全权限由显式迁移确定。用户明确宣布正式生产上线前，数据库定义直接修改声明式 Schema 和对应原始迁移，真实开发数据库及 migration history 清空后从第一条迁移重建。正式生产上线后才冻结历史迁移并只新增前向迁移。
+最初发布的三份 migration 为 `*_baseline.sql`、`*_product_data_v1.sql`、`*_api_security.sql`，其文件内容和 SHA-256 已永久冻结。数据库现已承载真实用户，禁止清空业务数据、重建 migration history 或修改这三份历史；所有数据库变更必须同时更新声明式 Schema，并通过按时间排序的向前 migration 兼容升级。`*_acquisition_attribution.sql` 是首份此类前向迁移，只增加来源对象、身份来源字段、兼容回填、RPC 与权限，不删除或重建既有数据。

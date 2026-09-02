@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Verify declarative schemas and the three immutable initial migrations without repository writes."""
+"""Verify declarative schemas, immutable history, and forward migrations without writes."""
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
@@ -17,6 +18,7 @@ SCHEMAS = ROOT / "supabase/schemas"
 MIGRATIONS = ROOT / "supabase/migrations"
 EXPECTED_SCHEMA_NAMES = {
     "00_foundation.sql",
+    "05_acquisition.sql",
     "10_identity.sql",
     "20_catalog.sql",
     "30_operations.sql",
@@ -43,7 +45,13 @@ EXPECTED_SCHEMA_NAMES = {
     "95_jobs.sql",
     "96_admin.sql",
 }
-EXPECTED_SUFFIXES = ("_baseline.sql", "_product_data_v1.sql", "_api_security.sql")
+INITIAL_MIGRATION_HASHES = {
+    "20260719104533_baseline.sql": "2a95b45cc07cc64504264ed17a15505590cd9bb9627f6f5958e6f1cca66a0890",
+    "20260719104602_product_data_v1.sql": "5f7c7c97dfb964a6d1d940952eddbca1de25e6268964582a1fe0a0f77cf040de",
+    "20260719104614_api_security.sql": "82185e5a1efa296e95d2e448d551944b2f4a42bc75ac9fb935cab10f18f55875",
+}
+INITIAL_SUFFIXES = ("_baseline.sql", "_product_data_v1.sql", "_api_security.sql")
+FORWARD_SUFFIX = "_acquisition_attribution.sql"
 ERROR_REGISTRY = ROOT / "packages/api-contracts/src/common/errors.ts"
 SUPABASE_CONFIG = ROOT / "supabase/config.toml"
 
@@ -55,14 +63,6 @@ def one_migration(suffix: str) -> Path:
     return matches[0]
 
 
-def rendered_baseline() -> str:
-    sections = ["-- Generated from supabase/schemas. Edit declarative schemas, then run supabase db diff for future changes.\n"]
-    for path in sorted(SCHEMAS.glob("*.sql")):
-        sections.append(f"\n-- source: {path.name}\n")
-        sections.append(path.read_text(encoding="utf-8").rstrip() + "\n")
-    return "".join(sections)
-
-
 def sql_function(source: str, name: str) -> str:
     matches = re.findall(
         rf"create or replace function {re.escape(name)}\(.*?\n\$\$;",
@@ -72,6 +72,107 @@ def sql_function(source: str, name: str) -> str:
     if len(matches) != 1:
         raise SystemExit(f"Expected exactly one {name} definition")
     return matches[0].lower()
+
+
+def verify_immutable_migration(path: Path) -> None:
+    expected = INITIAL_MIGRATION_HASHES.get(path.name)
+    if expected is None:
+        raise SystemExit(f"Unexpected immutable migration: {path.name}")
+    actual = hashlib.sha256(path.read_bytes()).hexdigest()
+    if actual != expected:
+        raise SystemExit(
+            f"Published migration changed: {path.name}; expected {expected}, got {actual}"
+        )
+
+
+def verify_acquisition_attribution_contract(path: Path) -> None:
+    source = path.read_text(encoding="utf-8")
+    sql = source.lower()
+    acquisition_schema = (SCHEMAS / "05_acquisition.sql").read_text(
+        encoding="utf-8"
+    )
+    if acquisition_schema.strip() not in source:
+        raise SystemExit(
+            "Forward migration acquisition registry differs from declarative schema"
+        )
+    required = (
+        "create schema if not exists acquisition",
+        "create table acquisition.sources",
+        "create trigger acquisition_sources_immutable",
+        "'legacy_unknown', null, 'legacy'",
+        "'telegram_direct', null, 'direct'",
+        "'tgapp_listing', 'listed_on_tg_app', 'directory'",
+        "'player_referral', null, 'referral'",
+        "'battle_share', null, 'battle'",
+        "add column first_source_code text",
+        "add column source_code text",
+        "set first_source_code = 'legacy_unknown'",
+        "set source_code = 'legacy_unknown'",
+        "alter column first_source_code set not null",
+        "alter column source_code set not null",
+        "users_first_source_created_idx",
+        "sessions_source_created_idx",
+        "login_requests_source_created_idx",
+        "p_entry_source_param text default null",
+        "source.start_param = p_entry_source_param",
+        "acquisition_source_register",
+        "acquisition_source_disable",
+        "acquisition_sources",
+        "acquisition_report",
+        "perform admin.assert_database_identity",
+        "alter table acquisition.sources enable row level security",
+        "revoke all on schema acquisition from public, anon, authenticated, service_role",
+        "grant execute on function api.identity_authenticate",
+        "notify pgrst, 'reload schema'",
+    )
+    missing = [fragment for fragment in required if fragment not in sql]
+    if missing:
+        raise SystemExit(f"Acquisition attribution migration is incomplete: {missing}")
+
+    forbidden = (
+        "truncate ",
+        "delete from identity.users",
+        "delete from identity.sessions",
+        "delete from identity.login_requests",
+        "drop table ",
+        "drop schema ",
+        "alter table identity.users drop ",
+        "alter table identity.sessions drop ",
+        "alter table identity.login_requests drop ",
+    )
+    present = [fragment for fragment in forbidden if fragment in sql]
+    if present:
+        raise SystemExit(
+            f"Forward attribution migration contains destructive data operations: {present}"
+        )
+
+    schema_sources = {
+        "acquisition.enforce_source_immutability": acquisition_schema,
+        "api.identity_authenticate": (SCHEMAS / "10_identity.sql").read_text(
+            encoding="utf-8"
+        ),
+        "admin.assert_owner_call": (SCHEMAS / "96_admin.sql").read_text(
+            encoding="utf-8"
+        ),
+        "admin.assert_database_identity": (SCHEMAS / "96_admin.sql").read_text(
+            encoding="utf-8"
+        ),
+        "admin.acquisition_source_register": (SCHEMAS / "96_admin.sql").read_text(
+            encoding="utf-8"
+        ),
+        "admin.acquisition_source_disable": (SCHEMAS / "96_admin.sql").read_text(
+            encoding="utf-8"
+        ),
+        "admin.acquisition_sources": (SCHEMAS / "96_admin.sql").read_text(
+            encoding="utf-8"
+        ),
+        "admin.acquisition_report": (SCHEMAS / "96_admin.sql").read_text(
+            encoding="utf-8"
+        ),
+    }
+    for name, schema_source in schema_sources.items():
+        if sql_function(schema_source, name) != sql_function(source, name):
+            raise SystemExit(f"Forward migration function differs from declarative schema: {name}")
 
 
 def verify_battle_operation_admission_contract() -> None:
@@ -1213,20 +1314,31 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--write-baseline", action="store_true")
     args = parser.parse_args()
+    if args.write_baseline:
+        raise SystemExit(
+            "Published migration history is immutable; create a forward migration instead"
+        )
     schema_names = {path.name for path in SCHEMAS.glob("*.sql")}
     if schema_names != EXPECTED_SCHEMA_NAMES:
         raise SystemExit(f"Schema inventory mismatch: {sorted(schema_names)}")
 
     migrations = sorted(MIGRATIONS.glob("*.sql"))
-    if len(migrations) != 3:
-        raise SystemExit(f"Expected three initial migrations, found {[path.name for path in migrations]}")
-    baseline, product_data, security = (one_migration(suffix) for suffix in EXPECTED_SUFFIXES)
-    if not (baseline.name < product_data.name < security.name):
-        raise SystemExit("Migration order must be baseline, product_data_v1, api_security")
-    if args.write_baseline:
-        baseline.write_text(rendered_baseline(), encoding="utf-8")
-    if baseline.read_text(encoding="utf-8") != rendered_baseline():
-        raise SystemExit("Baseline migration does not match declarative schemas")
+    if len(migrations) != 4:
+        raise SystemExit(
+            f"Expected three immutable initial migrations and one forward migration, "
+            f"found {[path.name for path in migrations]}"
+        )
+    baseline, product_data, security = (
+        one_migration(suffix) for suffix in INITIAL_SUFFIXES
+    )
+    forward = one_migration(FORWARD_SUFFIX)
+    if not (baseline.name < product_data.name < security.name < forward.name):
+        raise SystemExit(
+            "Migration order must be baseline, product_data_v1, api_security, then attribution"
+        )
+    for migration in (baseline, product_data, security):
+        verify_immutable_migration(migration)
+    verify_acquisition_attribution_contract(forward)
     verify_security(security)
     verify_database_error_codes()
     verify_database_boundaries()
@@ -1259,7 +1371,7 @@ def main() -> None:
         if product_data.read_bytes() != generated_product_data.read_bytes():
             print("Product data migration is stale", file=sys.stderr)
             raise SystemExit(1)
-    print("declarative schemas and three initial migrations are synchronized")
+    print("declarative schemas, immutable history, and forward migrations are synchronized")
 
 
 if __name__ == "__main__":

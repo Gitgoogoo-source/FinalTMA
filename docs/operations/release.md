@@ -1,4 +1,4 @@
-# 一次性发布手册
+# 生产发布手册
 
 ## 1. 硬前提
 
@@ -10,8 +10,8 @@
 - 现有 Storage 使用同一组 210 张正式藏品母版生成的 420 张运行时图片；私有母版对象、公开缩略图/详情图、模板、对象键与 SHA-256 必须和当前 `generated/assets/art-assets-v2.json` 一一对应，历史 v1 对应 `generated/assets/releases/catalog-v1-initial.json`。
 - 正式生产环境 `APP_ENV=production` 部署前必须提供正式 Telegram 分享图；该图片仍为已知开发占位 checksum 时禁止生产发布。休眠的 TON Connect 图标不阻塞当前 MVP。
 - 本次生产部署的 Supabase、Vercel、Telegram、Stars 与观测平台配置齐全；当前 MVP 不配置 TON RPC 或链上资源。
-- Git Integration 部署、数据库重建和 Telegram 开放使用同一 Git commit、同一 migration 序列和同一目录 manifest。
-- Git commit、按文件名排序的三份 migration 及 SHA-256、OpenAPI、Catalog 产品 manifest、宠物资源 manifest 与 `battle-v1` checksum 已冻结；代码发布单元与可独立切换的完整宠物资源批次分别保持内部原子性。
+- Git Integration 部署、数据库前向迁移和 Telegram 入口使用同一 Git commit、同一 migration 序列和同一目录 manifest；生产数据库禁止清空或重建。
+- Git commit、按文件名排序的全部 migration 及 SHA-256、OpenAPI、Catalog 产品 manifest、宠物资源 manifest 与 `battle-v1` checksum 构成发布单元；最初三份 migration 的字节与 SHA-256 永久冻结，后续只追加兼容真实数据的前向 migration。
 - Vercel 套餐支持 `vercel.json` 中支付对账、幂等清理、不变量监控和宠物公开对象清理四项当前 Cron；当前 MVP 不调度 Mint 对账 Cron。
 - Vercel Production 环境变量名称核查同时包含 `TELEGRAM_BOT_USERNAME` 与 `TELEGRAM_MINI_APP_SHORT_NAME`，生产 short name 固定为 `evomypet`。
 - Telegram webhook 唯一指向对应环境 HTTPS `/api/telegram/webhook`，`secret_token` 与该环境 `TELEGRAM_WEBHOOK_SECRET` 一致，`allowed_updates` 精确为 `["message", "pre_checkout_query"]`；禁止沿用上一个 Bot 或环境的 URL、secret 或隐式订阅状态。
@@ -52,7 +52,7 @@ pnpm manifest:check
 
 `pnpm architecture:check` 同时验证 `/game` 只承载 React + TypeScript Battle、没有 Phaser 或客户端战斗模拟器，任务页转盘位置、远征/钱包/Mint 任务与横幅隐藏、钱包/Mint/Mint 对账不进入当前运行时注册表，活动 Web 只使用 `app-client`、目录调用方只能使用 `useCatalogQuery()`、共享 UI barrel 与 React Router 保持删除、原生导航保留单一 popstate 订阅和完整 push/replace/历史返回/同源边界、每次 Web 文档具有非持久化会话根与递增历史 index、replace 保位、相同地址空跳转不生成历史、Telegram BackButton 只有一个全局所有者且领域页面不得注册、`global.css` 不得恢复、入口没有未登记的预渲染动态预取、重型操作运行时与操作表现保持动态边界、两个恢复 effect 通过 `useEffectEvent` 调用最新 `hydrate` 且不把它作为重新执行条件、操作注册中心 Context 只发布稳定 Store、聚合式 Hook 与完整 Runtime value bridge 保持删除、领域/导航/恢复/Wheel 只使用各自选择性订阅、根路径与深链唯一 CSP 的 `img-src` 不扩张且 `connect-src` 精确等于 ADR-054 的 Ably TLS 端点集合，以及其余模块边界、网关隔离和文档归属。生产 build 必须输出并通过 ADR-040/046 的 JS `400000 / gzip 125000`、CSS `110000 / gzip 23000` 首屏闭包硬门禁，以及 ADR-047/048 的 Battle 增量核心 JS `160000 / gzip 45000`、CSS `45000 / gzip 9000` 硬门禁；两组禁止模块和 Battle 动态 preload 映射中的应用入口 JS 均为零，且没有 Vite 大 chunk 警告。`pnpm contracts:check` 额外验证 OpenAPI 不发布休眠端点，并验证 `catalog.release` 与 Mint metadata 的 `x-cache-policy = public-immutable`。
 
-同一架构门禁还必须证明推荐交接只由 `referral_processed_at` 裁决、绑定终态覆盖请求会话与当前活跃会话，以及 operation 的 UUIDv7、回放优先、四项通用配额覆盖 Battle、Battle 动作级限流继续叠加、全部外键引用保护、7/30/37 天保留期和 5000 条 `SKIP LOCKED` 清理批次；门禁必须结构化拒绝 `admit_new_command` 内任意提前返回或 Battle 分支，逐一证明五个 Battle RPC 的精确 use case、单次 `begin_command`、准入前零行锁/advisory lock、回放顺序和四个对应动作级限流，并以内存负例证明等价早退、缺入口、缺限流和 accept 准入前加锁均无法通过。市场还必须证明成功上架 UTC 每日 200 次、账号生命周期 20,000 次、超限零 operation/listing/reservation 副作用、插入 trigger 原子计数和前端权威配额禁用。任一项缺失都禁止进入数据库重建与发布。
+同一架构门禁还必须证明推荐交接只由 `referral_processed_at` 裁决、绑定终态覆盖请求会话与当前活跃会话，以及 operation 的 UUIDv7、回放优先、四项通用配额覆盖 Battle、Battle 动作级限流继续叠加、全部外键引用保护、7/30/37 天保留期和 5000 条 `SKIP LOCKED` 清理批次；门禁必须结构化拒绝 `admit_new_command` 内任意提前返回或 Battle 分支，逐一证明五个 Battle RPC 的精确 use case、单次 `begin_command`、准入前零行锁/advisory lock、回放顺序和四个对应动作级限流，并以内存负例证明等价早退、缺入口、缺限流和 accept 准入前加锁均无法通过。市场还必须证明成功上架 UTC 每日 200 次、账号生命周期 20,000 次、超限零 operation/listing/reservation 副作用、插入 trigger 原子计数和前端权威配额禁用。任一项缺失都禁止进入数据库迁移与发布。
 
 休眠实现的 TON Connect manifest 仅通过以下命令保持格式确定：
 
@@ -68,9 +68,9 @@ pnpm manifest:build
 
 既有 v1 对象只执行一次命名空间迁移：先用 `manifest-runtime-v2 --from-manifest generated/assets/releases/catalog-v1-initial.json --release-key <唯一发布键>` 生成确定的 v2 清单，再在目标环境执行同参数的 `migrate-runtime-v2`，从公开 v1 对象读取并校验内容后无覆盖上传 v2 对象，不读取或导出私有母版。数据库从空库重建时先用历史清单执行受控 v1 发布，再用当前清单执行受控 v2 发布；v1 随即成为退役批次并从该时刻计算 90 天保留期。
 
-## 3. 既有云环境的一次性生产重建
+## 3. 已归档的一次性生产重建记录
 
-用户已明确授权把现有 Vercel 与 Supabase 一次性转为生产，并在入口开放前执行最后一次空库重建。Vercel Production 固定保持启用与可访问，完整提交只通过 `main` 的 Git Integration 自动部署；不得暂停项目、创建空触发提交或执行手动 Vercel 部署。顺序如下：
+以下编号步骤只保留为生产首次切换的历史记录，当前数据库已经承载真实用户，严禁再次执行其中的清空、重建或修改原始 migration 动作。当前及未来发布必须使用兼容存量数据的前向 migration，并保存执行前后行数与业务聚合。历史顺序如下：
 
 1. 记录发布单元的 Git commit、OpenAPI、Catalog manifest、`battle-v1` checksum、三条 migration 文件名及 SHA-256，核对目标 Supabase 为 `final-tma-real-test / ebewtjerusxcioegpzjd`、目标 Vercel Project 为 `final-tma`，并确认工作目录位于 `main`。
 2. 完成本地静态门禁；停用生产 Bot 的 Main Mini App，把默认菜单按钮恢复为默认行为，保留 `evomypet` short name 并将其 Web App URL 改为当前环境 `/maintenance.html`，禁止删除 named Mini App。关闭 Battle 新建/接受入口，但保持当前应用、`battle-tick-v1`、pg_net、两个 integrations 与 Ably 运行，直到 waiting、lobby、active room、active participant、locked stake、active reservation、未发布 outbox、`pending/unknown` Battle operation 和开放 Battle violation 全部为 0。只有首次引入维护页且旧 deployment 尚无该文件时，允许先关闭 Main 与菜单，推送包含维护页的完整提交并等待 deployment `READY`、维护页 200/HTML/no-store 后立即切换 named URL；后续发布不得重复该例外。
@@ -92,15 +92,15 @@ pnpm manifest:build
 
 顺序不可调整：
 
-1. 再次执行 `APP_ENV=production pnpm build` 与 `pnpm assets:check:production`，并核对 Git deployment SHA、三条 migration SHA-256、OpenAPI、Catalog manifest 和 `battle-v1` checksum 一致。
+1. 再次执行 `APP_ENV=production pnpm build` 与 `pnpm assets:check:production`，并核对 Git deployment SHA、全部 migration SHA-256、OpenAPI、Catalog manifest 和 `battle-v1` checksum 一致；最初三份 migration 必须保持冻结值。
 2. 核对 Vercel Production 的 `APP_ENV=production`、`APP_BASE_URL=https://final-tma-pi.vercel.app`、`TELEGRAM_BOT_USERNAME=EvoMyPet_bot`、`TELEGRAM_MINI_APP_SHORT_NAME=evomypet`、生产 Bot token、webhook secret、Supabase、Ably、Battle、Cron 与独立人工支付支持配置；不得输出 Secret 值。
 3. 核对数据库 identity 精确为 `production / ebewtjerusxcioegpzjd`、Battle 验收夹具禁用、`assets:release status` 为 `ready`、Data API 暴露面与全部 RLS/授权正确。
 4. 使用 `https://final-tma-pi.vercel.app/api/telegram/webhook`、生产 `TELEGRAM_WEBHOOK_SECRET` 和精确 `allowed_updates=["message","pre_checkout_query"]` 设置 webhook；用 `getWebhookInfo` 验证 URL、订阅、`pending_update_count` 和最后错误状态。
 5. 把 named Mini App `evomypet` 的 Web App URL 从维护页恢复到根 URL并用真实 Telegram 直链验收；再启用 Main Mini App；最后把默认菜单设为 `Open EvoMyPet` 并指向 `https://t.me/EvoMyPet_bot/evomypet`。任一步失败都保持其余入口关闭。
 6. 在真实 iPhone Telegram 与 Safari Web Inspector 完成登录、目录、资产、写入私聊授权与聊天列表、开盒、图鉴、进化、市场、Battle、支付助手和恢复验收；另用真实 Android Telegram 覆盖授权、拒绝后重进、已授权跳过与欢迎消息。付款流程只验证到 invoice 前，不实际支付 Telegram Stars。
 7. 恢复四项 Vercel Cron 与 `battle-tick-v1`，执行 health、四个 Vercel job 和两个 Battle integrations，并确认开放 violation 为 0、无未发布 outbox、无 pending/unknown operation。
-8. 记录入口恢复时间和冻结 commit。自此数据库承载生产数据，既有 migration history 永久冻结，只允许前向兼容应用和追加 migration。
+8. 记录入口恢复时间和冻结 commit。数据库已经承载生产数据，既有 migration history 永久冻结，只允许前向兼容应用和追加 migration。
 
 ## 5. 回滚边界
 
-不回滚数据库到旧 schema，不重新开放旧 API。生产入口首次恢复前，部署失败时保持 Telegram 业务入口与调度关闭但不暂停 Vercel Project，修正原始三条迁移并从空目标数据库重建；入口恢复后只能使用兼容现有数据与已加载客户端的前向修复和追加 migration。已经 Mint 的 NFT、已确认 Stars 支付和已锁定或结算的 Battle 只能通过原 operation、数据库 tick 与恢复流程完成，不能重复交付、改判、退款或撤销既有事实。
+不回滚数据库到旧 schema，不重新开放旧 API，不清空生产数据，不修改最初三份 migration，也不重建 migration history。部署失败时保持当前兼容版本运行，并只使用兼容现有数据与已加载客户端的前向修复和追加 migration。已经 Mint 的 NFT、已确认 Stars 支付和已锁定或结算的 Battle 只能通过原 operation、数据库 tick 与恢复流程完成，不能重复交付、改判、退款或撤销既有事实。

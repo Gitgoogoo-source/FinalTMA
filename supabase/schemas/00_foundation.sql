@@ -4,6 +4,7 @@ create extension if not exists pg_cron;
 create extension if not exists pg_net with schema extensions;
 create extension if not exists supabase_vault;
 
+create schema if not exists acquisition;
 create schema if not exists identity;
 create schema if not exists catalog;
 create schema if not exists economy;

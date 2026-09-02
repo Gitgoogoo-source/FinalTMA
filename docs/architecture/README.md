@@ -22,7 +22,7 @@ ec8d89aec0a700bfb504285401bf6327ed2a4c48c94d4d8bb92559bdae2ee61e
 - Realtime：Ably Standard 只发送 Battle 状态失效通知；REST 与数据库 `state_version` 回正权威状态。
 - Blockchain：TON Connect、钱包验证与 Tact NFT Mint 实现保留休眠；当前 App/Jobs 运行时注册表与 OpenAPI 均不发布相关端点，MVP 不提供入口、恢复或定时对账。
 - Deployment：既有 Vercel Pro Project `final-tma` 是唯一生产项目；`main` 只通过 Git Integration 自动部署，不使用项目暂停、空触发提交或手动部署；既有 Supabase `final-tma-real-test / ebewtjerusxcioegpzjd` 是唯一生产数据库，完整裁决见 [ADR-086](adr/ADR-086-evomypet-production-cutover.md)。
-- Tg.app：目录打开链接附带的精确 `listed_on_tg_app` 来源值在 Telegram `initData` 验签后折叠为现有 `direct`，不创建渠道入口类型、邀请候选、邀请奖励或 Battle 状态；其他未知参数继续拒绝，完整边界见 [ADR-090](adr/ADR-090-tgapp-catalog-source-entry.md)。
+- 推广归因：Tg.app 的精确 `listed_on_tg_app` 与 Owner 预注册的 `SRC_[A-F0-9]{20}` 都只在 Telegram `initData` 验签后作为 `direct` 入口处理；账号保存不可覆盖的首来源，session 保存本次来源，不创建邀请候选、邀请奖励或 Battle 状态，其他未知参数继续拒绝。完整边界见 [ADR-090](adr/ADR-090-tgapp-catalog-source-entry.md) 与 [ADR-101](adr/ADR-101-acquisition-source-attribution.md)。
 - 市场购买：单次数量固定为 `1..100`，普通购买与充值补差共用契约；数据库在任何挂单锁前复核上限，同模板串行后只锁定最多 100 条 FIFO 原始挂单并仅结算该候选集合，完整边界见 [ADR-097](adr/ADR-097-market-bounded-purchase-settlement.md)。
 - Telegram SDK：入口只加载官方当前 `telegram-web-app.js?63`，使用批准的 SHA-384 SRI 与匿名 CORS，失败时关闭认证且没有未固定回退；URL、字节哈希、静态门禁与真实 WebView 验收按 [ADR-098](adr/ADR-098-telegram-sdk-subresource-integrity.md) 同步升级。
 - Battle operation 准入：创建、随机匹配、取消、接受和行动与其他幂等命令共用四项用户容量上限，既有 Battle 动作级限流继续叠加，完整边界见 [ADR-099](adr/ADR-099-battle-operation-admission.md)。
@@ -82,7 +82,7 @@ Telegram 发现页和公开信息按 [ADR-088](adr/ADR-088-telegram-discovery-pr
 
 内部 schema 对 `public`、`anon`、`authenticated` 和 `service_role` 撤销 schema、表、视图、序列和函数权限。内部库存读模型使用 `security_invoker` 且不进入 Exposed schemas。`service_role` 只获得 `api` schema 的使用权和显式 allowlist 函数的执行权，不能执行内部登录限流 helper。玩家 RPC 使用 `session_id` 最终验证会话存在、撤销、绝对过期、账号、入口交接和资源归属；常规认证没有独立会话解析 RPC。
 
-`admin` 是数据库所有者专用的非 Data API 管理边界。受控 Battle 验收夹具只从该 schema 执行，默认没有项目身份或 enable 记录，不向 `service_role` 或任何应用角色授权；最终重建将项目绑定为 `production / ebewtjerusxcioegpzjd`，生产身份永久禁止启用夹具，其他边界遵循 [ADR-016](adr/ADR-016-controlled-battle-acceptance-fixture.md)。
+`admin` 是数据库所有者专用的非 Data API 管理边界。受控 Battle 验收夹具与推广来源注册、停用、匿名聚合报表只从该 schema 执行，不向 `service_role` 或任何应用角色授权；写入类管理操作必须核对不可变的数据库环境身份。Battle 边界遵循 [ADR-016](adr/ADR-016-controlled-battle-acceptance-fixture.md)，归因边界遵循 [ADR-101](adr/ADR-101-acquisition-source-attribution.md)。
 
 ## 操作恢复
 
@@ -197,6 +197,7 @@ operation 准入与保留按 [ADR-059](adr/ADR-059-bounded-operation-admission-a
 - [Telegram 聊天列表授权与首次欢迎消息](adr/ADR-087-telegram-chat-list-onboarding.md)
 - [Telegram 发现页品牌素材与公开信息闭环](adr/ADR-088-telegram-discovery-profile-and-public-info.md)
 - [Tg.app 目录来源参数精确直接入口](adr/ADR-090-tgapp-catalog-source-entry.md)
+- [Telegram 推广链接首来源归因](adr/ADR-101-acquisition-source-attribution.md)
 - [全局统一按钮点击音效（已被 ADR-092 替代）](adr/ADR-091-global-button-click-audio.md)
 - [低延迟按钮按下音效](adr/ADR-092-low-latency-button-press-audio.md)
 - [Battle 实际对战底部导航可见性](adr/ADR-093-battle-active-bottom-navigation-visibility.md)

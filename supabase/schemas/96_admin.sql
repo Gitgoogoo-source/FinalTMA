@@ -111,8 +111,400 @@ begin
   if v_owner is null or not pg_catalog.pg_has_role(current_user, v_owner, 'USAGE') then
     raise exception using
       errcode = '42501',
-      message = 'BATTLE_FIXTURE_OWNER_REQUIRED';
+      message = 'ADMIN_OWNER_REQUIRED';
   end if;
+end;
+$$;
+
+create or replace function admin.assert_database_identity(
+  p_environment text,
+  p_project_ref text
+)
+returns void
+language plpgsql
+stable
+security invoker
+set search_path = ''
+as $$
+declare
+  v_identity admin.database_identity%rowtype;
+begin
+  perform admin.assert_owner_call();
+  if p_environment is null
+    or p_environment not in ('local', 'real_development', 'production')
+    or p_project_ref is null
+    or p_project_ref !~ '^[a-z]{20}$'
+  then
+    raise exception using
+      errcode = '22023',
+      message = 'DATABASE_IDENTITY_INVALID';
+  end if;
+  select * into v_identity
+  from admin.database_identity
+  where singleton;
+  if v_identity.singleton is null
+    or v_identity.environment <> p_environment
+    or v_identity.project_ref <> p_project_ref
+  then
+    raise exception using
+      errcode = 'P0001',
+      message = 'DATABASE_IDENTITY_MISMATCH';
+  end if;
+end;
+$$;
+
+create or replace function admin.acquisition_source_register(
+  p_environment text,
+  p_project_ref text,
+  p_source_code text,
+  p_channel_code text,
+  p_platform_code text,
+  p_campaign_code text,
+  p_ad_group_code text,
+  p_creative_code text,
+  p_link_label text
+)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_source acquisition.sources%rowtype;
+  v_start_param text;
+  v_attempt integer;
+begin
+  perform admin.assert_database_identity(p_environment, p_project_ref);
+  if p_source_code is null
+    or p_source_code !~ '^[a-z][a-z0-9_]{2,63}$'
+    or p_source_code in (
+      'legacy_unknown',
+      'telegram_direct',
+      'tgapp_listing',
+      'player_referral',
+      'battle_share'
+    )
+    or p_channel_code is null
+    or p_channel_code not in ('directory', 'paid_ad')
+    or p_platform_code is null
+    or p_platform_code !~ '^[a-z][a-z0-9_]{1,31}$'
+    or p_campaign_code is null
+    or p_campaign_code !~ '^[a-z0-9][a-z0-9_.-]{0,63}$'
+    or (p_ad_group_code is not null and p_ad_group_code !~ '^[a-z0-9][a-z0-9_.-]{0,63}$')
+    or (p_creative_code is not null and p_creative_code !~ '^[a-z0-9][a-z0-9_.-]{0,63}$')
+    or p_link_label is null
+    or btrim(p_link_label) = ''
+    or char_length(p_link_label) > 160
+  then
+    raise exception using
+      errcode = '22023',
+      message = 'ACQUISITION_SOURCE_INVALID';
+  end if;
+
+  perform pg_advisory_xact_lock(
+    hashtextextended('admin.acquisition.source:' || p_source_code, 0)
+  );
+  select * into v_source
+  from acquisition.sources source
+  where source.source_code = p_source_code
+  for update;
+  if v_source.source_code is not null then
+    if v_source.channel_code is distinct from p_channel_code
+      or v_source.platform_code is distinct from p_platform_code
+      or v_source.campaign_code is distinct from p_campaign_code
+      or v_source.ad_group_code is distinct from p_ad_group_code
+      or v_source.creative_code is distinct from p_creative_code
+      or v_source.link_label is distinct from p_link_label
+    then
+      raise exception using
+        errcode = '23505',
+        message = 'ACQUISITION_SOURCE_CODE_CONFLICT';
+    end if;
+    return jsonb_build_object(
+      'source_code', v_source.source_code,
+      'start_param', v_source.start_param,
+      'status', v_source.status,
+      'created_at', v_source.created_at,
+      'replayed', true
+    );
+  end if;
+
+  for v_attempt in 1..5 loop
+    v_start_param := 'SRC_' || upper(encode(extensions.gen_random_bytes(10), 'hex'));
+    begin
+      insert into acquisition.sources (
+        source_code,
+        start_param,
+        channel_code,
+        platform_code,
+        campaign_code,
+        ad_group_code,
+        creative_code,
+        link_label
+      ) values (
+        p_source_code,
+        v_start_param,
+        p_channel_code,
+        p_platform_code,
+        p_campaign_code,
+        p_ad_group_code,
+        p_creative_code,
+        p_link_label
+      )
+      returning * into v_source;
+      exit;
+    exception when unique_violation then
+      v_source := null;
+    end;
+  end loop;
+  if v_source.source_code is null then
+    raise exception using
+      errcode = 'P0001',
+      message = 'ACQUISITION_SOURCE_TOKEN_GENERATION_FAILED';
+  end if;
+
+  return jsonb_build_object(
+    'source_code', v_source.source_code,
+    'start_param', v_source.start_param,
+    'status', v_source.status,
+    'created_at', v_source.created_at,
+    'replayed', false
+  );
+end;
+$$;
+
+create or replace function admin.acquisition_source_disable(
+  p_environment text,
+  p_project_ref text,
+  p_source_code text
+)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_source acquisition.sources%rowtype;
+begin
+  perform admin.assert_database_identity(p_environment, p_project_ref);
+  if p_source_code is null then
+    raise exception using
+      errcode = '22023',
+      message = 'ACQUISITION_SOURCE_INVALID';
+  end if;
+  if p_source_code in (
+    'legacy_unknown',
+    'telegram_direct',
+    'tgapp_listing',
+    'player_referral',
+    'battle_share'
+  ) then
+    raise exception using
+      errcode = '22023',
+      message = 'ACQUISITION_SYSTEM_SOURCE_IMMUTABLE';
+  end if;
+  select * into v_source
+  from acquisition.sources source
+  where source.source_code = p_source_code
+  for update;
+  if v_source.source_code is null then
+    raise exception using
+      errcode = 'P0001',
+      message = 'ACQUISITION_SOURCE_NOT_FOUND';
+  end if;
+  if v_source.status = 'active' then
+    update acquisition.sources
+    set status = 'disabled',
+        disabled_at = now(),
+        disabled_by = current_user
+    where source_code = p_source_code
+    returning * into v_source;
+  end if;
+  return jsonb_build_object(
+    'source_code', v_source.source_code,
+    'start_param', v_source.start_param,
+    'status', v_source.status,
+    'disabled_at', v_source.disabled_at
+  );
+end;
+$$;
+
+create or replace function admin.acquisition_sources()
+returns table (
+  source_code text,
+  start_param text,
+  channel_code text,
+  platform_code text,
+  campaign_code text,
+  ad_group_code text,
+  creative_code text,
+  link_label text,
+  status text,
+  created_at timestamptz,
+  disabled_at timestamptz
+)
+language plpgsql
+stable
+security invoker
+set search_path = ''
+as $$
+begin
+  perform admin.assert_owner_call();
+  return query
+  select
+    source.source_code,
+    source.start_param,
+    source.channel_code,
+    source.platform_code,
+    source.campaign_code,
+    source.ad_group_code,
+    source.creative_code,
+    source.link_label,
+    source.status,
+    source.created_at,
+    source.disabled_at
+  from acquisition.sources source
+  order by source.created_at, source.source_code;
+end;
+$$;
+
+create or replace function admin.acquisition_report(
+  p_cohort_from timestamptz,
+  p_cohort_to timestamptz
+)
+returns table (
+  source_code text,
+  start_param text,
+  channel_code text,
+  platform_code text,
+  campaign_code text,
+  ad_group_code text,
+  creative_code text,
+  link_label text,
+  status text,
+  new_users bigint,
+  unique_login_users bigint,
+  successful_logins bigint,
+  activated_users bigint,
+  d1_eligible_users bigint,
+  d1_retained_users bigint,
+  d7_eligible_users bigint,
+  d7_retained_users bigint,
+  payer_users bigint,
+  gross_stars bigint,
+  refund_stars bigint,
+  net_stars bigint
+)
+language plpgsql
+stable
+security invoker
+set search_path = ''
+as $$
+begin
+  perform admin.assert_owner_call();
+  if p_cohort_from is null or p_cohort_to is null or p_cohort_from >= p_cohort_to then
+    raise exception using
+      errcode = '22023',
+      message = 'ACQUISITION_REPORT_RANGE_INVALID';
+  end if;
+  return query
+  with cohort as (
+    select
+      account.id as user_id,
+      account.first_source_code,
+      (account.created_at at time zone 'utc')::date as registration_date
+    from identity.users account
+    where account.created_at >= p_cohort_from
+      and account.created_at < p_cohort_to
+  ), cohort_rollup as (
+    select
+      cohort.first_source_code,
+      count(*) as new_users,
+      count(*) filter (
+        where exists (
+          select 1
+          from tasks.daily_progress progress
+          where progress.user_id = cohort.user_id
+            and progress.task_code in ('gacha_1', 'gacha_10', 'gacha_ten')
+            and progress.progress > 0
+        )
+      ) as activated_users,
+      count(*) filter (
+        where cohort.registration_date + 1 < (now() at time zone 'utc')::date
+      ) as d1_eligible_users,
+      count(*) filter (
+        where cohort.registration_date + 1 < (now() at time zone 'utc')::date
+          and exists (
+            select 1
+            from identity.sessions retained_session
+            where retained_session.user_id = cohort.user_id
+              and (retained_session.created_at at time zone 'utc')::date = cohort.registration_date + 1
+          )
+      ) as d1_retained_users,
+      count(*) filter (
+        where cohort.registration_date + 7 < (now() at time zone 'utc')::date
+      ) as d7_eligible_users,
+      count(*) filter (
+        where cohort.registration_date + 7 < (now() at time zone 'utc')::date
+          and exists (
+            select 1
+            from identity.sessions retained_session
+            where retained_session.user_id = cohort.user_id
+              and (retained_session.created_at at time zone 'utc')::date = cohort.registration_date + 7
+          )
+      ) as d7_retained_users
+    from cohort
+    group by cohort.first_source_code
+  ), session_rollup as (
+    select
+      session.source_code,
+      count(distinct session.user_id) as unique_login_users,
+      count(*) as successful_logins
+    from identity.sessions session
+    where session.created_at >= p_cohort_from
+      and session.created_at < p_cohort_to
+    group by session.source_code
+  ), payment_rollup as (
+    select
+      cohort.first_source_code,
+      count(distinct payment.user_id) as payer_users,
+      coalesce(sum(payment.stars_amount), 0)::bigint as gross_stars,
+      coalesce(sum(payment.refunded_stars), 0)::bigint as refund_stars
+    from cohort
+    join payments.orders payment on payment.user_id = cohort.user_id
+    where payment.paid_at is not null
+    group by cohort.first_source_code
+  )
+  select
+    source.source_code,
+    source.start_param,
+    source.channel_code,
+    source.platform_code,
+    source.campaign_code,
+    source.ad_group_code,
+    source.creative_code,
+    source.link_label,
+    source.status,
+    coalesce(cohort_metric.new_users, 0),
+    coalesce(session_metric.unique_login_users, 0),
+    coalesce(session_metric.successful_logins, 0),
+    coalesce(cohort_metric.activated_users, 0),
+    coalesce(cohort_metric.d1_eligible_users, 0),
+    coalesce(cohort_metric.d1_retained_users, 0),
+    coalesce(cohort_metric.d7_eligible_users, 0),
+    coalesce(cohort_metric.d7_retained_users, 0),
+    coalesce(payment_metric.payer_users, 0),
+    coalesce(payment_metric.gross_stars, 0),
+    coalesce(payment_metric.refund_stars, 0),
+    coalesce(payment_metric.gross_stars, 0) - coalesce(payment_metric.refund_stars, 0)
+  from acquisition.sources source
+  left join cohort_rollup cohort_metric
+    on cohort_metric.first_source_code = source.source_code
+  left join session_rollup session_metric
+    on session_metric.source_code = source.source_code
+  left join payment_rollup payment_metric
+    on payment_metric.first_source_code = source.source_code
+  order by source.platform_code, source.campaign_code nulls first, source.source_code;
 end;
 $$;
 
