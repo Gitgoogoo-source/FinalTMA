@@ -55,7 +55,6 @@ export function TopupDialog({
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const closing = useRef(false);
-  const directGachaTopupStarted = useRef(false);
   const status = useApiQuery("topup.bootstrap");
   const { run } = useOperationCommands();
   const { bindTopupOrder } = useNavigationIntent();
@@ -184,12 +183,6 @@ export function TopupDialog({
       if (!order.invoice_url) return;
       telegram()?.openInvoice(order.invoice_url, (invoiceStatus) => {
         if (invoiceStatus === "cancelled") {
-          if (directGachaTopup) {
-            closing.current = true;
-            close();
-            void cancelOrder(order.id);
-            return;
-          }
           resetOrder();
           void cancelOrder(order.id);
           return;
@@ -204,62 +197,59 @@ export function TopupDialog({
         setActiveOrder({ ...order, status: "processing" });
       });
     },
-    [cancelOrder, close, directGachaTopup, failOrder, resetOrder],
+    [cancelOrder, failOrder, resetOrder],
   );
 
-  const create = useCallback(
-    async (forceExactGap = false) => {
-      const input =
-        request && (forceExactGap || selectedAmount === "exact_gap")
-          ? ({ mode: "exact_gap", intent: request.intent } as const)
-          : ({
-              mode: "fixed",
-              amount: Number(selectedAmount) as 50 | 500 | 1000 | 5000 | 10000,
-              ...(request ? { intent: request.intent } : {}),
-            } as const);
-      setCreating(true);
-      setCreateError(null);
-      try {
-        const result = (
-          await apiRequest("topup.create_order", input, {
-            idempotencyKey: newIdempotencyKey(),
-          })
-        ).data;
-        if (closing.current) {
-          void cancelOrder(result.id);
-          return;
-        }
-        setCreating(false);
-        bindTopupOrder(result.id);
-        setActiveOrder(result);
-        openInvoice(result);
-      } catch (cause) {
-        if (closing.current) return;
-        setCreating(false);
-        setCreateError(
-          cause instanceof ApiFailure
-            ? cause.message
-            : t("暂时无法创建支付订单，请立即重试"),
-        );
-        const refreshed = await status.refetch();
-        if (closing.current) return;
-        const processing = refreshed.data?.orders.find(
-          (candidate) =>
-            candidate.kind === "kcoin_topup" &&
-            (candidate.status === "processing" ||
-              candidate.status === "paid" ||
-              candidate.status === "payment_identity_conflict"),
-        );
-        if (processing) {
-          bindTopupOrder(processing.id);
-          setActiveOrder(processing);
-          setSubmitted(true);
-          setCreateError(null);
-        }
+  const create = async () => {
+    const input =
+      selectedAmount === "exact_gap" && request
+        ? ({ mode: "exact_gap", intent: request.intent } as const)
+        : ({
+            mode: "fixed",
+            amount: Number(selectedAmount) as 50 | 500 | 1000 | 5000 | 10000,
+            ...(request ? { intent: request.intent } : {}),
+          } as const);
+    setCreating(true);
+    setCreateError(null);
+    try {
+      const result = (
+        await apiRequest("topup.create_order", input, {
+          idempotencyKey: newIdempotencyKey(),
+        })
+      ).data;
+      if (closing.current) {
+        void cancelOrder(result.id);
+        return;
       }
-    },
-    [bindTopupOrder, cancelOrder, openInvoice, request, selectedAmount, status],
-  );
+      setCreating(false);
+      bindTopupOrder(result.id);
+      setActiveOrder(result);
+      openInvoice(result);
+    } catch (cause) {
+      if (closing.current) return;
+      setCreating(false);
+      setCreateError(
+        cause instanceof ApiFailure
+          ? cause.message
+          : t("暂时无法创建支付订单，请立即重试"),
+      );
+      const refreshed = await status.refetch();
+      if (closing.current) return;
+      const processing = refreshed.data?.orders.find(
+        (candidate) =>
+          candidate.kind === "kcoin_topup" &&
+          (candidate.status === "processing" ||
+            candidate.status === "paid" ||
+            candidate.status === "payment_identity_conflict"),
+      );
+      if (processing) {
+        bindTopupOrder(processing.id);
+        setActiveOrder(processing);
+        setSubmitted(true);
+        setCreateError(null);
+      }
+    }
+  };
 
   const closeDialog = () => {
     if (locked) return;
@@ -269,18 +259,6 @@ export function TopupDialog({
   };
 
   const orderId = order?.id;
-
-  useEffect(() => {
-    if (
-      !directGachaTopup ||
-      order ||
-      createError ||
-      directGachaTopupStarted.current
-    )
-      return;
-    directGachaTopupStarted.current = true;
-    void create(true);
-  }, [create, createError, directGachaTopup, order]);
 
   useEffect(() => {
     if (!locked || !orderId) return;
@@ -317,24 +295,6 @@ export function TopupDialog({
     order?.status === "expired" ||
     order?.status === "rejected" ||
     (order?.status === "refunded" && !order.delivered_at);
-
-  if (directGachaTopup && !order && !createError) {
-    return (
-      <AppModal
-        className="topup-sheet-backdrop"
-        labelledBy="topup-dialog-title"
-        onClose={creating ? undefined : closeDialog}
-      >
-        <div className="modal topup topup-sheet">
-          <header className="topup-sheet-heading">
-            <Sparkles aria-hidden="true" />
-            <h2 id="topup-dialog-title">{t("正在创建充值订单")}</h2>
-            <Sparkles aria-hidden="true" />
-          </header>
-        </div>
-      </AppModal>
-    );
-  }
 
   if (request && !showOptions && !order) {
     return (
