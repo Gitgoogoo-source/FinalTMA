@@ -61,6 +61,53 @@ final result: passed
 
 ---
 
+## Stars 充值底部小窗与开盒背景连续性（2026-09-03）
+
+**Comparison Target**
+
+- Source visual truth: `/var/folders/__/ffcc9r1113l4c8cd1z4m8tp80000gn/T/codex-clipboard-e294b11b-1142-454b-9a18-62b300521958.png`
+- Implementation screenshot: `/Users/mac/.codex/visualizations/2026/09/02/01a06345-818a-7923-bdc1-44aee24db7fd/stars-topup-bottom-sheet/implementation-iphone-gacha-shortfall.png`
+- Full-view comparison: `/Users/mac/.codex/visualizations/2026/09/02/01a06345-818a-7923-bdc1-44aee24db7fd/stars-topup-bottom-sheet/reference-vs-implementation.png`
+- Runtime: Telegram iOS on the mirrored physical iPhone, Vercel Production deployment `dpl_6MNwwhCFQAn2spzAjAmuQrBuBUiF`, commit `4e2a808412a7c4282a44c35ef5435554b2ffc9f1`
+- Viewport normalization: source and implementation are both `330 × 733px` mirrored captures and were compared 1:1 without resizing. The underlying CSS viewport and device pixel ratio were not available because Safari reported no inspectable content.
+- State: Open page, Rare Mythic box selected, account Stars balance `0`, one-open shortfall `40 Stars`, exact-gap option selected, Telegram invoice not opened.
+- Focused comparison: not required because the `660 × 733px` full-view comparison keeps the sheet title, description, all six amount controls, both actions, and the visible opening-page background legible at original capture density.
+
+**Findings**
+
+- No actionable P0, P1, or P2 visual difference remains in the requested scope.
+- Fonts and typography: the existing heavy game heading, small explanatory copy, tabular amount labels, and compact two-line payment CTA remain legible and preserve the hierarchy of the decomposition reference.
+- Spacing and layout rhythm: the sheet is bottom-aligned with the same warm rounded-top treatment and handle pattern as the reference. Its content-sized height leaves the egg, box selector, top asset bar, and Telegram controls visible instead of presenting a replacement full page.
+- Colors and visual tokens: the warm ivory sheet and orange selected/primary states remain consistent with the existing inventory action sheet. The full-screen recharge backdrop is transparent and does not add a white, dark, or blurred layer over the opening page.
+- Image quality and asset fidelity: the opening egg and box artwork remain sharp and unobscured above the sheet. The former oversized coin cluster that extended outside the sheet is no longer rendered; no replacement placeholder or synthetic asset was introduced.
+- Copy and content: the shortfall copy shows the authoritative estimated `40 Stars`, all existing fixed products remain available, and the payment action continues to identify Telegram Stars explicitly.
+- Interaction states: opening from the top Stars control and returning both worked. Opening one box with a zero balance produced the expected exact-gap sheet on the opening page. The payment CTA was intentionally not activated, so no order or Stars payment was created.
+
+**Comparison History**
+
+- Iteration 1: the source reference and the deployed iPhone implementation were placed in one same-size comparison. The requested bottom-sheet composition, visible background continuity, and compact height were present, so no post-capture P0/P1/P2 correction cycle was required.
+
+**Open Questions**
+
+- Safari Web Inspector listed the connected iPhone twice but showed `无可检查内容` for both entries. Console and network evidence for this run therefore remains unverified.
+
+**Implementation Checklist**
+
+- [x] Keep the opening page mounted and visibly present behind the recharge sheet.
+- [x] Remove the full-screen blur/dim treatment and the oversized coin artwork outside the sheet.
+- [x] Size the recharge sheet to its content while preserving a safe maximum height and internal scrolling.
+- [x] Preserve amount selection, exact-gap selection, recovery states, Back, and Telegram payment actions.
+- [x] Verify the deployed shortfall state on the real iPhone without opening an invoice or spending Stars.
+- [ ] Capture Console and Network evidence when Safari exposes the Telegram WebView as inspectable content.
+
+**Follow-up Polish**
+
+- None required for the approved visual scope.
+
+final result: passed
+
+---
+
 ## 开盒黑洞 13 次科幻升频呼吸精修（2026-08-14）
 
 **Comparison Target**
