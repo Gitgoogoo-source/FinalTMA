@@ -214,6 +214,23 @@
                                 { "type": "null" }
                               ]
                             },
+                            "welcome_reward": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "free_normal_box"
+                                    },
+                                    "amount": { "type": "number", "const": 1 }
+                                  },
+                                  "required": ["kind", "amount"],
+                                  "additionalProperties": false
+                                },
+                                { "type": "null" }
+                              ]
+                            },
                             "initial_state": {
                               "anyOf": [
                                 {
@@ -1084,6 +1101,7 @@
                             "entry_kind",
                             "entry_handoff_code",
                             "entry_handoff_result",
+                            "welcome_reward",
                             "initial_state"
                           ],
                           "additionalProperties": false

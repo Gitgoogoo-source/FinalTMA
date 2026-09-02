@@ -159,7 +159,10 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
             entryHandoffCode: login.data.entry_handoff_code,
             entryHandoffResult: login.data.entry_handoff_result,
             initialState: login.data.initial_state,
-            notice: referralNotice(login.data.entry_handoff_result),
+            notice: mergeEntryNotices(
+              login.data.welcome_reward ? t("免费普通盲盒已到账") : null,
+              referralNotice(login.data.entry_handoff_result),
+            ),
           };
         }
 
@@ -207,7 +210,7 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
             });
             return;
           }
-          context.notice = settlement.notice;
+          context.notice = mergeEntryNotices(context.notice, settlement.notice);
           context.entryHandoffState = "complete";
           context.entryHandoffResult = settlement.result;
           context.initialState = null;
@@ -521,6 +524,13 @@ function referralNotice(result: EntryHandoffResult | null): string | null {
   return result === "REFERRAL_BOUND"
     ? t("邀请关系已绑定，完成首次有效充值后可为邀请人解锁奖励")
     : referralErrorMessages[result];
+}
+
+function mergeEntryNotices(
+  first: string | null,
+  second: string | null,
+): string | null {
+  return first && second ? `${first} · ${second}` : (first ?? second);
 }
 
 const referralErrorMessages: Record<

@@ -42,6 +42,9 @@ create index entitlements_fifo_idx on economy.entitlements (user_id, kind, obtai
 create index entitlements_operation_idx
 on economy.entitlements (operation_id)
 where operation_id is not null;
+create unique index entitlements_new_user_welcome_unique_idx
+on economy.entitlements (user_id)
+where kind = 'free_normal_box' and source = 'new_user_welcome';
 
 create or replace function economy.assets(p_user_id uuid)
 returns jsonb

@@ -314,6 +314,7 @@ declare
   v_referral_processed_at timestamptz;
   v_rate_allowed boolean;
   v_source_code text;
+  v_session_new_user boolean;
 begin
   if p_request_hash is null or p_request_hash !~ '^[0-9a-f]{64}$'
     or p_user_key_hash is null or p_user_key_hash !~ '^[0-9a-f]{64}$'
@@ -394,13 +395,26 @@ begin
     if v_login.account_status = 'banned' or v_user.status = 'banned' then
       return jsonb_build_object('account_status', 'banned');
     end if;
+    select s.new_user into v_session_new_user
+    from identity.sessions s
+    where s.id = v_login.session_id;
     return jsonb_build_object(
       'session_id', v_login.session_id,
       'user_id', v_login.user_id,
       'account_status', 'normal',
       'preferred_language', v_user.preferred_language,
       'entry_kind', v_login.entry_kind,
-      'expires_at', v_login.expires_at
+      'expires_at', v_login.expires_at,
+      'welcome_reward', case
+        when coalesce(v_session_new_user, false) and exists (
+          select 1
+          from economy.entitlements entitlement
+          where entitlement.user_id = v_login.user_id
+            and entitlement.kind = 'free_normal_box'
+            and entitlement.source = 'new_user_welcome'
+        ) then jsonb_build_object('kind', 'free_normal_box', 'amount', 1)
+        else null
+      end
     ) || identity.session_entry_handoff(v_login.session_id);
   end if;
 
@@ -476,6 +490,10 @@ begin
   insert into economy.balances (user_id, currency)
   values (v_user.id, 'KCOIN'), (v_user.id, 'FGEMS')
   on conflict do nothing;
+  if v_new_user then
+    insert into economy.entitlements (user_id, kind, source)
+    values (v_user.id, 'free_normal_box', 'new_user_welcome');
+  end if;
 
   update identity.sessions set revoked_at = now()
   where user_id = v_user.id and revoked_at is null;
@@ -514,7 +532,14 @@ begin
     'account_status', v_user.status,
     'preferred_language', v_user.preferred_language,
     'entry_kind', p_entry_kind,
-    'expires_at', v_expires_at
+    'expires_at', v_expires_at,
+    'welcome_reward', case
+      when v_new_user then jsonb_build_object(
+        'kind', 'free_normal_box',
+        'amount', 1
+      )
+      else null
+    end
   ) || identity.session_entry_handoff(v_session_id);
 end;
 $$;

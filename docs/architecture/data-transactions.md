@@ -36,10 +36,10 @@ Battle 在 lobby 开战 RPC 或 monitor 检测到规则、参与者、stake/ledg
 
 `api.album_get` 是图鉴唯一读取模型：在同一次数据库读取中按 `catalog.chains.global_order` 聚合固定 70 条链和每链 3 个模板节点，并直接返回 `album.nodes` 的节点级永久点亮事实、`inventory.holdings.quantity` 的当前拥有总数、`album.rewards` 的领取事实以及完成链、可领取汇总。Web 不再联接公开目录补节点，也不得用链条点亮数量推断节点状态。`album.unlock_template` 只在节点主键首次插入成功时推进当日点亮任务，并以“用户 + 链”事务锁串行裁决第三个显式节点、仅推进一次完成链任务；所有合法获得方式共用这一事务边界。`api.album_claim` 通过操作幂等记录、`album.rewards (user_id, chain_id)` 主键、Gems 账本唯一写入和同一数据库事务保证并发领取最多成功一次。
 
-预认证登录先由来源专用 RPC 在 Telegram 验签前执行每分钟 30 次限制；验签后的 `api.identity_authenticate` 按用户、`initData`、登录 operation、Telegram 用户固定锁序，在同一事务完成每用户 10 次和同一 `initData` 3 次限制、`identity.login_requests` 幂等、用户创建、资料更新、首次入口候选、入口交接状态、旧会话撤销和指定 session UUID 的新会话创建。用户限流成功而 `initData` 超限时用户尝试记录仍提交；无效入口和同键异请求以结构化错误提交限流记录但不创建业务事实。`banned` 分支只撤销会话，不创建新会话。邀请绑定的候选终态、邀请关系、操作终态和 `referral_processed_at` 必须在同一事务提交；异常回滚后交接仍为 `pending`。
+预认证登录先由来源专用 RPC 在 Telegram 验签前执行每分钟 30 次限制；验签后的 `api.identity_authenticate` 按用户、`initData`、登录 operation、Telegram 用户固定锁序，在同一事务完成每用户 10 次和同一 `initData` 3 次限制、`identity.login_requests` 幂等、用户创建、资料更新、首次入口候选、新账号唯一一条 `new_user_welcome` 免费普通盲盒资格、入口交接状态、旧会话撤销和指定 session UUID 的新会话创建。新手资格只以用户行首次插入成功为条件，存量账号不回填；资格写入失败使整个登录事务回滚。用户限流成功而 `initData` 超限时用户尝试记录仍提交；无效入口和同键异请求以结构化错误提交限流记录但不创建业务事实。`banned` 分支只撤销会话，不创建新会话。邀请绑定的候选终态、邀请关系、操作终态和 `referral_processed_at` 必须在同一事务提交；异常回滚后交接仍为 `pending`。
 
 Telegram `write_access_allowed` 不属于玩家 operation。`api.telegram_chat_onboarding_claim` 先记录完整 webhook payload，再按 Telegram ID 锁定正常账号，并以 `operations.telegram_chat_onboarding.user_id` 主键、Telegram ID 与首次 update ID 唯一约束原子创建 `unknown` 发送尝试；只有首次插入返回 `should_send=true`。外部 `sendMessage` 发生在事务提交后，`api.telegram_chat_onboarding_finish` 只能把尚未完成的首次尝试记为 `sent`、`failed` 或保持 `unknown` 并补齐完成时间，永远不能恢复发送资格。Telegram 重试、重复 update、多设备并发和未知网络结果都只读取原记录，不再次发送。
 
 ## 迁移
 
-最初发布的三份 migration 为 `*_baseline.sql`、`*_product_data_v1.sql`、`*_api_security.sql`，其文件内容和 SHA-256 已永久冻结。数据库现已承载真实用户，禁止清空业务数据、重建 migration history 或修改这三份历史；所有数据库变更必须同时更新声明式 Schema，并通过按时间排序的向前 migration 兼容升级。`*_acquisition_attribution.sql` 是首份此类前向迁移，只增加来源对象、身份来源字段、兼容回填、RPC 与权限，不删除或重建既有数据。
+最初发布的三份 migration 为 `*_baseline.sql`、`*_product_data_v1.sql`、`*_api_security.sql`，其文件内容和 SHA-256 已永久冻结。数据库现已承载真实用户，禁止清空业务数据、重建 migration history 或修改这三份历史；所有数据库变更必须同时更新声明式 Schema，并通过按时间排序的向前 migration 兼容升级。`*_acquisition_attribution.sql` 是首份此类前向迁移；`*_new_user_free_normal_box.sql` 继续只增加资格唯一索引并替换兼容 RPC，不回填、删除或重建既有数据。

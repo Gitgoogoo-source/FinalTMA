@@ -72,11 +72,11 @@ Telegram 发现页和公开信息按 [ADR-088](adr/ADR-088-telegram-discovery-pr
 
 ## 可信边界
 
-前端只提交动作、目标标识、数量、operation-backed 命令所需的幂等键，以及 Battle presence 意图所需的 lifecycle version、lease UUID 与 command sequence。价格、余额、库存、资格、奖励、Battle presence 终态、属性与技能数值、命中、伤害、行动顺序、胜负、结算、随机结果、任务进度和链上状态均由服务端重新校验，并由单个数据库事务裁决。
+前端只提交动作、目标标识、数量、operation-backed 命令所需的幂等键，以及 Battle presence 意图所需的 lifecycle version、lease UUID 与 command sequence。价格、余额、库存、资格、奖励、是否首次创建账号、Battle presence 终态、属性与技能数值、命中、伤害、行动顺序、胜负、结算、随机结果、任务进度和链上状态均由服务端重新校验，并由单个数据库事务裁决。
 
 创建 operation 的玩家写请求以 UUIDv7 `Idempotency-Key` 作为 `operation_id`。数据库先回放旧 key，再对新 key 执行时间新鲜度与有界准入，并对规范化请求计算哈希；相同键和相同请求返回原结果，相同键和不同请求返回 `IDEMPOTENCY_KEY_REUSED`。Battle 只有创建、随机匹配、取消、接受和 `attack | switch | replace_attack` 行动属于这一范围；heartbeat/offline 不接收幂等键、不创建 operation，由数据库在 room-first 锁内先裁决 lifecycle version + lease UUID + command sequence，旧 lease、低版本、重复和乱序命令完全无副作用。Battle 结果展示不产生写请求。
 
-会话令牌只在运行内存保存，绝对有效期 15 分钟。只有 `POST /api/auth/telegram` 接收 Telegram `initData`；认证裁决固定执行验签前来源限流和验签后登录事务两个数据库 RPC，完成交接的正常首屏再在事务提交后执行一次 `identity_initial` 只读 RPC，因此正常完整首屏共三次数据库 RPC、一个浏览器认证请求。令牌是包含版本、session UUID 与 HMAC 的自定义 opaque bearer，Function 本地证明完整性后只把 `session_id` 传给业务 RPC。账号为 `banned` 时前端立即清空全部业务内容，只渲染空白界面。
+会话令牌只在运行内存保存，绝对有效期 15 分钟。只有 `POST /api/auth/telegram` 接收 Telegram `initData`；认证裁决固定执行验签前来源限流和验签后登录事务两个数据库 RPC，登录事务同时为真正首次创建的账号写入唯一 `new_user_welcome` 免费普通盲盒资格并返回权威 `welcome_reward`，完成交接的正常首屏再在事务提交后执行一次 `identity_initial` 只读 RPC，因此正常完整首屏共三次数据库 RPC、一个浏览器认证请求。令牌是包含版本、session UUID 与 HMAC 的自定义 opaque bearer，Function 本地证明完整性后只把 `session_id` 传给业务 RPC。账号为 `banned` 时前端立即清空全部业务内容，只渲染空白界面。
 
 ## 数据库权限
 
@@ -123,6 +123,7 @@ operation 准入与保留按 [ADR-059](adr/ADR-059-bounded-operation-admission-a
 - [模块边界与网关隔离](adr/ADR-007-module-boundaries-and-gateway-isolation.md)
 - [Vercel 函数打包与配置隔离](adr/ADR-008-vercel-packaging-and-config-isolation.md)
 - [开盒页运行期视图状态](adr/ADR-009-gacha-runtime-view-state.md)
+- [新用户免费普通盲盒](adr/ADR-102-new-user-free-normal-box.md)
 - [正式藏品图片资源](adr/ADR-010-catalog-image-assets.md)
 - [进化共享藏品操作底部确认弹窗](adr/ADR-012-evolution-bottom-sheet-confirmation.md)
 - [登录会话内页面保活与事件驱动刷新](adr/ADR-013-session-page-lifecycle.md)

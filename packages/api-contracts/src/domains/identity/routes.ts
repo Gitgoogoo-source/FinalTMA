@@ -70,6 +70,13 @@ const normalAuthOutput = z
         "REFERRAL_SELF_BIND",
       ])
       .nullable(),
+    welcome_reward: z
+      .object({
+        kind: z.literal("free_normal_box"),
+        amount: z.literal(1),
+      })
+      .strict()
+      .nullable(),
     initial_state: identityInitialSchema.nullable(),
   })
   .strict();

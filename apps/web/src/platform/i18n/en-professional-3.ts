@@ -43,6 +43,7 @@ export const professionalEnglishCopy3: Readonly<Record<string, string>> = {
   正在匹配同档对手: "Finding an Opponent in This Tier",
   "正在登录，请稍候": "Entering EvoMyPet…",
   "正在领取 VIP 每日 100 Gems": "Claiming 100 Daily VIP Gems",
+  免费普通盲盒已到账: "Free Standard Mystery Box ready!",
   "该地址是当前账号唯一经过 TON Proof 验证的主钱包。":
     "This is the primary TON wallet verified for your EvoMyPet account.",
   "该藏品已经是最终形态，无法继续进化":

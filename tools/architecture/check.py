@@ -96,6 +96,7 @@ REQUIRED_PATHS = (
     "docs/architecture/adr/ADR-097-market-bounded-purchase-settlement.md",
     "docs/architecture/adr/ADR-098-telegram-sdk-subresource-integrity.md",
     "docs/architecture/adr/ADR-100-gacha-settlement-presentation-fail-closed.md",
+    "docs/architecture/adr/ADR-102-new-user-free-normal-box.md",
     "apps/web/public/maintenance.html",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
@@ -233,6 +234,7 @@ def main() -> None:
     verify_api_boundaries()
     verify_session_credential_boundary()
     verify_identity_read_model_boundary()
+    verify_new_user_welcome_boundary()
     verify_contract_boundaries()
     verify_documentation()
     verify_package_exports()
@@ -3497,6 +3499,7 @@ def verify_session_credential_boundary() -> None:
         "result.session_id !== issued.sessionId",
         '"identity_initial"',
         "initial_state: initialState",
+        "welcome_reward: result.welcome_reward ?? null",
     )
     missing = [term for term in required_login_terms if term not in authenticate_block]
     if missing or authenticate_block.count("await rpc") != 3:
@@ -3686,6 +3689,8 @@ def verify_identity_read_model_boundary() -> None:
 
     required_contract = (
         'initial_state: identityInitialSchema.nullable()',
+        'kind: z.literal("free_normal_box")',
+        "amount: z.literal(1)",
         'id: "identity.initial"',
         'path: "/api/me/initial"',
         'id: "identity.summary"',
@@ -3778,6 +3783,81 @@ def verify_identity_read_model_boundary() -> None:
         or '"identity.summary": async (context)' not in handlers
     ):
         raise SystemExit("Identity read-model handlers or API privilege allowlist are incomplete")
+
+
+def verify_new_user_welcome_boundary() -> None:
+    contract = (CONTRACT_ROOT / "domains/identity/routes.ts").read_text(
+        encoding="utf-8"
+    )
+    handlers = (API_ROOT / "domains/identity/routes.ts").read_text(
+        encoding="utf-8"
+    )
+    bootstrap = (
+        WEB_ROOT / "workflows/session-bootstrap/useBootstrap.ts"
+    ).read_text(encoding="utf-8")
+    gacha = (WEB_ROOT / "domains/gacha/ui/GachaView.tsx").read_text(
+        encoding="utf-8"
+    )
+    adr = (
+        ROOT / "docs/architecture/adr/ADR-102-new-user-free-normal-box.md"
+    ).read_text(encoding="utf-8")
+    product = (ROOT / "docs/product/功能说明文档.md").read_text(
+        encoding="utf-8"
+    )
+    acceptance = (ROOT / "docs/operations/acceptance.md").read_text(
+        encoding="utf-8"
+    )
+    required = {
+        "contract": (
+            'kind: z.literal("free_normal_box")',
+            "amount: z.literal(1)",
+            ".strict()\n      .nullable()",
+        ),
+        "handlers": (
+            "welcome_reward: result.welcome_reward ?? null",
+            'kind: "free_normal_box"',
+            "amount: 1",
+        ),
+        "bootstrap": (
+            "login.data.welcome_reward",
+            "mergeEntryNotices(",
+            "免费普通盲盒已到账",
+        ),
+        "gacha": ('remembered?.selectedTier ?? "normal"',),
+        "ADR-102": (
+            "new_user_welcome",
+            "不回填",
+            "welcome_reward",
+            "免费普通盲盒",
+        ),
+        "product": (
+            "新用户首次注册赠礼",
+            "不向存量账号回填",
+            "默认选中三档中的第 1 档“普通盲盒”",
+        ),
+        "acceptance": (
+            "`new_user_welcome` 免费普通盲盒资格",
+            "`welcome_reward`",
+            "存量账号",
+            "不自动开盒",
+        ),
+    }
+    sources = {
+        "contract": contract,
+        "handlers": handlers,
+        "bootstrap": bootstrap,
+        "gacha": gacha,
+        "ADR-102": adr,
+        "product": product,
+        "acceptance": acceptance,
+    }
+    missing = {
+        name: [term for term in terms if term not in sources[name]]
+        for name, terms in required.items()
+        if any(term not in sources[name] for term in terms)
+    }
+    if missing:
+        raise SystemExit(f"New-user welcome boundary is incomplete: {missing}")
 
 
 def verify_contract_boundaries() -> None:

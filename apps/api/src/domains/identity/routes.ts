@@ -124,6 +124,7 @@ export const identityHandlers = {
         entry_handoff_state: result.entry_handoff_state,
         entry_handoff_code: result.entry_handoff_code ?? null,
         entry_handoff_result: result.entry_handoff_result ?? null,
+        welcome_reward: result.welcome_reward ?? null,
         initial_state: initialState,
       },
     };
@@ -224,6 +225,10 @@ type IdentityAuthenticationResult =
         | "REFERRAL_OLD_USER"
         | "REFERRAL_SELF_BIND"
         | null;
+      welcome_reward: {
+        kind: "free_normal_box";
+        amount: 1;
+      } | null;
     };
 
 const stableInitialStateErrors = new Set([

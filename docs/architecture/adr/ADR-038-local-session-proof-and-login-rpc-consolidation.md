@@ -13,7 +13,7 @@
 
 Function 的本地校验只证明令牌由当前服务签发并提取 `session_id`，不读取或裁决任何可变账号状态。每个玩家业务 RPC 必须在业务读取、写入或外部副作用前调用 `api.session_user`，或调用以 `api.session_user` 开始的 `operations.begin_command`。数据库继续唯一裁决会话存在、撤销、替换、绝对过期、账号封禁和 `pending` 入口交接。`referral.bind` 与受限 `operations.get` 的既有 `pending` 例外保持在数据库内；`api.identity_resolve_session` 删除。
 
-Telegram 登录的认证裁决固定为两次 Data API RPC。第一次只调用 `api.identity_consume_login_source_rate_limit`，在验签前按来源执行每分钟 30 次限制。验签成功后，第二次调用 `api.identity_authenticate`；它按固定的用户、`initData`、登录 operation、Telegram 用户顺序取得事务锁，在同一事务内完成每用户每分钟 10 次、同一 `initData` 每分钟 3 次限制、登录幂等、账号资料、入口候选、旧会话撤销和新会话创建。相同幂等请求的重放仍消耗用户与 `initData` 限流次数，同一 `initData` 第 4 次仍拒绝。正常且入口交接完成时，认证事务提交后同一 Function 再调用一次只读 `api.identity_initial`，因此完整首屏正常路径共三次数据库 RPC，但浏览器仍只有一个认证 HTTP 请求；`pending` 交接不执行第三次读取。
+Telegram 登录的认证裁决固定为两次 Data API RPC。第一次只调用 `api.identity_consume_login_source_rate_limit`，在验签前按来源执行每分钟 30 次限制。验签成功后，第二次调用 `api.identity_authenticate`；它按固定的用户、`initData`、登录 operation、Telegram 用户顺序取得事务锁，在同一事务内完成每用户每分钟 10 次、同一 `initData` 每分钟 3 次限制、登录幂等、账号资料、入口候选、真正首次创建账号的新用户免费普通盲盒资格、旧会话撤销和新会话创建。相同幂等请求的重放仍消耗用户与 `initData` 限流次数，同一 `initData` 第 4 次仍拒绝。正常且入口交接完成时，认证事务提交后同一 Function 再调用一次只读 `api.identity_initial`，因此完整首屏正常路径共三次数据库 RPC，但浏览器仍只有一个认证 HTTP 请求；`pending` 交接不执行第三次读取。新用户资格的唯一性、响应和存量账号边界由 [ADR-102](ADR-102-new-user-free-normal-box.md) 固定。
 
 `api.identity_authenticate` 接收域隔离的用户与 `initData` HMAC 指纹、Function 派生的 `session_id` 和完整令牌哈希。用户限流成功而 `initData` 限流失败时，用户尝试记录仍提交，保持原三 RPC 顺序的结果。无效 `start_param` 和同键异请求在限流记录写入后以结构化 `error_code` 返回，由 Function 映射为现有公开错误；它们不创建账号、入口候选、session 或 login request。正常结果返回的 `session_id` 必须与 Function 派生值完全一致，否则令牌不得返回。
 

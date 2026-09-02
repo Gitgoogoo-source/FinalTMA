@@ -52,6 +52,7 @@ INITIAL_MIGRATION_HASHES = {
 }
 INITIAL_SUFFIXES = ("_baseline.sql", "_product_data_v1.sql", "_api_security.sql")
 FORWARD_SUFFIX = "_acquisition_attribution.sql"
+WELCOME_FORWARD_SUFFIX = "_new_user_free_normal_box.sql"
 ERROR_REGISTRY = ROOT / "packages/api-contracts/src/common/errors.ts"
 SUPABASE_CONFIG = ROOT / "supabase/config.toml"
 
@@ -148,9 +149,6 @@ def verify_acquisition_attribution_contract(path: Path) -> None:
 
     schema_sources = {
         "acquisition.enforce_source_immutability": acquisition_schema,
-        "api.identity_authenticate": (SCHEMAS / "10_identity.sql").read_text(
-            encoding="utf-8"
-        ),
         "admin.assert_owner_call": (SCHEMAS / "96_admin.sql").read_text(
             encoding="utf-8"
         ),
@@ -173,6 +171,66 @@ def verify_acquisition_attribution_contract(path: Path) -> None:
     for name, schema_source in schema_sources.items():
         if sql_function(schema_source, name) != sql_function(source, name):
             raise SystemExit(f"Forward migration function differs from declarative schema: {name}")
+
+
+def verify_new_user_welcome_contract(path: Path) -> None:
+    source = path.read_text(encoding="utf-8")
+    sql = source.lower()
+    identity_schema = (SCHEMAS / "10_identity.sql").read_text(encoding="utf-8")
+    economy_schema = (SCHEMAS / "31_economy.sql").read_text(encoding="utf-8").lower()
+    index_definition = (
+        "create unique index entitlements_new_user_welcome_unique_idx\n"
+        "on economy.entitlements (user_id)\n"
+        "where kind = 'free_normal_box' and source = 'new_user_welcome';"
+    )
+    required = (
+        index_definition,
+        "create or replace function api.identity_authenticate",
+        "if v_new_user then\n    insert into economy.entitlements",
+        "values (v_user.id, 'free_normal_box', 'new_user_welcome')",
+        "'welcome_reward', case",
+        "jsonb_build_object('kind', 'free_normal_box', 'amount', 1)",
+        "select s.new_user into v_session_new_user",
+        "grant execute on function api.identity_authenticate",
+        "notify pgrst, 'reload schema'",
+    )
+    missing = [fragment for fragment in required if fragment not in sql]
+    if missing:
+        raise SystemExit(f"New-user welcome migration is incomplete: {missing}")
+    if index_definition not in economy_schema:
+        raise SystemExit("New-user welcome uniqueness index differs from declarative schema")
+
+    function = sql_function(source, "api.identity_authenticate")
+    if function != sql_function(identity_schema, "api.identity_authenticate"):
+        raise SystemExit(
+            "New-user welcome authentication migration differs from declarative schema"
+        )
+    if function.count("insert into economy.entitlements") != 1:
+        raise SystemExit("New-user welcome grant must have exactly one entitlement write path")
+    if not (
+        function.index("v_new_user := v_user.id is not null")
+        < function.index("if v_new_user then\n    insert into economy.entitlements")
+        < function.index("insert into identity.sessions")
+    ):
+        raise SystemExit(
+            "New-user welcome grant must follow authoritative user creation and precede session commit"
+        )
+    outside_function = sql.replace(function, "")
+    forbidden = (
+        "insert into economy.entitlements",
+        "update economy.entitlements",
+        "delete from economy.entitlements",
+        "truncate ",
+        "delete from identity.users",
+        "drop table ",
+        "drop schema ",
+    )
+    present = [fragment for fragment in forbidden if fragment in outside_function]
+    if present:
+        raise SystemExit(
+            "New-user welcome migration must not backfill or destructively rewrite data: "
+            f"{present}"
+        )
 
 
 def verify_battle_operation_admission_contract() -> None:
@@ -641,6 +699,9 @@ def verify_identity_login_contract() -> None:
         "if v_user.status = 'banned'",
         "now() + interval '15 minutes'",
         "now() + interval '10 minutes'",
+        "if v_new_user then\n    insert into economy.entitlements",
+        "values (v_user.id, 'free_normal_box', 'new_user_welcome')",
+        "'welcome_reward', case",
     )
     missing = [fragment for fragment in required if fragment not in sql]
     if missing:
@@ -1323,22 +1384,31 @@ def main() -> None:
         raise SystemExit(f"Schema inventory mismatch: {sorted(schema_names)}")
 
     migrations = sorted(MIGRATIONS.glob("*.sql"))
-    if len(migrations) != 4:
+    if len(migrations) != 5:
         raise SystemExit(
-            f"Expected three immutable initial migrations and one forward migration, "
+            f"Expected three immutable initial migrations and two forward migrations, "
             f"found {[path.name for path in migrations]}"
         )
     baseline, product_data, security = (
         one_migration(suffix) for suffix in INITIAL_SUFFIXES
     )
     forward = one_migration(FORWARD_SUFFIX)
-    if not (baseline.name < product_data.name < security.name < forward.name):
+    welcome_forward = one_migration(WELCOME_FORWARD_SUFFIX)
+    if not (
+        baseline.name
+        < product_data.name
+        < security.name
+        < forward.name
+        < welcome_forward.name
+    ):
         raise SystemExit(
-            "Migration order must be baseline, product_data_v1, api_security, then attribution"
+            "Migration order must be immutable baseline, product data, API security, "
+            "attribution, then new-user welcome"
         )
     for migration in (baseline, product_data, security):
         verify_immutable_migration(migration)
     verify_acquisition_attribution_contract(forward)
+    verify_new_user_welcome_contract(welcome_forward)
     verify_security(security)
     verify_database_error_codes()
     verify_database_boundaries()
