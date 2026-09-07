@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import re
 import subprocess
@@ -36,7 +38,7 @@ MARKET_POLICY = ROOT / "packages/api-contracts/src/domains/market/policy.ts"
 TOPUP_MODELS = ROOT / "packages/api-contracts/src/domains/topup/models.ts"
 MARKET_VIEW = WEB_ROOT / "domains/market/ui/MarketView.tsx"
 WEB_INDEX = ROOT / "apps/web/index.html"
-TELEGRAM_SDK_URL = "https://telegram.org/js/telegram-web-app.js?63"
+TELEGRAM_SDK_URL = "/vendor/telegram-web-app.3549138a7934.js"
 TELEGRAM_SDK_INTEGRITY = (
     "sha384-UIU2aXwkvBIU//NSd8KQvPQc3/EvwMoKj+m2qYgtQAtF1u3Vvhf5+pjstVoLvU3i"
 )
@@ -396,14 +398,14 @@ def verify_browser_csp_boundaries() -> None:
             raise SystemExit(f"Content-Security-Policy repeats directive: {name}")
         directives[name] = sources
 
-    expected_script_sources = {"'self'", "https://telegram.org"}
+    expected_script_sources = {"'self'"}
     script_sources = directives.get("script-src", [])
     if (
         set(script_sources) != expected_script_sources
         or len(script_sources) != len(expected_script_sources)
     ):
         raise SystemExit(
-            "CSP script-src must remain same-origin plus the Telegram SDK origin only"
+            "CSP script-src must remain same-origin only"
         )
 
     index_html = WEB_INDEX.read_text(encoding="utf-8")
@@ -423,17 +425,25 @@ def verify_browser_csp_boundaries() -> None:
     telegram_scripts = [
         (tag, attributes)
         for tag, attributes in parsed_scripts
-        if attributes.get("src", "").startswith("https://telegram.org/")
+        if attributes.get("id") == "telegram-sdk"
     ]
     external_scripts = [
         attributes.get("src", "")
         for _, attributes in parsed_scripts
         if attributes.get("src", "").startswith(("http://", "https://"))
     ]
-    if len(telegram_scripts) != 1 or external_scripts != [TELEGRAM_SDK_URL]:
+    if len(telegram_scripts) != 1 or external_scripts:
         raise SystemExit(
-            "The Telegram SDK must be the only external script and use the approved URL"
+            "The Telegram SDK must use its pinned same-origin artifact without external scripts"
         )
+    sdk_path = ROOT / "apps/web/public" / TELEGRAM_SDK_URL.lstrip("/")
+    if not sdk_path.is_file():
+        raise SystemExit("Pinned Telegram SDK artifact is missing")
+    sdk_integrity = "sha384-" + base64.b64encode(
+        hashlib.sha384(sdk_path.read_bytes()).digest()
+    ).decode("ascii")
+    if sdk_integrity != TELEGRAM_SDK_INTEGRITY:
+        raise SystemExit("Pinned Telegram SDK bytes do not match the approved integrity")
     telegram_tag, telegram_attributes = telegram_scripts[0]
     if (
         telegram_attributes.get("src") != TELEGRAM_SDK_URL

@@ -8,6 +8,7 @@ export default tseslint.config(
   {
     ignores: [
       "**/dist/**",
+      "apps/web/public/vendor/*.js",
       "**/node_modules/**",
       ".vercel/**",
       "contracts/ton/build/**",
