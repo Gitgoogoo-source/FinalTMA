@@ -24,7 +24,7 @@ ec8d89aec0a700bfb504285401bf6327ed2a4c48c94d4d8bb92559bdae2ee61e
 - Deployment：既有 Vercel Pro Project `final-tma` 是唯一生产项目；`main` 只通过 Git Integration 自动部署，不使用项目暂停、空触发提交或手动部署；既有 Supabase `final-tma-real-test / ebewtjerusxcioegpzjd` 是唯一生产数据库，完整裁决见 [ADR-086](adr/ADR-086-evomypet-production-cutover.md)。
 - 推广归因：Tg.app 的精确 `listed_on_tg_app` 与 Owner 预注册的 `SRC_[A-F0-9]{20}` 都只在 Telegram `initData` 验签后作为 `direct` 入口处理；账号保存不可覆盖的首来源，session 保存本次来源，不创建邀请候选、邀请奖励或 Battle 状态，其他未知参数继续拒绝。完整边界见 [ADR-090](adr/ADR-090-tgapp-catalog-source-entry.md) 与 [ADR-101](adr/ADR-101-acquisition-source-attribution.md)。
 - 市场购买：单次数量固定为 `1..100`，普通购买与充值补差共用契约；数据库在任何挂单锁前复核上限，同模板串行后只锁定最多 100 条 FIFO 原始挂单并仅结算该候选集合，完整边界见 [ADR-097](adr/ADR-097-market-bounded-purchase-settlement.md)。
-- Telegram SDK：入口只加载官方当前 `telegram-web-app.js?63`，使用批准的 SHA-384 SRI 与匿名 CORS，失败时关闭认证且没有未固定回退；URL、字节哈希、静态门禁与真实 WebView 验收按 [ADR-098](adr/ADR-098-telegram-sdk-subresource-integrity.md) 同步升级。
+- Telegram SDK：入口只加载官方当前 `telegram-web-app.js?63`，使用批准的 SHA-384 SRI 与匿名 CORS 异步加载；先渲染启动画面，SDK 就绪后才认证，12 秒超时提供整页重试；失败时关闭认证且没有未固定回退；URL、字节哈希、静态门禁与真实 WebView 验收按 [ADR-098](adr/ADR-098-telegram-sdk-subresource-integrity.md) 同步升级。
 - Battle operation 准入：创建、随机匹配、取消、接受和行动与其他幂等命令共用四项用户容量上限，既有 Battle 动作级限流继续叠加，完整边界见 [ADR-099](adr/ADR-099-battle-operation-admission.md)。
 - 按钮音效：文字、图标、底部导航、页签、弹窗与按钮式卡片在可信主指针按下时，通过单份预解码 Web Audio 缓冲立即播放同一短音；原始 MP3 只保留为母版，运行时使用去除前导与尾部静音的 PCM WAV，键盘与辅助功能由可信 `click` 后备且同一次指针操作不得重播。禁用控件和普通游戏画面按压静默，音效失败不阻塞按钮动作，完整边界见 [ADR-092](adr/ADR-092-low-latency-button-press-audio.md)。
 - Battle 行动时限：数据库继续裁决完整 15 秒；响应使用实际构造时刻，Web 在倒计时归零后同步关闭操作并阻止新 action POST，预截止在途请求继续由数据库裁决，`BATTLE_STATE_CONFLICT` 不重提动作且只合并读取一次权威状态，完整边界见 [ADR-094](adr/ADR-094-battle-action-deadline-client-gating.md)。

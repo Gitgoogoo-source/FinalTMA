@@ -439,14 +439,17 @@ def verify_browser_csp_boundaries() -> None:
         telegram_attributes.get("src") != TELEGRAM_SDK_URL
         or telegram_attributes.get("integrity") != TELEGRAM_SDK_INTEGRITY
         or telegram_attributes.get("crossorigin") != "anonymous"
+        or telegram_attributes.get("id") != "telegram-sdk"
+        or not re.search(r"\sasync(?:\s|>)", telegram_tag)
+        or re.search(r"\s(?:defer|blocking)(?:\s|=|>)", telegram_tag)
         or "onerror" in telegram_attributes
     ):
         raise SystemExit(
-            "The Telegram SDK requires the approved SHA-384 SRI and anonymous CORS without fallback"
+            "The Telegram SDK requires async loading, id, approved SHA-384 SRI and anonymous CORS without fallback"
         )
     module_position = index_html.find('src="/src/main.tsx"')
     if module_position < 0 or index_html.find(telegram_tag) > module_position:
-        raise SystemExit("The integrity-pinned Telegram SDK must load before the app module")
+        raise SystemExit("The integrity-pinned Telegram SDK tag must precede the app module")
 
     expected_image_sources = {
         "'self'",
@@ -940,7 +943,7 @@ def verify_first_screen_runtime_boundaries() -> None:
             f"{forbidden_presenters}"
         )
     main_source = (WEB_ROOT / "main.tsx").read_text(encoding="utf-8")
-    pre_render_source = main_source.split("createRoot(root).render", maxsplit=1)[0]
+    pre_render_source = main_source.split("reactRoot.render", maxsplit=1)[0]
     startup_preloads = re.findall(r"\b(preload[A-Za-z0-9_]+)\(", pre_render_source)
     if startup_preloads != ["preloadFirstScreenContracts"]:
         raise SystemExit(

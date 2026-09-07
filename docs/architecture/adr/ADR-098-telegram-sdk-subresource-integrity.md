@@ -2,6 +2,7 @@
 
 - 状态：已接受
 - 日期：2026-08-30
+- 启动恢复修订：2026-09-07
 
 ## 背景
 
@@ -22,9 +23,13 @@ Telegram 官方要求 Mini App 在其他脚本前从 `telegram.org` 加载 `tele
 
 ## 唯一结论
 
-`apps/web/index.html` 只能有一个跨源脚本：上述精确 Telegram URL。该标签必须位于应用 module 之前，同时包含批准的 SHA-384 `integrity` 和 `crossorigin="anonymous"`。不得使用 `onerror`、动态插入、无 SRI 的第二地址、备用 CDN、内联脚本或静默降级。
+`apps/web/index.html` 只能有一个跨源脚本：上述精确 Telegram URL。该标签必须位于应用 module 之前，同时包含 `id="telegram-sdk"`、`async`、批准的 SHA-384 `integrity` 和 `crossorigin="anonymous"`。不得添加 `defer` 或 `blocking` 重新阻塞应用启动。不得使用内联 `onerror`、动态插入、无 SRI 的第二地址、备用 CDN、内联脚本或静默降级。
 
-根路径和全部前端深链继续共用唯一 CSP。`script-src` 固定只包含 `'self'` 与 `https://telegram.org`，不增加通配符、协议来源、`unsafe-inline`、`unsafe-eval` 或其他脚本域。SRI 不匹配或 CORS 失败时，浏览器必须阻止 SDK；既有启动流程因缺少 `window.Telegram.WebApp` 停止认证并提示从 Telegram Mini App 重新进入，不能发送 `initData`、创建 session 或改载未固定脚本。
+根路径和全部前端深链继续共用唯一 CSP。`script-src` 固定只包含 `'self'` 与 `https://telegram.org`，不增加通配符、协议来源、`unsafe-inline`、`unsafe-eval` 或其他脚本域。SRI 不匹配或 CORS 失败时，浏览器必须阻止 SDK。应用入口先渲染既有启动画面，`sdk-ready.ts` 观察唯一脚本的 `load` / `error` 事件并确认 `window.Telegram.WebApp`，只有成功后才按需加载 `initialize.ts`、初始化 Telegram 布局、账号语言并挂载认证流程。布局初始化不进入 SDK 未就绪时的首屏同步闭包。`async` 允许启动画面先执行，不允许登录提前执行；启动参数在此期间保留在原位置，不自行解析或存储身份数据。
+
+SDK 已加载时立即继续；正在加载时最多等待 `TELEGRAM_SDK_TIMEOUT_MS`（12 秒，自应用开始等待时计时）。脚本缺失、加载失败、完成后没有 WebApp 或等待超时均进入明确失败状态；即使错误事件早于应用模块执行，12 秒上限仍保证结束等待。失败画面使用 `Adventure Paused` / `冒险暂时未能开启`，说明暂时未能开启冒险并提供 `Try Again` / `重新尝试`。重试仅完整刷新当前页面，保留 Telegram 原有入口参数和链接；不注入第二脚本、不改哈希、不无限自动刷新。失败后迟到的 SDK 不自动开始认证，须由用户重试开启新的启动流程。失败前后都不能发送 `initData`、创建 session 或改载未固定脚本。控制台只记录固定诊断码，不记录用户身份或 URL fragment。
+
+2026-09-07 的真实 iPhone 证据表明：同步脚本请求在主页面已返回后等待超过一分钟，阻塞 `<body>`、游戏容器和所有 API。此次修订替换同步加载方式，保留官方 URL、制品哈希和来源边界。外部网络不可达时，应用保证有可操作失败界面，不宣称可以绕过 SDK 进入游戏。
 
 Vite 首屏 JS/CSS 门禁保持不变；远程 SDK 不计入 Vite chunk，因此 production build 通过不能代替 SRI、CORS、CSP 和真实 WebView 验收。
 
@@ -42,7 +47,9 @@ Vite 首屏 JS/CSS 门禁保持不变；远程 SDK 不计入 Vite chunk，因此
 
 ## 验收
 
-`pnpm architecture:check` 必须结构化确认 CSP `script-src` 精确集合、唯一外部脚本、精确 URL、SHA-384、匿名 CORS、先于应用 module 和不存在错误回退。构建产物的 `index.html` 必须保留相同属性，首屏体积门禁不得新增同步依赖。
+`pnpm architecture:check` 必须结构化确认 CSP `script-src` 精确集合、唯一外部脚本、精确 URL、SHA-384、匿名 CORS、异步加载、标签先于应用 module 和不存在错误回退。构建产物的 `index.html` 必须保留相同属性，首屏体积门禁不得新增同步依赖。
+
+`pnpm test:web:startup` 覆盖 SDK 预先就绪、延迟成功、加载拒绝、缺失、超时、超时后迟到和事件清理。隔离浏览器检查必须延迟或拒绝 SDK，确认启动界面可见、超时可重试、认证请求为零；解除阻塞后必须走正常启动门禁，不伪造登录。
 
 部署后同时检查根路径与深链 CSP、官方 SDK 的 200/MIME/CORS/字节哈希以及 Console 中没有 integrity、CORS 或 CSP 错误。真实 iPhone Telegram 必须证明 `window.Telegram.WebApp` 可用，登录、重新认证、主题、安全区、返回按钮、分享和支付桥接保持原行为。负向验证使用不发布的错误哈希，必须看到浏览器阻止 SDK且没有 `/api/auth/telegram` 请求；验证结束立即清除该临时状态。
 
