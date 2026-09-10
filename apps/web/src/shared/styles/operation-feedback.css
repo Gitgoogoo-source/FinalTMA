@@ -1,0 +1,145 @@
+.app-shell.operation-feedback-host {
+  position: fixed;
+  inset: auto 12px
+    calc(max(var(--safe-bottom), var(--content-safe-bottom)) + 84px);
+  z-index: 190;
+  width: min(calc(100% - 24px), 406px);
+  min-height: 0;
+  margin: 0 auto;
+  padding: 0;
+  color: #36434b;
+  background: transparent;
+  pointer-events: none;
+}
+[data-modal-feedback-slot] .operation-feedback-host {
+  inset: calc(max(var(--safe-top), var(--content-safe-top)) + 18px) 12px auto;
+}
+.operation-feedback-card {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 14px;
+  border: 1px solid #e8e4d9;
+  border-radius: 22px;
+  background: #fffefa;
+  box-shadow: 0 12px 36px #34342a24;
+  pointer-events: auto;
+  animation: feedback-arrive 180ms ease-out;
+}
+.operation-feedback-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  color: #c87517;
+  background: #fff0d9;
+}
+.phase-succeeded .operation-feedback-icon {
+  color: #348147;
+  background: #eaf5e8;
+}
+.phase-failed .operation-feedback-icon {
+  color: #b55139;
+  background: #fff0e9;
+}
+.operation-feedback-icon svg {
+  width: 20px;
+  height: 20px;
+}
+.operation-feedback-copy strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.35;
+}
+.operation-feedback-copy p {
+  margin: 4px 0 0;
+  color: #6a756e;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.operation-feedback-close {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: #748079;
+}
+.operation-feedback-close svg {
+  width: 18px;
+  height: 18px;
+}
+.operation-feedback-link {
+  grid-column: 2 / -1;
+  justify-self: start;
+  min-height: 36px;
+  padding: 5px 0;
+  border: 0;
+  background: transparent;
+  color: #9b4c14;
+  font-size: 13px;
+  font-weight: 750;
+}
+.operation-feedback-host:is(.phase-confirming, .phase-submitting) {
+  animation: feedback-delay 700ms step-end;
+}
+.operation-feedback-host:is(
+    .phase-pending,
+    .phase-unknown,
+    .phase-submitting,
+    .phase-confirming
+  )
+  .operation-feedback-icon
+  svg {
+  animation: feedback-spin 1.5s linear infinite;
+}
+@keyframes feedback-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes feedback-delay {
+  from {
+    visibility: hidden;
+  }
+  to {
+    visibility: visible;
+  }
+}
+@keyframes feedback-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .operation-feedback-card,
+  .operation-feedback-icon svg {
+    animation: none !important;
+  }
+}
+
+.operation-feedback-resume {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 auto;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid #e9dcc4;
+  border-radius: 18px;
+  color: #835627;
+  background: #fffaf0;
+  box-shadow: 0 6px 20px #39302020;
+  font-size: 13px;
+  font-weight: 700;
+  pointer-events: auto;
+}
+.operation-feedback-resume svg {
+  width: 18px;
+  height: 18px;
+}

@@ -1,4 +1,4 @@
-import { Coins, ExternalLink, Minus, RefreshCw, Sparkles } from "lucide-react";
+import { ExternalLink, Minus, RefreshCw, Sparkles } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -27,7 +27,7 @@ import {
 } from "../../../workflows/payment-recovery/context.ts";
 import "../../../shared/styles/shell-dialogs.css";
 import type { PaymentOrder } from "../index.ts";
-import { t, tp } from "../../../platform/i18n/index.ts";
+import { t, tp, tr } from "../../../platform/i18n/index.ts";
 
 const FINAL_STATUSES = new Set<PaymentOrder["status"]>([
   "delivered",
@@ -47,8 +47,6 @@ export function TopupDialog({
   request: TopupRequest | null;
 }): ReactNode {
   const [amount, setAmount] = useState("");
-  const directGachaTopup = request?.intent.kind === "gacha";
-  const [showOptions, setShowOptions] = useState(!request || directGachaTopup);
   const [activeOrder, setActiveOrder] = useState<PaymentOrder | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [pollFailed, setPollFailed] = useState(false);
@@ -296,34 +294,6 @@ export function TopupDialog({
     order?.status === "rejected" ||
     (order?.status === "refunded" && !order.delivered_at);
 
-  if (request && !showOptions && !order) {
-    return (
-      <AppModal
-        className="topup-shortage-backdrop"
-        labelledBy="topup-shortage-title"
-        onClose={closeDialog}
-      >
-        <div className="modal topup topup-shortage">
-          <span className="topup-shortage-mark" aria-hidden="true">
-            <Coins />
-          </span>
-          <h2 id="topup-shortage-title">{t("Stars 余额不足")}</h2>
-          <p>
-            {tp("本次操作还差 {{0}} Stars，请返回重新选择或前往获取。", [
-              request.estimatedGap,
-            ])}
-          </p>
-          <div className="button-row">
-            <Button className="secondary" onClick={closeDialog}>
-              {t("返回")}
-            </Button>
-            <Button onClick={() => setShowOptions(true)}>{t("去获取")}</Button>
-          </div>
-        </div>
-      </AppModal>
-    );
-  }
-
   return (
     <AppModal
       className="topup-sheet-backdrop"
@@ -339,7 +309,7 @@ export function TopupDialog({
         </header>
         <p className="topup-sheet-description">
           {request
-            ? tp("原操作预计还差 {{0}} Stars；最新差额与可用档位将重新确认。", [
+            ? tp("还需约 {{0}} Stars，选择充值数量继续。", [
                 request.estimatedGap,
               ])
             : t(
@@ -360,7 +330,7 @@ export function TopupDialog({
           </div>
         ) : identityConflict ? (
           <div className="payment-recovery">
-            <strong>{t("支付身份校验异常")}</strong>
+            <strong>{t("这笔充值需要协助处理")}</strong>
             <small>{t("本次未到账，请前往支付助手发送 /paysupport")}</small>
           </div>
         ) : failed ? (
@@ -409,7 +379,7 @@ export function TopupDialog({
           {locked && order ? (
             <Button onClick={() => void pollOrder(order.id)}>
               <RefreshCw />
-              {t("立即重新查询")}
+              {t("查看充值结果")}
             </Button>
           ) : succeeded ? (
             <Button onClick={closeDialog}>{t("完成")}</Button>
@@ -420,7 +390,7 @@ export function TopupDialog({
           ) : order?.status === "pending" && order.invoice_url ? (
             <Button onClick={() => openInvoice(order)}>
               <ExternalLink />
-              {t("打开 Telegram Stars 支付")}
+              {tr("Continue to payment", "去付款")}
             </Button>
           ) : (
             <Button
@@ -431,7 +401,9 @@ export function TopupDialog({
               onClick={() => void create()}
             >
               <ExternalLink />
-              {creating ? t("正在创建充值订单") : t("打开 Telegram Stars 支付")}
+              {creating
+                ? t("正在打开支付")
+                : tr("Continue to payment", "去付款")}
             </Button>
           )}
         </div>

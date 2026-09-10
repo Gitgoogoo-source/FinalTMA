@@ -144,15 +144,9 @@ export function EvolutionConfirmationDialog({
             <TriangleAlert aria-hidden="true" />
             <p>
               <span>
-                {t(
-                  "基础成功率不包含当前路线保底；提交后由系统按真实保底、材料和 Gems 状态裁决。",
-                )}
+                {t("基础成功率不含保底加成；保底按当前进化路线计算。")}
               </span>
-              <span>
-                {t(
-                  "每次失败扣除 2 个材料并保留 1 个，整批变化全部写入或全部不写入。",
-                )}
-              </span>
+              <span>{t("每次失败消耗 2 个材料，保留 1 个。")}</span>
             </p>
           </div>
           {unavailableReason ? (

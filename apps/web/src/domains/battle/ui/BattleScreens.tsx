@@ -561,8 +561,8 @@ function BattleCountdownLock({
       <div className="battle-countdown-energy red" aria-hidden="true" />
       <div className="battle-countdown-energy blue" aria-hidden="true" />
       <header>
-        <span>COMBAT COMMITMENT LOCKED</span>
-        <h1>{t("倒计时已锁定")}</h1>
+        <span>{t("准备开战")}</span>
+        <h1>{t("即将开战")}</h1>
       </header>
       <div
         className="battle-countdown-core"
@@ -839,7 +839,7 @@ export function BattleResult({
           <dd>{result.fee} Stars</dd>
         </div>
       </dl>
-      <small>{tp("结算原因：{{0}}", [result.reason])}</small>
+      <small>{battleEndReason(result.reason)}</small>
       <time dateTime={result.finished_at}>
         {formatDate(result.finished_at, {
           dateStyle: "medium",
@@ -970,4 +970,12 @@ function inviteStatusText(status: InviteRoom["invite_status"]): string {
     voided: t("挑战已安全作废"),
   };
   return labels[status];
+}
+
+function battleEndReason(reason: string): string {
+  if (reason === "team_knockout") return t("一方的所有伙伴已失去战斗能力");
+  if (reason === "turn_limit") return t("已达到对战回合上限");
+  if (reason === "system_invariant_void")
+    return t("对战未能完成，请查看退款金额");
+  return t("对战已结束");
 }

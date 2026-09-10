@@ -9,7 +9,6 @@ import {
 import { t } from "../../platform/i18n/index.ts";
 import { useSession } from "../../platform/session/store.ts";
 import type { WelcomeReward } from "../session-bootstrap/useBootstrap.ts";
-import TelegramChatOnboarding from "../telegram-chat-onboarding/TelegramChatOnboarding.tsx";
 import {
   initializeTutorialStatus,
   writeTutorialStatus,
@@ -85,9 +84,6 @@ export default function EntryExperienceCoordinator({
           onSettled={settle}
         />
       ) : null}
-      <TelegramChatOnboarding
-        deferred={tutorialPending && !tutorialLoadFailed}
-      />
       {(!tutorialPending || tutorialLoadFailed) &&
       fallbackNotice &&
       !noticeConsumed ? (

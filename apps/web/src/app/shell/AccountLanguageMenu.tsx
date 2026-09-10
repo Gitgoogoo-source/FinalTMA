@@ -13,6 +13,8 @@ import { refreshUserState, useApiQuery } from "../../platform/query/index.ts";
 import { selectionHaptic } from "../../platform/telegram/index.ts";
 import { AppModal } from "../../shared/ui/AppModal.tsx";
 
+import TelegramChatOnboarding from "../../workflows/telegram-chat-onboarding/TelegramChatOnboarding.tsx";
+
 const options = [
   { value: "en", label: "English" },
   { value: "zh-CN", label: "简体中文" },
@@ -101,6 +103,7 @@ export function AccountLanguageMenu({ close }: { close(): void }): ReactNode {
             )}
           </p>
         ) : null}
+        <TelegramChatOnboarding />
       </section>
     </AppModal>
   );

@@ -1,3 +1,4 @@
+import { dialogEnglishCopy } from "./dialog-copy.ts";
 import { englishCopy1 } from "./en-copy-1.ts";
 import { englishCopy2 } from "./en-copy-2.ts";
 import { englishCopy3 } from "./en-copy-3.ts";
@@ -142,4 +143,5 @@ export const englishCopy: Readonly<Record<string, string>> = {
   ...professionalEnglishCopy,
   ...professionalEnglishCopy2,
   ...professionalEnglishCopy3,
+  ...dialogEnglishCopy,
 };

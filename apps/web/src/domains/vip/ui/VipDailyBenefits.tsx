@@ -13,10 +13,6 @@ import {
 import { t, tp } from "../../../platform/i18n/index.ts";
 
 type Benefit = "fgems" | "freeBox";
-type Feedback = {
-  status: "success" | "failed";
-  benefitDate: string;
-};
 
 export function VipDailyBenefits(): ReactNode {
   const vip = useApiQuery("vip.get");
@@ -24,9 +20,6 @@ export function VipDailyBenefits(): ReactNode {
   const preparePage = usePageModulePreparation();
   const { present, run } = useOperationCommands();
   const [pending, setPending] = useState<Partial<Record<Benefit, boolean>>>({});
-  const [feedback, setFeedback] = useState<Partial<Record<Benefit, Feedback>>>(
-    {},
-  );
   const fgemsOperationBlocked = useOperationBlocked("vip.claim_fgems");
   const freeBoxOperationBlocked = useOperationBlocked("vip.claim_free_box");
   const fgemsPending = Boolean(pending.fgems) || fgemsOperationBlocked;
@@ -99,7 +92,6 @@ export function VipDailyBenefits(): ReactNode {
     const routeId =
       benefit === "fgems" ? "vip.claim_fgems" : "vip.claim_free_box";
     setPending((current) => ({ ...current, [benefit]: true }));
-    setFeedback((current) => ({ ...current, [benefit]: undefined }));
     const result = await run(
       benefit === "fgems"
         ? t("正在领取 VIP 每日 100 Gems")
@@ -112,13 +104,6 @@ export function VipDailyBenefits(): ReactNode {
       },
     );
     setPending((current) => ({ ...current, [benefit]: false }));
-    setFeedback((current) => ({
-      ...current,
-      [benefit]: {
-        status: result ? "success" : "failed",
-        benefitDate: data?.benefit_date ?? "",
-      },
-    }));
     if (result && benefit === "freeBox") notifyFreeRareClaimed();
     present(routeId);
   };
@@ -127,16 +112,6 @@ export function VipDailyBenefits(): ReactNode {
   const expired = !active && Boolean(data?.ends_on);
   const fgemsClaimed = Boolean(data?.fgems_claimed_today);
   const freeBoxClaimed = Boolean(data?.free_box_claimed_today);
-  const fgemsFeedback = feedback.fgems;
-  const freeBoxFeedback = feedback.freeBox;
-  const fgemsFeedbackStatus =
-    fgemsFeedback && fgemsFeedback.benefitDate === data?.benefit_date
-      ? fgemsFeedback.status
-      : undefined;
-  const freeBoxFeedbackStatus =
-    freeBoxFeedback && freeBoxFeedback.benefitDate === data?.benefit_date
-      ? freeBoxFeedback.status
-      : undefined;
   const statusText = vipStatusText(data, paymentPending, vip.isLoading);
   const fgemsAction = benefitButtonText({
     active,
@@ -215,11 +190,6 @@ export function VipDailyBenefits(): ReactNode {
             />
             <BenefitStateIcon state={fgemsVisualState} />
           </Button>
-          <BenefitFeedback
-            feedback={fgemsFeedbackStatus}
-            claimed={fgemsClaimed}
-            success={t("领取成功，Gems +100")}
-          />
         </article>
 
         <article className="vip-benefit-item vip-benefit-free-box">
@@ -243,11 +213,6 @@ export function VipDailyBenefits(): ReactNode {
             />
             <BenefitStateIcon state={freeBoxVisualState} />
           </Button>
-          <BenefitFeedback
-            feedback={freeBoxFeedbackStatus}
-            claimed={freeBoxClaimed}
-            success={t("领取成功，免费稀有盲盒次数 +1")}
-          />
         </article>
       </div>
     </aside>
@@ -274,27 +239,6 @@ function BenefitStateIcon({ state }: { state: BenefitVisualState }): ReactNode {
       ) : (
         <LoaderCircle className="spin" />
       )}
-    </span>
-  );
-}
-
-function BenefitFeedback({
-  feedback,
-  claimed,
-  success,
-}: {
-  feedback: Feedback["status"] | undefined;
-  claimed: boolean;
-  success: string;
-}): ReactNode {
-  if (!feedback) return null;
-  return (
-    <span className="vip-benefit-status-text" role="status">
-      {feedback === "success"
-        ? success
-        : claimed
-          ? t("今日权益已领取，未重复发放")
-          : t("领取未成功，已刷新最新状态")}
     </span>
   );
 }

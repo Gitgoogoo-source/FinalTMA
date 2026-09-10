@@ -1,0 +1,727 @@
+/* Shared presentation for deferred game panels. No first-screen import. */
+.app-shell.app-modal-backdrop {
+  --dialog-paper: #fffdf7;
+  --dialog-ink: #3e3b33;
+  --dialog-muted: #756e60;
+  --dialog-line: #eae3d5;
+}
+.app-shell.app-modal-backdrop .modal:not(.gacha-resume-dialog) {
+  border-color: #fffaf0;
+  color: var(--dialog-ink);
+  background-color: var(--dialog-paper);
+  box-shadow: 0 20px 64px #36372e30;
+}
+.app-shell.app-modal-backdrop .modal h2 {
+  line-height: 1.2;
+}
+.app-shell.app-modal-backdrop .modal p {
+  line-height: 1.55;
+}
+.app-shell.app-modal-backdrop .modal > .button {
+  min-height: 48px;
+  font-size: 14px;
+}
+.app-shell .dialog-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid #ffffffa8;
+  border-radius: 50%;
+  color: #574f42;
+  background: #fffdf1dc;
+}
+.app-shell .dialog-close svg {
+  width: 20px;
+  height: 20px;
+}
+.app-shell .dialog-kicker {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #b66b27;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+.app-shell .dialog-kicker svg {
+  width: 16px;
+  height: 16px;
+}
+.app-shell .dialog-rules {
+  border-top: 1px solid #eae3d5;
+  color: #726957;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.app-shell .dialog-rules summary {
+  padding: 14px 0;
+  color: #514839;
+  cursor: pointer;
+  font-weight: 750;
+}
+.app-shell .dialog-rules p {
+  margin: 0 0 12px;
+  font-size: 13px;
+}
+.app-shell .dialog-rules dl {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 14px;
+}
+.app-shell .dialog-rules dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+.app-shell .dialog-rules dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 700;
+}
+/* VIP: illustration, two daily benefits, payment anchored below the scroll. */
+.app-shell.vip-pass-backdrop {
+  padding: max(var(--safe-top), 18px) 0 0;
+  place-items: end center;
+}
+.app-shell.app-modal-backdrop .vip-pass {
+  width: min(100%, var(--app-width));
+  max-height: calc(
+    var(--tg-viewport-stable-height, 100dvh) - max(var(--safe-top), 18px)
+  );
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  border-radius: 30px;
+  overflow: hidden;
+  background: #fffdf7;
+}
+.vip-pass-hero {
+  position: relative;
+  flex: 0 0 172px;
+  overflow: hidden;
+  background: #ffecc8;
+}
+.vip-pass-hero > img {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  object-fit: cover;
+  object-position: center 47%;
+}
+.vip-pass-heading {
+  position: relative;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 8px;
+  min-height: 172px;
+  padding: 24px 20px;
+  width: 59%;
+}
+.vip-pass-heading > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: #986322;
+}
+.vip-pass-heading svg {
+  width: 16px;
+  height: 16px;
+}
+.app-shell .vip-pass-heading h2 {
+  margin: 0;
+  color: #533a20;
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+.app-shell .vip-pass-heading .badge {
+  color: #754b19;
+  background: #fffbebcc;
+  border: 1px solid #e9cd9e;
+  font-size: 11px;
+}
+.vip-pass-content {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 18px 20px 0;
+}
+.vip-pass-price {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.vip-pass-price > div {
+  display: grid;
+  gap: 5px;
+}
+.vip-pass-price small {
+  font-size: 12px;
+  color: #817562;
+}
+.vip-pass-price strong {
+  font-size: 28px;
+  line-height: 1.2;
+  color: #513b24;
+}
+.vip-pass-price strong span {
+  font-size: 12px;
+  font-weight: 650;
+  color: #85725b;
+}
+.vip-days {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px;
+  border-radius: 12px;
+  background: #f0f5e9;
+  color: #557043;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.vip-days svg {
+  width: 14px;
+  height: 14px;
+}
+.vip-perk-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.vip-perk-grid article {
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 5px;
+  padding: 12px 8px;
+  border: 1px solid #ece3cf;
+  border-radius: 20px;
+  background: linear-gradient(#fff8e8, #fffdf8);
+  text-align: center;
+}
+.vip-perk-grid img {
+  width: 72px;
+  height: 64px;
+  object-fit: contain;
+}
+.vip-perk-grid strong {
+  font-size: 14px;
+  color: #533e28;
+}
+.vip-perk-grid span {
+  font-size: 12px;
+  color: #837256;
+}
+.vip-perk-grid small {
+  font-size: 12px;
+  color: #50844b;
+  margin-top: 3px;
+}
+.app-shell .vip-rebate-note,
+.app-shell .vip-expiry {
+  margin: 12px 0;
+  color: #776e5d;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.vip-pass-actions {
+  flex: 0 0 auto;
+  padding: 12px 20px calc(var(--safe-bottom) + 16px);
+  border-top: 1px solid #eae3d5;
+  background: #fffdf7;
+}
+.app-shell .vip-pass-actions > .button {
+  width: 100%;
+  min-height: 52px;
+  font-size: 14px;
+  border-radius: 17px;
+}
+.app-shell .vip-pass .payment-recovery {
+  font-size: 14px;
+  border-color: #e8d7b7;
+  background: #fff7e6;
+}
+/* Expedition: a team of three remains visible above the selectable roster. */
+.app-shell.expedition-picker-backdrop {
+  place-items: end center;
+  padding: max(var(--safe-top), 18px) 0 0;
+}
+.app-shell.app-modal-backdrop .expedition-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: min(100%, var(--app-width));
+  max-height: calc(
+    var(--tg-viewport-stable-height, 100dvh) - max(var(--safe-top), 18px)
+  );
+  padding: 0;
+  border-radius: 30px;
+  overflow: hidden;
+  background: #fffdf7;
+}
+.expedition-picker-heading {
+  position: relative;
+  flex: 0 0 auto;
+  padding: 22px 20px 14px;
+  background: linear-gradient(120deg, #fff2d4, #fffdf7);
+}
+.app-shell .expedition-picker-heading h2 {
+  margin: 9px 38px 6px 0;
+  color: #513b24;
+  font-size: 24px;
+}
+.app-shell .expedition-picker-heading p {
+  font-size: 13px;
+  color: #85725b;
+}
+.expedition-team-preview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  flex: 0 0 auto;
+  padding: 0 20px 16px;
+}
+.expedition-team-preview > div {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 5px;
+  min-height: 96px;
+  padding: 8px 4px;
+  border: 1px dashed #d8d8c8;
+  border-radius: 17px;
+  background: #f7f8f0;
+  color: #a4ac95;
+}
+.expedition-team-preview .filled {
+  border-style: solid;
+  border-color: #d3dfbf;
+  background: #f1f6e9;
+}
+.expedition-team-preview .catalog-image {
+  height: 60px;
+  width: 60px;
+  object-fit: contain;
+}
+.expedition-team-preview small {
+  max-width: 100%;
+  color: #717957;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.expedition-picker-content {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 20px 14px;
+}
+.app-shell .expedition-picker .selection-list {
+  max-height: none;
+  overflow: visible;
+  gap: 8px;
+}
+.app-shell .expedition-picker .selection-list > .card {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 44px 30px 44px;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+  border: 1px solid #eee7d9;
+  border-radius: 16px;
+  background: #fffefa;
+  box-shadow: none;
+}
+.app-shell .expedition-picker .selection-list > .card.selected {
+  border-color: #b9d39f;
+  background: #f6faef;
+}
+.expedition-picker .selection-list .catalog-image {
+  width: 44px;
+  height: 48px;
+  object-fit: contain;
+}
+.expedition-picker .selection-list strong {
+  display: block;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.expedition-picker .selection-list small {
+  font-size: 12px;
+  line-height: 1.4;
+}
+.app-shell .expedition-picker .selection-list .button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  font-size: 20px;
+  border-radius: 12px;
+}
+.app-shell .expedition-picker .selection-list .badge {
+  padding: 0;
+  border: 0;
+  background: none;
+  white-space: nowrap;
+  font-size: 12px;
+  color: #5b6650;
+}
+.expedition-picker-footer {
+  flex: 0 0 auto;
+  padding: 12px 20px calc(var(--safe-bottom) + 16px);
+  border-top: 1px solid #eae3d5;
+  background: #fffdf7;
+}
+.expedition-trip-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 0 12px;
+  color: #726b57;
+  font-size: 12px;
+}
+.expedition-trip-summary span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.expedition-trip-summary svg {
+  width: 15px;
+  height: 15px;
+}
+.expedition-trip-summary strong {
+  color: #6b803e;
+}
+.app-shell .expedition-picker-footer .button {
+  min-height: 48px;
+  font-size: 14px;
+}
+/* A smaller action sheet for irreversible choices; evolution gets extra room. */
+.app-shell.app-modal-backdrop.inventory-action-dialog-backdrop
+  .inventory-action-dialog {
+  height: auto;
+  max-height: calc(
+    var(--tg-viewport-stable-height, 100dvh) -
+      max(var(--safe-top), var(--content-safe-top)) - 32px
+  );
+  overflow: hidden;
+  border-radius: 28px 28px 0 0;
+}
+.app-shell.app-modal-backdrop.inventory-action-dialog-backdrop {
+  padding-top: calc(max(var(--safe-top), var(--content-safe-top)) + 32px);
+}
+.app-shell.app-modal-backdrop .inventory-action-dialog-heading {
+  padding: 28px 20px 18px;
+  overflow: hidden;
+}
+.app-shell.app-modal-backdrop .inventory-action-dialog-clouds {
+  top: -52px;
+  left: auto;
+  right: -46px;
+  width: 166px;
+  transform: none;
+  opacity: 0.45;
+}
+.app-shell.app-modal-backdrop .inventory-action-dialog-title h2 {
+  font-size: 24px;
+  line-height: 1.25;
+}
+.app-shell.app-modal-backdrop .inventory-action-dialog-title svg {
+  display: none;
+}
+.app-shell.app-modal-backdrop .inventory-action-dialog-handle {
+  width: 36px;
+  height: 4px;
+  margin-bottom: 12px;
+  background: #dacdb8;
+}
+.app-shell.app-modal-backdrop .inventory-action-dialog-content {
+  padding: 0 20px 18px;
+}
+.app-shell.app-modal-backdrop .inventory-action-dialog-content > p {
+  font-size: 13px;
+}
+.app-shell.app-modal-backdrop .inventory-action-dialog-content,
+.app-shell.app-modal-backdrop .evolution-confirmation-content {
+  max-height: 54dvh;
+}
+.app-shell.app-modal-backdrop .inventory-action-dialog-actions {
+  padding-right: 20px;
+  padding-left: 20px;
+}
+.app-shell.app-modal-backdrop .inventory-quantity-warning {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  color: #9b523d;
+  background: #fff2e8;
+}
+.app-shell.app-modal-backdrop .inventory-quantity-warning svg {
+  flex: 0 0 18px;
+}
+.app-shell.app-modal-backdrop .evolution-risk-copy {
+  padding: 12px;
+  border-radius: 14px;
+  background: #fff4df;
+}
+.app-shell.app-modal-backdrop .evolution-risk-copy p {
+  font-size: 13px;
+  line-height: 1.55;
+}
+/* Trading confirmation: one clear price and one primary action. */
+.app-shell.app-modal-backdrop .market-purchase-dialog {
+  position: relative;
+  padding: 22px;
+  gap: 14px;
+  border-radius: 28px;
+  background: #fffdf7;
+}
+.app-shell .market-purchase-dialog .market-purchase-preview {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #eae3d5;
+}
+.app-shell .market-purchase-dialog .market-purchase-preview > .catalog-image {
+  width: 84px;
+  height: 94px;
+  object-fit: contain;
+}
+.app-shell .market-purchase-dialog .market-purchase-preview h2 {
+  margin: 7px 0;
+  font-size: 24px;
+}
+.app-shell .market-purchase-dialog .market-purchase-preview span {
+  font-size: 12px;
+  color: #7b705d;
+}
+.app-shell .market-purchase-dialog .market-purchase-totals {
+  padding: 14px;
+  border: 1px solid #edddbd;
+  border-radius: 18px;
+  background: #fff5df;
+}
+.app-shell
+  .market-purchase-dialog
+  .market-purchase-totals
+  > span:first-child
+  strong {
+  font-size: 23px;
+  color: #a85c1b;
+}
+.app-shell .market-purchase-dialog .market-purchase-price,
+.app-shell .market-purchase-dialog .market-purchase-quantity {
+  font-size: 14px;
+}
+.app-shell.app-modal-backdrop .market-delist-dialog {
+  justify-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 24px;
+  border-radius: 28px;
+}
+.market-delist-dialog > .catalog-image {
+  width: 96px;
+  height: 100px;
+  object-fit: contain;
+}
+.app-shell .market-delist-dialog h2 {
+  font-size: 24px;
+}
+.app-shell .market-delist-dialog p {
+  font-size: 14px;
+}
+.app-shell .market-delist-dialog > .button {
+  width: 100%;
+}
+/* Recharge stays transparent behind the sheet. */
+.app-shell.app-modal-backdrop.topup-sheet-backdrop {
+  background: transparent !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.app-shell.app-modal-backdrop .topup-sheet {
+  border-radius: 28px 28px 0 0;
+  padding-right: 20px;
+  padding-left: 20px;
+}
+.app-shell.app-modal-backdrop .topup-sheet-heading h2 {
+  font-size: 27px;
+}
+.app-shell.app-modal-backdrop .topup-sheet-description {
+  font-size: 13px;
+  font-weight: 500;
+}
+.app-shell.app-modal-backdrop .topup-sheet .amount-grid {
+  gap: 9px;
+}
+.app-shell.app-modal-backdrop .topup-sheet .amount-grid button {
+  min-height: 52px;
+  font-size: 16px;
+  border-radius: 15px;
+}
+.app-shell.app-modal-backdrop .topup-sheet .button-row .button {
+  min-height: 50px;
+  font-size: 13px;
+}
+.app-shell.app-modal-backdrop .topup-sheet .payment-recovery {
+  padding: 15px;
+  border-radius: 16px;
+  color: #674e2a;
+  background: #fff5df;
+  border-color: #edddbd;
+}
+/* Wallet/account retain their content with the same readable control scale. */
+.app-shell.app-modal-backdrop .wallet {
+  background: #fffdf7;
+  color: #403c33;
+}
+.app-shell.app-modal-backdrop .wallet .verified-wallet {
+  background: #f2f7f6;
+  border-color: #d9e5df;
+  color: #374f49;
+}
+.app-shell.app-modal-backdrop .wallet .verified-wallet small {
+  color: #6b8278;
+}
+.app-shell.app-modal-backdrop .wallet .verified-wallet code {
+  color: #51685f;
+}
+.app-shell.app-modal-backdrop .account-language-menu {
+  max-height: 80dvh;
+}
+.app-shell .chat-permission {
+  padding-top: 14px;
+  margin-top: 4px;
+  border-top: 1px solid #eae3d5;
+  display: grid;
+  gap: 9px;
+}
+.app-shell .chat-permission strong {
+  font-size: 14px;
+}
+.app-shell .chat-permission p {
+  font-size: 12px;
+  color: #756e60;
+}
+.app-shell .chat-permission .button {
+  min-height: 44px;
+  font-size: 13px;
+}
+.app-shell .dialog-placeholder {
+  min-height: 260px;
+}
+.dialog-skeleton {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 20px 0;
+}
+.dialog-skeleton span {
+  display: block;
+  height: 60px;
+  border-radius: 16px;
+  background: #f0ebdf;
+  animation: dialog-breathe 1.2s ease-in-out infinite alternate;
+}
+@keyframes dialog-breathe {
+  to {
+    opacity: 0.45;
+  }
+}
+@media (max-height: 680px) {
+  .vip-pass-hero,
+  .vip-pass-heading {
+    min-height: 132px;
+  }
+  .vip-pass-hero {
+    flex-basis: 132px;
+  }
+  .vip-perk-grid img {
+    height: 45px;
+  }
+  .expedition-team-preview > div {
+    min-height: 76px;
+  }
+  .expedition-team-preview .catalog-image {
+    height: 44px;
+  }
+}
+@media (max-width: 350px) {
+  .vip-pass-content {
+    padding-inline: 14px;
+  }
+  .vip-pass-price strong {
+    font-size: 24px;
+  }
+  .vip-perk-grid strong {
+    font-size: 13px;
+  }
+  .expedition-picker-content,
+  .expedition-team-preview {
+    padding-inline: 12px;
+  }
+  .app-shell .market-purchase-dialog {
+    padding: 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.app-modal-backdrop,
+  .app-shell.app-modal-backdrop .modal,
+  .dialog-skeleton span {
+    animation: none !important;
+  }
+}
+.app-modal-backdrop > [data-modal-feedback-slot] {
+  display: contents;
+}
+
+/* Scroll content must keep its intrinsic height, including cost and risk rows. */
+.app-shell.app-modal-backdrop .evolution-confirmation-content > *,
+.app-shell.app-modal-backdrop .inventory-action-dialog-content > * {
+  flex-shrink: 0;
+}
+.app-shell.app-modal-backdrop .topup-sheet .button-row .button svg {
+  flex: 0 0 16px;
+}
+.app-shell.app-modal-backdrop .evolution-confirmation-content {
+  grid-template-rows: none;
+  grid-auto-rows: max-content;
+  align-content: start;
+}
+.app-shell.app-modal-backdrop .inventory-action-dialog-content {
+  grid-auto-rows: max-content;
+}
+.app-shell.app-modal-backdrop .evolution-rule-summary span {
+  font-size: 12px;
+  line-height: 1.3;
+}
+.app-shell.app-modal-backdrop .evolution-rule-summary strong {
+  font-size: 14px;
+}
+
+.expedition-picker-footer .button-row {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  width: 100%;
+}
+.app-shell.app-modal-backdrop .inventory-action-dialog-heading.has-handle {
+  padding-top: 24px;
+}

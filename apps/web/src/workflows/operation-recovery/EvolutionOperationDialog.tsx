@@ -80,6 +80,7 @@ export function EvolutionOperationDialog({
   const announcedOutcome = useRef<string | null>(null);
 
   useEffect(() => {
+    if (ceremonyComplete) return;
     const pulseTimers = [1_600, 2_850, 3_750, 4_350, 4_720].map((delay) =>
       window.setTimeout(selectionHaptic, delay),
     );
@@ -91,7 +92,7 @@ export function EvolutionOperationDialog({
       pulseTimers.forEach((pulseTimer) => window.clearTimeout(pulseTimer));
       window.clearTimeout(timer);
     };
-  }, [operationId]);
+  }, [operationId, ceremonyComplete]);
 
   useEffect(() => {
     if (!ceremonyComplete) return;
@@ -115,7 +116,20 @@ export function EvolutionOperationDialog({
   }, [ceremonyComplete, confirmedResult, phase]);
 
   if (!ceremonyComplete)
-    return <EvolutionCeremony presentation={presentation} />;
+    return (
+      <>
+        <EvolutionCeremony presentation={presentation} />
+        {(phase === "succeeded" && confirmedResult) || phase === "failed" ? (
+          <button
+            type="button"
+            className="ceremony-skip"
+            onClick={() => setCeremonyComplete(true)}
+          >
+            {t("查看结果")}
+          </button>
+        ) : null}
+      </>
+    );
 
   if (phase === "succeeded" && confirmedResult)
     return confirmedResult.success_count > 0 ? (
@@ -145,7 +159,7 @@ export function EvolutionOperationDialog({
         />
         <section className="evolution-result-panel evolution-result-panel--dismissible">
           <EvolutionResultClose disabled={busy} onClick={onAcknowledge} />
-          <p className="evolution-result-kicker">{t("本次没有产生结算")}</p>
+          <p className="evolution-result-kicker">{t("本次进化未开始")}</p>
           <h2 id="evolution-result-title">{t("进化未执行")}</h2>
           <p>
             {rejectedMessages[code ?? ""] ??
@@ -170,9 +184,9 @@ export function EvolutionOperationDialog({
         className="evolution-stage-pet--restored"
       />
       <section className="evolution-result-panel">
-        <p className="evolution-result-kicker">{t("藏品保持原形态")}</p>
-        <h2 id="evolution-result-title">{t("进化中断")}</h2>
-        <p>{t("进化仪式被打断，请重新确认结果")}</p>
+        <p className="evolution-result-kicker">{t("正在确认进化结果")}</p>
+        <h2 id="evolution-result-title">{t("伙伴正在蜕变")}</h2>
+        <p>{t("请等待结果确认，暂时不要再次进化。")}</p>
         <Button onClick={onRecover}>{t("重新确认")}</Button>
       </section>
     </EvolutionStage>

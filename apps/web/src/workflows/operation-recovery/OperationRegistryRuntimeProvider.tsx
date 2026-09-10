@@ -65,7 +65,13 @@ import {
   preloadOperationPresentation,
   type LoadedOperationPresentation,
 } from "./presentation-loader.ts";
-import { t, tp } from "../../platform/i18n/index.ts";
+import { apiErrorMessage, t, tp, tr } from "../../platform/i18n/index.ts";
+import { OperationFeedback, OperationResume } from "./OperationFeedback.tsx";
+import {
+  compactFeedbackRoutes,
+  feedbackTitle,
+  feedbackDetail,
+} from "./feedback-policy.ts";
 
 type RegisteredOperation = {
   id: string;
@@ -279,7 +285,8 @@ export function OperationRegistryRuntimeProvider({
       )
         blockedRoutes.add(operation.routeId);
       if (
-        navigationLockedThroughResultRouteIds.has(operation.routeId) ||
+        (navigationLockedThroughResultRouteIds.has(operation.routeId) &&
+          !compactFeedbackRoutes.has(operation.routeId)) ||
         (operation.routeId === "inventory.evolve" &&
           unresolvedPhases.has(operation.phase))
       )
@@ -374,14 +381,15 @@ export function OperationRegistryRuntimeProvider({
     invalidGachaSuccess ||
     invalidWheelSuccess ||
     invalidAlbumClaimSuccess ||
-    invalidVipClaimSuccess;
+    invalidVipClaimSuccess ||
+    Boolean(
+      active?.phase === "succeeded" &&
+      !validationPending &&
+      active.routeId === "market.purchase" &&
+      !validatedActive?.result,
+    );
   const unresolved = Object.values(operations).filter((operation) =>
     unresolvedPhases.has(operation.phase),
-  );
-  const resumableUnresolved = unresolved.filter(
-    (operation) =>
-      operation.routeId !== "market.create_listing" &&
-      operation.routeId !== "market.purchase",
   );
   const closingBlocked = unresolved.some(
     (operation) =>
@@ -448,7 +456,9 @@ export function OperationRegistryRuntimeProvider({
     unresolvedPhases.has(active.phase),
   );
   const showOperationDialog =
-    session?.accountStatus === "normal" && !hideMarketProgress;
+    session?.accountStatus === "normal" &&
+    !hideMarketProgress &&
+    !(active && compactFeedbackRoutes.has(active.routeId));
 
   useEffect(() => {
     operationsRef.current = operations;
@@ -1206,7 +1216,10 @@ export function OperationRegistryRuntimeProvider({
               : null;
           update(operation.id, {
             phase: "failed",
-            message: definition?.message ?? t("操作未完成"),
+            message: apiErrorMessage(
+              recovered.error_code ?? "INTERNAL_ERROR",
+              definition?.message ?? "",
+            ),
             result: recovered.result,
             errorCode: recovered.error_code,
             presentationStatus: "ready",
@@ -1496,9 +1509,19 @@ export function OperationRegistryRuntimeProvider({
         phase: "unknown",
         message: t("图鉴奖励详情暂时无法确认，请查看最新结果"),
       });
+    if (
+      compactFeedbackRoutes.has(active.routeId) &&
+      (validationPending || invalidDedicatedSuccess)
+    )
+      update(active.id, {
+        phase: "unknown",
+        message: tr("Checking your result", "正在确认结果"),
+      });
     setActiveId(null);
   }, [
     active,
+    validationPending,
+    invalidDedicatedSuccess,
     invalidAlbumClaimSuccess,
     invalidGachaSuccess,
     invalidWheelSuccess,
@@ -1627,13 +1650,11 @@ export function OperationRegistryRuntimeProvider({
     <>
       {session?.accountStatus === "normal" &&
         !active &&
-        resumableUnresolved.length > 0 && (
-          <button
-            className="operation-resume"
-            onClick={() => setActiveId(resumableUnresolved[0]?.id ?? null)}
-          >
-            {tp("{{0}} 个操作待确认", [resumableUnresolved.length])}
-          </button>
+        unresolved.length > 0 && (
+          <OperationResume
+            label={tp("{{0}} 个操作待确认", [unresolved.length])}
+            onResume={() => setActiveId(unresolved[0]?.id ?? null)}
+          />
         )}
       {active?.routeId === "gacha.open" &&
         gachaResult &&
@@ -1641,6 +1662,66 @@ export function OperationRegistryRuntimeProvider({
         gachaResultPreparationReady && (
           <GachaResultImagePreloader key={active.id} result={gachaResult} />
         )}
+      {active &&
+      session?.accountStatus === "normal" &&
+      compactFeedbackRoutes.has(active.routeId) ? (
+        <OperationFeedback
+          key={active.id}
+          phase={
+            active.phase === "succeeded" &&
+            (validationPending || invalidDedicatedSuccess)
+              ? "unknown"
+              : active.phase
+          }
+          title={
+            active.phase === "succeeded" &&
+            !validationPending &&
+            !invalidDedicatedSuccess
+              ? feedbackTitle(active.routeId)
+              : active.phase === "failed"
+                ? tr("Couldn't complete this", "本次未完成")
+                : active.phase === "unknown" ||
+                    active.phase === "pending" ||
+                    invalidDedicatedSuccess
+                  ? tr("Checking your result", "正在确认结果")
+                  : tr("Just a moment", "请稍候")
+          }
+          message={
+            active.phase === "failed"
+              ? apiErrorMessage(active.errorCode ?? "INTERNAL_ERROR", "")
+              : active.phase === "unknown" ||
+                  active.phase === "pending" ||
+                  invalidDedicatedSuccess
+                ? tr(
+                    "Please wait before trying this action again.",
+                    "请等待结果确认后再进行此操作。",
+                  )
+                : active.phase === "succeeded" && !validationPending
+                  ? feedbackDetail(active.routeId, active.result)
+                  : undefined
+          }
+          onRecover={() => void recover(active)}
+          onClose={() =>
+            active.phase === "succeeded" &&
+            (validationPending || invalidDedicatedSuccess)
+              ? defer()
+              : unresolvedPhases.has(active.phase)
+                ? defer()
+                : remove(active.id)
+          }
+          onCollection={
+            active.routeId === "market.purchase" &&
+            active.phase === "succeeded" &&
+            marketPurchaseResult
+              ? () => {
+                  remove(active.id);
+                  preparePage("/inventory");
+                  navigate("/inventory");
+                }
+              : undefined
+          }
+        />
+      ) : null}
       {active && showOperationDialog && (
         <div
           ref={dialogRef}
@@ -1977,7 +2058,7 @@ function PresentationLoadFailure({ retry }: { retry(): void }): ReactNode {
     <div className="modal operation-presentation-loading" role="alert">
       <div className="operation-mark failed">!</div>
       <h2>{t("画面暂时无法显示")}</h2>
-      <p>{t("操作状态已保留，重新加载画面不会重复执行操作。")}</p>
+      <p>{tr("Try loading this screen again.", "请重新加载这个画面。")}</p>
       <Button onClick={retry}>{t("重新加载画面")}</Button>
     </div>
   );
@@ -2172,7 +2253,7 @@ function recoveredMessage(operation: RecoverableOperationSummary): string {
     return confirmedMessage(operation.use_case, operation.result);
   if (operation.status === "failed")
     return operation.error_code && isErrorCode(operation.error_code)
-      ? errorDefinition(operation.error_code).message
+      ? apiErrorMessage(operation.error_code, "")
       : t("操作未完成");
   return operation.status === "unknown"
     ? t("结果仍在确认，请勿重复操作")
@@ -2220,7 +2301,7 @@ function marketListingFailureMessage(errorCode: string | null): string {
     playerFacingMarketListingErrorCodes.has(errorCode) &&
     isErrorCode(errorCode)
   )
-    return errorDefinition(errorCode).message;
+    return apiErrorMessage(errorCode, "");
   return t("藏品没有上架，请根据最新的可出售状态重试。");
 }
 
@@ -2230,7 +2311,7 @@ function marketPurchaseFailureMessage(errorCode: string | null): string {
     playerFacingMarketPurchaseErrorCodes.has(errorCode) &&
     isErrorCode(errorCode)
   )
-    return errorDefinition(errorCode).message;
+    return apiErrorMessage(errorCode, "");
   return t("本次购买没有完成，请根据最新库存和余额重试。");
 }
 

@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 import { DecompositionAction } from "../../domains/decomposition/index.ts";
 import { EvolutionAction } from "../../domains/evolution/index.ts";
 import { useAppNavigate } from "../../platform/navigation/index.tsx";
 import {
   InventoryView,
-  SellQuantityDialog,
   type InventoryItem,
 } from "../../domains/inventory/index.ts";
 import { Button } from "../../shared/ui/Button.tsx";
@@ -20,7 +19,6 @@ export function InventoryPage(): ReactNode {
   const navigate = useAppNavigate();
   const preparePage = usePageModulePreparation();
   const [params] = usePageSearchParams();
-  const [sellItem, setSellItem] = useState<InventoryItem | null>(null);
   const requestedFocus = params.get("focus");
   const evolutionBlocked = useOperationBlocked("inventory.evolve");
   const decompositionBlocked = useOperationBlocked("inventory.decompose");
@@ -45,7 +43,11 @@ export function InventoryPage(): ReactNode {
         <Button
           className="inventory-action-button inventory-action-button--sell"
           disabled={blocked || !imageReady || item.available < 1}
-          onClick={() => setSellItem(item)}
+          onClick={() => {
+            const path = `/market?sell=${encodeURIComponent(item.template_id)}`;
+            preparePage(path);
+            navigate(path);
+          }}
         >
           <span>{t("出售")}</span>
         </Button>
@@ -55,19 +57,6 @@ export function InventoryPage(): ReactNode {
   return (
     <>
       <InventoryView renderActions={actions} />
-      {sellItem ? (
-        <SellQuantityDialog
-          item={sellItem}
-          onCancel={() => setSellItem(null)}
-          onConfirm={(quantity) => {
-            const templateId = sellItem.template_id;
-            setSellItem(null);
-            const path = `/market?sell=${encodeURIComponent(templateId)}&quantity=${quantity}`;
-            preparePage(path);
-            navigate(path);
-          }}
-        />
-      ) : null}
     </>
   );
 }

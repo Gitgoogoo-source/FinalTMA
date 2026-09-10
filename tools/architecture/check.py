@@ -635,6 +635,7 @@ def verify_telegram_chat_list_onboarding() -> None:
             / "workflows/telegram-chat-onboarding/TelegramChatOnboarding.tsx"
         ).read_text(encoding="utf-8"),
         "app": (WEB_ROOT / "app/App.tsx").read_text(encoding="utf-8"),
+        "account menu": (WEB_ROOT / "app/shell/AccountLanguageMenu.tsx").read_text(encoding="utf-8"),
         "entry coordinator": (
             WEB_ROOT / "workflows/entry-experience/EntryExperienceCoordinator.tsx"
         ).read_text(encoding="utf-8"),
@@ -680,13 +681,12 @@ def verify_telegram_chat_list_onboarding() -> None:
             "requestWriteAccess?",
         ),
         "web workflow": (
-            "subscribeFirstPlayablePageReady",
-            "subscribeFirstScreenReady",
+            'session?.accountStatus !== "normal"',
             'session.entryHandoffState !== "complete"',
-            "requestTelegramWriteAccessOnce()",
-            'app.isVersionAtLeast("6.9")',
-            "writeAccessRequestAttempted = true",
-            "deferred ||",
+            'app.isVersionAtLeast?.("6.9")',
+            "pending.current = true",
+            "onClick={request}",
+            "app.requestWriteAccess?.",
         ),
         "app": (
             "const EntryExperienceCoordinator = lazy",
@@ -694,10 +694,9 @@ def verify_telegram_chat_list_onboarding() -> None:
             "<AppRouter />",
             "<EntryExperienceCoordinator",
         ),
-        "entry coordinator": (
+        "account menu": (
             "telegram-chat-onboarding/TelegramChatOnboarding.tsx",
             "<TelegramChatOnboarding",
-            "deferred={tutorialPending && !tutorialLoadFailed}",
         ),
         "page readiness": (
             "markFirstScreenReady(session.generation)",
@@ -729,7 +728,7 @@ def verify_telegram_chat_list_onboarding() -> None:
         ),
         "ADR": (
             "`requestWriteAccess()`",
-            "下次完整关闭并重新进入 Mini App 时自动再次请求",
+            "只在账户菜单中由玩家主动点击后请求",
             "至多尝试一次欢迎消息",
             "不新增环境变量",
         ),
@@ -748,6 +747,8 @@ def verify_telegram_chat_list_onboarding() -> None:
         raise SystemExit(
             f"Telegram chat-list onboarding boundary is incomplete: {missing}"
         )
+    if "TelegramChatOnboarding" in sources["entry coordinator"] or "useEffect" in sources["web workflow"]:
+        raise SystemExit("Telegram message permission must not be requested automatically")
     legacy = API_ROOT / "workflows/stars-payment/telegram-webhook.ts"
     if legacy.exists():
         raise SystemExit("Telegram webhook orchestration cannot remain payment-owned")
@@ -3873,7 +3874,6 @@ def verify_new_user_welcome_boundary() -> None:
         "coordinator": (
             "initializeTutorialStatus(",
             'writeTutorialStatus(userId, "completed")',
-            "deferred={tutorialPending && !tutorialLoadFailed}",
         ),
         "tutorial": (
             'useApiQuery("gacha.bootstrap")',
@@ -3888,7 +3888,7 @@ def verify_new_user_welcome_boundary() -> None:
             '"completed"',
             '"dismissed"',
         ),
-        "Telegram chat onboarding": ("deferred ||",),
+        "Telegram chat onboarding": ("onClick={request}",),
         "ADR-102": (
             "new_user_welcome",
             "不回填",

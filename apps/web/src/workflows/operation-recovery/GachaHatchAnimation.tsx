@@ -140,11 +140,12 @@ export function GachaImageUnavailable({
       <header className="gacha-astral-ritual-heading">
         <small>{t("月下灵契")}</small>
         <h2 id="gacha-image-unavailable-title">{t("灵契尚未显现")}</h2>
+        <p>{t("宠物图片暂未加载，请重新加载图片。")}</p>
       </header>
 
       <div className="gacha-astral-image-unavailable-action">
         <Button disabled={busy} onClick={onRetry}>
-          {busy ? t("显现中") : t("再试一次")}
+          {busy ? t("显现中") : t("重新加载图片")}
         </Button>
       </div>
     </section>

@@ -9,6 +9,7 @@ import {
 
 import { DialogRenderBoundary } from "./DialogRenderBoundary.tsx";
 
+import { AppModal } from "../../shared/ui/AppModal.tsx";
 import { Button } from "../../shared/ui/Button.tsx";
 import type { TopupRequest } from "../../workflows/payment-recovery/context.ts";
 import type { GlobalDialog } from "./TopAssetBar.tsx";
@@ -17,7 +18,7 @@ import {
   reloadGlobalDialog,
   type LoadedGlobalDialog,
 } from "./global-dialog-loader.ts";
-import { t } from "../../platform/i18n/index.ts";
+import { t, tr } from "../../platform/i18n/index.ts";
 
 export function DialogRenderer(
   props: ComponentProps<typeof DialogContent>,
@@ -59,24 +60,7 @@ function DialogContent({
   }, [active, load]);
   if (!active) return null;
   if (failed === active)
-    return (
-      <div
-        className="modal-backdrop app-shell app-modal-backdrop"
-        role="dialog"
-        aria-modal="true"
-      >
-        <div className="modal" role="alert">
-          <h2>{t("画面暂时无法显示")}</h2>
-          <p>{t("状态已保留，重新加载画面不会重复执行操作。")}</p>
-          <Button onClick={() => reloadGlobalDialog(active)}>
-            {t("重新加载画面")}
-          </Button>
-          <Button className="secondary" onClick={close}>
-            {t("稍后再看")}
-          </Button>
-        </div>
-      </div>
-    );
+    return <DialogPlaceholder kind={active} failed close={close} />;
   if (loaded?.kind === "account" && active === "account") {
     const AccountLanguageMenu = loaded.module.AccountLanguageMenu;
     return <AccountLanguageMenu close={close} />;
@@ -93,16 +77,68 @@ function DialogContent({
     const VipDialog = loaded.module.VipDialog;
     return <VipDialog close={close} />;
   }
+  return <DialogPlaceholder kind={active} close={close} />;
+}
+
+export function DialogPlaceholder({
+  kind,
+  failed = false,
+  close,
+}: {
+  kind: GlobalDialog;
+  failed?: boolean;
+  close(): void;
+}): ReactNode {
+  const title =
+    kind === "topup"
+      ? t("Stars 充值")
+      : kind === "vip"
+        ? tr("VIP Pass", "VIP 月卡")
+        : kind === "wallet"
+          ? tr("TON Wallet", "TON 钱包")
+          : tr("Language", "语言");
   return (
-    <div
-      className="modal-backdrop app-shell app-modal-backdrop"
-      role="dialog"
-      aria-modal="true"
+    <AppModal
+      className={
+        kind === "topup"
+          ? "topup-sheet-backdrop"
+          : "dialog-placeholder-backdrop"
+      }
+      label={title}
+      onClose={close}
     >
-      <div className="modal" role="status">
-        <h2>{t("正在打开")}</h2>
-        <p>{t("精彩内容马上呈现。")}</p>
-      </div>
-    </div>
+      <section
+        className={`modal dialog-placeholder ${kind === "topup" ? "topup-sheet" : ""}`}
+        aria-busy={!failed}
+      >
+        <h2>{title}</h2>
+        {failed ? (
+          <>
+            <p role="alert">
+              {tr(
+                "This screen couldn't load. Please try again.",
+                "画面暂时无法加载，请重试。",
+              )}
+            </p>
+            <Button onClick={() => reloadGlobalDialog(kind)}>
+              {t("重新加载画面")}
+            </Button>
+          </>
+        ) : (
+          <div
+            className="dialog-skeleton"
+            role="status"
+            aria-label={t("加载中")}
+          >
+            <span />
+            <span />
+            <span />
+          </div>
+        )}
+        <Button className="secondary" onClick={close}>
+          {t("关闭")}
+        </Button>
+      </section>
+    </AppModal>
   );
 }

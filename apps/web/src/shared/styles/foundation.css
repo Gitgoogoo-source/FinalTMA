@@ -2154,3 +2154,24 @@ html[data-app-shell-active] #root {
     font-size: 11px;
   }
 }
+
+/* Tiny fallback while the deferred dialog renderer downloads. */
+.shell-dialog-skeleton {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  min-height: 100px;
+  align-items: center;
+}
+.shell-dialog-skeleton span {
+  display: block;
+  height: 60px;
+  border-radius: 15px;
+  background: #efeadd;
+}
+
+.app-shell.app-modal-backdrop.topup-loading-backdrop {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}

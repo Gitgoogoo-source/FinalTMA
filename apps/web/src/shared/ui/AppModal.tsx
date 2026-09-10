@@ -5,6 +5,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import "../styles/dialog-design.css";
 
 type BackgroundState = {
   count: number;
@@ -125,6 +126,7 @@ export function AppModal({
       onKeyDown={trapFocus}
     >
       {children}
+      <div data-modal-feedback-slot />
     </div>,
     document.body,
   );

@@ -9,7 +9,7 @@
 
 ## 唯一结论
 
-正常账号完成 Telegram 认证、入口交接和首个可操作页面准备后，Web 检查当前 Telegram 用户的 `allows_write_to_pm`。授权协调器作为独立动态模块加载，不进入首屏静态闭包；如果模块晚于页面就绪信号加载，则读取同一 session generation 与路径的已就绪快照后继续，不丢失触发。已经授权时不再请求；未授权且客户端至少支持 Bot API 6.9、同时存在 `requestWriteAccess()` 时，每个新 WebView 自动调用一次原生授权弹窗。用户拒绝后，本 WebView 不循环弹窗、不阻塞游戏，也不写入持久关闭标记；用户下次完整关闭并重新进入 Mini App 时自动再次请求，直到用户授权。旧客户端、普通浏览器、方法缺失或调用抛错时静默跳过，游戏继续可用。
+2026-09-10 弹窗体验调整：消息授权只在账户菜单中由玩家主动点击后请求。正常账号完成认证和入口交接后，在账户菜单展示消息设置；已授权时显示已开启，未授权且客户端支持 Bot API 6.9 并提供 `requestWriteAccess()` 时，点击“允许发送消息”才调用官方原生弹窗。等待回调时禁止重复点击。拒绝后当前 WebView 不重复自动请求，完整关闭并重新进入也不自动请求；玩家仍可主动重试。旧客户端、普通浏览器或方法缺失时隐藏该设置，调用失败不阻塞游戏。该设置随账户菜单动态加载，不进入首屏静态闭包。
 
 `allows_write_to_pm` 只用于前端体验分流，不作为服务端权限或身份事实。服务端只接受带正确 `X-Telegram-Bot-Api-Secret-Token` 的 Telegram webhook，并且只处理私聊中 `message.write_access_allowed.from_request=true`、`message.from.id=message.chat.id`、Telegram ID 为正安全整数的事件。数据库按 Telegram ID 找到 `status=normal` 的内部账号后，才允许至多尝试一次欢迎消息；未识别账号、封禁账号、非私聊、身份不一致、非请求产生的授权或非法数字全部返回成功确认但不发送消息。
 
@@ -26,7 +26,7 @@ Telegram 顶层 webhook 编排归属于 `apps/api/src/workflows/telegram-webhook
 
 ## 验收与失败边界
 
-同一 Production deployment SHA 必须在真实 iPhone Telegram 与 Android Telegram 验证：英语和简体中文首次授权；拒绝后同一 WebView 不重复、重新进入后再次弹出；拒绝后再次进入并授权只收到一条欢迎消息；已授权账号不再弹出且重复 update、多设备并发都不重复消息；既有未授权账号重新进入也会请求；封禁账号、伪造身份、非私聊和 `from_request` 缺失均不发送。Safari Web Inspector 只用于检查页面运行与调用异常，不能替代真实原生弹窗和聊天列表结果。Telegram API、数据库或客户端能力失败均不得阻塞游戏；不得为验收支付 Telegram Stars，也不得创建视觉验收记录日志。
+同一 Production deployment SHA 必须在真实 iPhone Telegram 与 Android Telegram 验证：英语和简体中文在账户菜单主动授权；首次进入、拒绝后同一 WebView 和重新进入都不自动弹出；拒绝后再次主动授权只收到一条欢迎消息；已授权账号不再弹出且重复 update、多设备并发都不重复消息；既有未授权账号也只有主动点击才请求；封禁账号、伪造身份、非私聊和 `from_request` 缺失均不发送。Safari Web Inspector 只用于检查页面运行与调用异常，不能替代真实原生弹窗和聊天列表结果。Telegram API、数据库或客户端能力失败均不得阻塞游戏；不得为验收支付 Telegram Stars，也不得创建视觉验收记录日志。
 
 ## 关联裁决
 

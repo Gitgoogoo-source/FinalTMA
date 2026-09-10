@@ -89,12 +89,11 @@ export function contentName(id: string, source: string): string {
     : source;
 }
 
-export function apiErrorMessage(code: string, source: string): string {
-  if (currentLanguage === "zh-CN") return source;
+export function apiErrorMessage(code: string, _source: string): string {
+  if (currentLanguage === "zh-CN")
+    return englishCatalog?.chineseErrors[code] ?? "暂时无法完成，请稍后重试。";
   return (
-    englishCatalog?.errors[code] ??
-    englishCatalog?.copy[source] ??
-    "Something went wrong. Please try again."
+    englishCatalog?.errors[code] ?? "Something went wrong. Please try again."
   );
 }
 

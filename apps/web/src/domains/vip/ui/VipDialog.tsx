@@ -1,4 +1,4 @@
-import { Crown } from "lucide-react";
+import { Crown, X, CalendarDays } from "lucide-react";
 import type { ReactNode } from "react";
 import "../../../shared/styles/shell-dialogs.css";
 
@@ -11,7 +11,7 @@ import {
   useOperationBlocked,
   useOperationCommands,
 } from "../../../workflows/operation-recovery/context.ts";
-import { t, tp } from "../../../platform/i18n/index.ts";
+import { t, tp, tr } from "../../../platform/i18n/index.ts";
 
 export function VipDialog({ close }: { close(): void }): ReactNode {
   const query = useApiQuery("vip.get");
@@ -52,69 +52,139 @@ export function VipDialog({ close }: { close(): void }): ReactNode {
   const identityConflict =
     attentionOrder?.status === "payment_identity_conflict";
   return (
-    <AppModal labelledBy="vip-dialog-title" onClose={close}>
-      <div className="modal vip">
-        <Crown size={42} />
-        <Badge>
-          {vipDetailStatus(data, Boolean(activeOrder), identityConflict)}
-        </Badge>
-        <h2 id="vip-dialog-title">{t("EvoMyPet VIP 月卡")}</h2>
-        {query.isLoading ? (
-          <p>{t("正在加载 VIP 权益")}</p>
-        ) : query.error ? (
-          <Button onClick={() => void query.refetch()}>{t("重新加载")}</Button>
-        ) : (
-          <>
-            <div className="vip-detail-list">
-              <span>
-                {t("价格")}
-                <strong>{data?.stars_price} Telegram Stars</strong>
-              </span>
-              <span>
-                {t("UTC+0 有效期")}
-                <strong>
-                  {data?.starts_on && data.ends_on
-                    ? tp("{{0}} 至 {{1}}", [data.starts_on, data.ends_on])
-                    : t("尚未开通")}
-                </strong>
-              </span>
-              <span>
-                {t("剩余权益日")}
-                <strong>{tp("{{0}} 天", [data?.remaining_days ?? 0])}</strong>
-              </span>
-              <span>
-                {t("本有效期续费")}
-                <strong>{data?.renewals_used ?? 0}/2</strong>
-              </span>
-              <span>
-                {t("今日 100 Gems")}
-                <strong>
-                  {data?.active
-                    ? data.fgems_claimed_today
-                      ? t("已领取")
-                      : t("可在开盒页领取")
-                    : t("不可领取")}
-                </strong>
-              </span>
-              <span>
-                {t("今日免费稀有盲盒")}
-                <strong>{freeBoxStatus(data)}</strong>
-              </span>
-              <span>
-                {t("全部来源可用免费稀有盲盒")}
-                <strong>
-                  {tp("{{0}} 次", [data?.free_rare_box_available ?? 0])}
-                </strong>
-              </span>
-            </div>
-            <p className="vip-detail-note">
-              {t(
-                "两项每日权益仅在开盒页按 UTC+0 分别手动领取，未领取不补领；有效月卡卖家的真实成交手续费返还按系统结果结算。",
-              )}
-            </p>
+    <AppModal
+      className="vip-pass-backdrop"
+      labelledBy="vip-dialog-title"
+      onClose={close}
+    >
+      <section className="modal vip vip-pass">
+        <header className="vip-pass-hero">
+          <img src="/assets/vip/vip-membership-hero-v4.webp" alt="" />
+          <button
+            className="dialog-close"
+            type="button"
+            onClick={close}
+            aria-label={t("关闭")}
+          >
+            <X />
+          </button>
+          <div className="vip-pass-heading">
+            <span>
+              <Crown aria-hidden="true" /> EVOMYPET
+            </span>
+            <h2 id="vip-dialog-title">{tr("VIP Pass", "VIP 月卡")}</h2>
+            <Badge>
+              {vipDetailStatus(data, Boolean(activeOrder), identityConflict)}
+            </Badge>
+          </div>
+        </header>
+        <div className="vip-pass-content">
+          {query.isLoading ? (
+            <p role="status">{t("正在加载 VIP 权益")}</p>
+          ) : query.error ? (
+            <Button onClick={() => void query.refetch()}>
+              {t("重新加载")}
+            </Button>
+          ) : (
+            <>
+              <div className="vip-pass-price">
+                <div>
+                  <small>
+                    {data?.active
+                      ? tr("Your daily adventure perks", "每天都有新的收获")
+                      : tr("A little extra, every day", "每天多一份惊喜")}
+                  </small>
+                  <strong>
+                    {data?.stars_price}
+                    <span> Telegram Stars</span>
+                  </strong>
+                </div>
+                {data?.active ? (
+                  <span className="vip-days">
+                    <CalendarDays aria-hidden="true" />
+                    {tp("{{0}} 天", [data.remaining_days])}
+                  </span>
+                ) : null}
+              </div>
+              <div className="vip-perk-grid">
+                <article>
+                  <img src="/assets/vip/daily-fgems.png" alt="" />
+                  <strong>100 Gems</strong>
+                  <span>{tr("Every day", "每日领取")}</span>
+                  <small>
+                    {data?.active
+                      ? data.fgems_claimed_today
+                        ? t("已领取")
+                        : t("可在开盒页领取")
+                      : tr("With your VIP Pass", "开通后可领取")}
+                  </small>
+                </article>
+                <article>
+                  <img src="/assets/vip/vip-free-rare-ticket.webp" alt="" />
+                  <strong>{tr("Rare Mystery Box", "稀有盲盒")}</strong>
+                  <span>{tr("One free pull daily", "每日免费开一次")}</span>
+                  <small>
+                    {data?.active
+                      ? freeBoxStatus(data)
+                      : tr("With your VIP Pass", "开通后可领取")}
+                  </small>
+                </article>
+              </div>
+              <p className="vip-rebate-note">
+                {tr(
+                  "Marketplace fee rebates on eligible VIP sales.",
+                  "VIP 有效期内，符合条件的市场成交可享手续费返还。",
+                )}
+              </p>
+              {data?.active && data.ends_on ? (
+                <p className="vip-expiry">
+                  {tr("Valid through", "有效期至")}{" "}
+                  <strong>{data.ends_on}</strong> · UTC
+                </p>
+              ) : null}
+              <details className="dialog-rules">
+                <summary>
+                  {tr("Pass details & rules", "权益详情与规则")}
+                </summary>
+                <p>
+                  {tr(
+                    "Claim both daily perks from the Mystery Box page. Daily benefits reset at 00:00 UTC. Unclaimed perks are not carried over.",
+                    "每日权益需在开盒页分别手动领取，每天 UTC 00:00 重置，未领取的权益不补领。",
+                  )}
+                </p>
+                <dl>
+                  <div>
+                    <dt>{tr("Validity (UTC)", "有效期（UTC）")}</dt>
+                    <dd>
+                      {data?.starts_on && data.ends_on
+                        ? `${data.starts_on} – ${data.ends_on}`
+                        : t("尚未开通")}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>{t("本有效期续费")}</dt>
+                    <dd>{data?.renewals_used ?? 0}/2</dd>
+                  </div>
+                  <div>
+                    <dt>
+                      {tr("Available free rare pulls", "可用免费稀有盲盒")}
+                    </dt>
+                    <dd>
+                      {tp("{{0}} 次", [data?.free_rare_box_available ?? 0])}
+                    </dd>
+                  </div>
+                </dl>
+              </details>
+            </>
+          )}
+        </div>
+        {!query.isLoading && !query.error ? (
+          <footer className="vip-pass-actions">
             {identityConflict ? (
               <div className="payment-recovery">
-                <strong>{t("支付身份校验异常")}</strong>
+                <strong>
+                  {tr("Payment needs attention", "这笔付款需要协助处理")}
+                </strong>
                 <small>{t("本次未到账，请前往支付助手发送 /paysupport")}</small>
               </div>
             ) : activeOrder ? (
@@ -147,12 +217,9 @@ export function VipDialog({ close }: { close(): void }): ReactNode {
                     : tp("使用 {{0}} Telegram Stars 购买", [data?.stars_price])}
               </Button>
             )}
-          </>
-        )}
-        <Button className="secondary" onClick={close}>
-          {t("关闭")}
-        </Button>
-      </div>
+          </footer>
+        ) : null}
+      </section>
     </AppModal>
   );
 }

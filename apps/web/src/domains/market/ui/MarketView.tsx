@@ -722,12 +722,17 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
           labelledBy="market-delist-confirm-title"
           onClose={blocked ? undefined : () => setPendingDelist(null)}
         >
-          <div className="modal">
-            <div className="operation-mark confirming">!</div>
+          <div className="modal market-delist-dialog">
+            <CatalogImage
+              url={pendingDelist.image_thumbnail_url}
+              alt={t(pendingDelist.name)}
+              variant="thumbnail"
+              loading="eager"
+            />
             <h2 id="market-delist-confirm-title">{t("确认全部下架")}</h2>
             <p>
               {tp(
-                "将下架“{{0}}”结算时仍未成交的全部数量。当前显示出售中 {{1}} 个，确认后以最新结果为准。",
+                "下架“{{0}}”的所有未售出数量？当前出售中 {{1}} 个，已售出的部分不受影响。",
                 [t(pendingDelist.name), pendingDelist.available],
               )}
             </p>
@@ -1462,7 +1467,9 @@ function MarketCard({
               ) : (
                 <>
                   <ShoppingCart />
-                  {t("确认购买")}
+                  {balance !== undefined && balance < price * quantity
+                    ? t("充值并继续")
+                    : tp("确认购买 · {{0}} Stars", [price * quantity])}
                 </>
               )}
             </Button>

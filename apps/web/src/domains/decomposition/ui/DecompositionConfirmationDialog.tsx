@@ -8,7 +8,15 @@ import { Button } from "../../../shared/ui/Button.tsx";
 import { CatalogImage } from "../../../shared/ui/CatalogImage.tsx";
 import { InventoryActionDialogHeader } from "../../../shared/ui/InventoryActionDialogHeader.tsx";
 import { QuantityControl } from "../../../shared/ui/QuantityControl.tsx";
-import { t, tp } from "../../../platform/i18n/index.ts";
+import { localized, t, tp } from "../../../platform/i18n/index.ts";
+
+const rarityLabels = localized({
+  common: "普通",
+  rare: "稀有",
+  epic: "史诗",
+  legendary: "传说",
+  mythic: "神话",
+});
 
 type InventoryItem = RouteOutput<"inventory.list">["items"][number];
 
@@ -47,7 +55,10 @@ export function DecompositionConfirmationDialog({
             />
             <div>
               <Badge>
-                {tp("{{0}} · 第 {{1}} 阶", [item.rarity, item.stage])}
+                {tp("{{0}} · 第 {{1}} 阶", [
+                  rarityLabels[item.rarity],
+                  item.stage,
+                ])}
               </Badge>
               <strong>{t(item.name)}</strong>
               <span>
