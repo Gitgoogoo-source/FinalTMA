@@ -455,10 +455,17 @@ export function OperationRegistryRuntimeProvider({
       active?.routeId === "market.purchase") &&
     unresolvedPhases.has(active.phase),
   );
+  const showCompactFeedback = Boolean(
+    active &&
+    compactFeedbackRoutes.has(active.routeId) &&
+    !(
+      active.routeId === "market.create_listing" && active.phase === "succeeded"
+    ),
+  );
   const showOperationDialog =
     session?.accountStatus === "normal" &&
     !hideMarketProgress &&
-    !(active && compactFeedbackRoutes.has(active.routeId));
+    !showCompactFeedback;
 
   useEffect(() => {
     operationsRef.current = operations;
@@ -1662,9 +1669,7 @@ export function OperationRegistryRuntimeProvider({
         gachaResultPreparationReady && (
           <GachaResultImagePreloader key={active.id} result={gachaResult} />
         )}
-      {active &&
-      session?.accountStatus === "normal" &&
-      compactFeedbackRoutes.has(active.routeId) ? (
+      {active && session?.accountStatus === "normal" && showCompactFeedback ? (
         <OperationFeedback
           key={active.id}
           phase={
@@ -1734,7 +1739,7 @@ export function OperationRegistryRuntimeProvider({
                   ? `evolution-operation-backdrop phase-${active.phase}`
                   : active.routeId === "market.create_listing" &&
                       active.phase === "succeeded"
-                    ? "app-shell result-sheet-backdrop market-listing-success-backdrop"
+                    ? "app-shell market-listing-confirmation-backdrop"
                     : active.routeId === "market.create_listing" &&
                         active.phase === "failed"
                       ? "app-shell market-listing-failure-backdrop"

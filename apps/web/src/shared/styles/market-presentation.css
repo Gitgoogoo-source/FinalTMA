@@ -1,3 +1,17 @@
+.app-shell.operation-dialog-backdrop.market-listing-confirmation-backdrop {
+  place-items: center;
+  padding: max(var(--safe-top), 20px) 20px max(var(--safe-bottom), 20px);
+  background: rgba(35, 43, 47, 0.42);
+  backdrop-filter: blur(9px);
+}
+.app-shell .market-listing-confirmation-modal {
+  width: min(100%, 320px);
+  justify-items: center;
+  gap: 16px;
+  padding: 24px;
+  border-radius: 24px;
+  text-align: center;
+}
 .app-shell.operation-dialog-backdrop.market-listing-success-backdrop {
   animation: none;
 }
