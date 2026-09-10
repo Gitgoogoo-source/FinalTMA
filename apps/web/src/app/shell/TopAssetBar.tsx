@@ -14,6 +14,11 @@ export function TopAssetBar({
   openDialog(dialog: GlobalDialog): void;
 }): ReactNode {
   const summary = useApiQuery("identity.summary");
+  const wallet = useApiQuery("wallet.get");
+  const walletConnected = wallet.data?.connected === true;
+  const walletLabel = `${tr("Open TON wallet", "打开 TON 钱包")} · ${
+    walletConnected ? tr("Connected", "已连接") : tr("Not connected", "未连接")
+  }`;
   const kcoin = summary.data?.assets.kcoin;
   const fgems = summary.data?.assets.fgems;
   const user = summary.data?.user;
@@ -41,25 +46,29 @@ export function TopAssetBar({
         <button
           type="button"
           className="ton-wallet-action"
-          aria-label={tr("Open TON wallet", "打开 TON 钱包")}
+          data-connected={walletConnected}
+          aria-label={walletLabel}
+          title={walletLabel}
           aria-haspopup="dialog"
           {...dialogTrigger("wallet", openDialog)}
         >
           <svg
-            width="20"
-            height="20"
+            width="19"
+            height="19"
             viewBox="0 0 24 24"
             fill="none"
             aria-hidden="true"
           >
             <path
-              d="M4 5h16v3L12 21 4 8V5Zm8 0v16"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinejoin="round"
+              d="M6.5 4A3.5 3.5 0 0 0 3 7.5v9A3.5 3.5 0 0 0 6.5 20H18a3 3 0 0 0 3-3v-.5h-4a4.5 4.5 0 0 1 0-9H6.5a.75.75 0 0 1 0-1.5H20a2 2 0 0 0-2-2H6.5Z"
+              fill="currentColor"
+            />
+            <path
+              d="M17 9a3 3 0 0 0 0 6h4.5V9H17Zm.25 2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"
+              fill="currentColor"
+              fillRule="evenodd"
             />
           </svg>
-          <small>TON</small>
         </button>
         <div
           className="asset-pill fgems"
