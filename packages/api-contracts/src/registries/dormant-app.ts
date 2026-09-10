@@ -1,8 +1,7 @@
 import { assertContractRegistry } from "../common/registry.ts";
 import { mintRoutes } from "../domains/mint/routes.ts";
-import { walletRoutes } from "../domains/wallet/routes.ts";
 
-export const dormantRoutes = [...walletRoutes, ...mintRoutes] as const;
+export const dormantRoutes = [...mintRoutes] as const;
 
 assertContractRegistry(dormantRoutes);
 

@@ -2103,3 +2103,54 @@ html[data-app-shell-active] #root {
     padding-inline: 6px;
   }
 }
+
+/* Fit the TON entry alongside both asset balances on narrow Telegram WebViews. */
+.app-shell .asset-actions .asset-pill {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  padding-inline: 4px;
+}
+.app-shell .asset-actions .ton-wallet-action {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+  padding: 3px;
+  border: 1px solid #559edc66;
+  border-radius: 15px;
+  background: linear-gradient(145deg, #19446b, #102842);
+  color: #8dd4ff;
+}
+.app-shell .ton-wallet-action small {
+  font-size: 9px;
+  line-height: 12px;
+}
+.app-shell .asset-copy {
+  min-width: 0;
+}
+.app-shell .asset-copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-shell .asset-actions .asset-copy strong {
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 12px;
+  letter-spacing: -0.4px;
+}
+@media (max-width: 359px) {
+  .app-shell .asset-actions .asset-pill {
+    gap: 3px;
+  }
+  .app-shell .asset-actions .asset-pill .asset-icon {
+    width: 16px;
+    height: 16px;
+  }
+  .app-shell .asset-actions .asset-copy strong {
+    font-size: 11px;
+  }
+}

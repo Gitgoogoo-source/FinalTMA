@@ -56,11 +56,15 @@ const referralSchema = z.object({
   TELEGRAM_MINI_APP_SHORT_NAME: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
 });
 
-const tonSchema = z.object({
-  APP_BASE_URL: z.string().url(),
+const tonWalletSchema = z.object({
   TON_NETWORK: z.enum(["mainnet", "testnet"]),
   TON_API_BASE_URL: z.string().url(),
+  TON_API_KEY: z.string().min(1).optional(),
+});
+
+const tonSchema = tonWalletSchema.extend({
   TON_API_KEY: z.string().min(1),
+  APP_BASE_URL: z.string().url(),
   TON_COLLECTION_ADDRESS: z.string().min(1),
   TON_MINT_VALUE_NANO: z.string().regex(/^[1-9][0-9]*$/),
   TON_MINT_AUTH_PRIVATE_KEY: z.string().min(64),
@@ -77,11 +81,13 @@ export type BattleEnv = z.infer<typeof battleSchema>;
 export type DatabaseEnv = z.infer<typeof databaseSchema>;
 export type ReferralEnv = z.infer<typeof referralSchema>;
 export type TonEnv = z.infer<typeof tonSchema>;
+export type TonWalletEnv = z.infer<typeof tonWalletSchema>;
 let cached: ServerEnv | undefined;
 let cachedBattle: BattleEnv | undefined;
 let cachedDatabase: DatabaseEnv | undefined;
 let cachedReferral: ReferralEnv | undefined;
 let cachedTon: TonEnv | undefined;
+let cachedTonWallet: TonWalletEnv | undefined;
 
 export function getEnv(): ServerEnv {
   cached ??= serverSchema.parse(process.env);
@@ -106,4 +112,9 @@ export function getReferralEnv(): ReferralEnv {
 export function getTonEnv(): TonEnv {
   cachedTon ??= tonSchema.parse(process.env);
   return cachedTon;
+}
+
+export function getTonWalletEnv(): TonWalletEnv {
+  cachedTonWallet ??= tonWalletSchema.parse(process.env);
+  return cachedTonWallet;
 }

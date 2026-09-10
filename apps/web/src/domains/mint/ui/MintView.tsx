@@ -1,4 +1,8 @@
-import { useTonConnectUI, useTonWallet } from "@tonconnect/ui-react";
+import {
+  useTonConnectUI,
+  useTonWallet,
+  type SendTransactionResponse,
+} from "@tonconnect/ui-react";
 import { ChevronLeft, Link2, ShieldAlert } from "lucide-react";
 import { useCallback, useState, type ReactNode } from "react";
 
@@ -8,7 +12,6 @@ import {
 } from "../../../platform/navigation/index.tsx";
 import { CatalogImage } from "../../../shared/ui/CatalogImage.tsx";
 import {
-  useDormantApiQuery,
   useDormantOperationBlocked,
   useDormantOperationCommands,
 } from "../../../dormant/api.ts";
@@ -29,7 +32,7 @@ export function MintView(): ReactNode {
   const inventory = useApiQuery("inventory.detail", {
     template_id: templateId,
   });
-  const walletStatus = useDormantApiQuery("wallet.get");
+  const walletStatus = useApiQuery("wallet.get");
   const navigate = useAppNavigate();
   const back = useCallback(() => navigate(-1), [navigate]);
   const item = inventory.data;
@@ -52,7 +55,7 @@ export function MintView(): ReactNode {
     const mintId = reserved.mint.id;
     const signed = JSON.parse(reserved.permit) as { transaction: Transaction };
     const transaction = signed.transaction;
-    let result: Awaited<ReturnType<typeof tonConnect.sendTransaction>>;
+    let result: SendTransactionResponse;
     try {
       result = await tonConnect.sendTransaction({
         validUntil: transaction.valid_until,

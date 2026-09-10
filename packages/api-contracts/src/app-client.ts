@@ -64,6 +64,7 @@ const routeLoaders = {
   market: cachedLoader(() => import("./domains/market/routes.ts")),
   referral: cachedLoader(() => import("./domains/referral/routes.ts")),
   tasks: cachedLoader(() => import("./domains/tasks/routes.ts")),
+  wallet: cachedLoader(() => import("./domains/wallet/routes.ts")),
   wheel: cachedLoader(() => import("./domains/wheel/routes.ts")),
 } as const;
 
@@ -188,6 +189,8 @@ const recoverableRouteIds = new Set<RecoverableRouteId>([
   "vip.claim_fgems",
   "vip.claim_free_box",
   "vip.create_order",
+  "wallet.verify",
+  "wallet.disconnect",
   "wheel.spin",
 ]);
 

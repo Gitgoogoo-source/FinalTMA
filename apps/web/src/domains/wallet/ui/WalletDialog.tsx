@@ -1,176 +1,352 @@
-import { CheckCircle2, Link2Off, ShieldCheck, WalletCards } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useTonConnectUI, useTonWallet } from "@tonconnect/ui-react";
-
+import { CheckCircle2, Link2Off, WalletCards } from "lucide-react";
 import {
-  dormantApiRequest,
-  useDormantApiQuery,
-  useDormantOperationBlocked,
-  useDormantOperationCommands,
-} from "../../../dormant/api.ts";
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  useIsConnectionRestored,
+  useTonConnectUI,
+  useTonWallet,
+  toUserFriendlyAddress,
+} from "@tonconnect/ui-react";
+
+import { apiRequest } from "../../../platform/api/client.ts";
+import { useApiQuery } from "../../../platform/query/index.ts";
+import { getSession, useSession } from "../../../platform/session/store.ts";
+import {
+  useOperationBlocked,
+  useOperationCommands,
+} from "../../../workflows/operation-recovery/context.ts";
 import { AppModal } from "../../../shared/ui/AppModal.tsx";
 import { Badge } from "../../../shared/ui/Badge.tsx";
 import { Button } from "../../../shared/ui/Button.tsx";
-import { t } from "../../../platform/i18n/index.ts";
-
-type Challenge = { payload: string; expiresAt: string };
+import { tr } from "../../../platform/i18n/index.ts";
+import { requestWalletConnection } from "../connection.ts";
+import {
+  clearPendingWalletConnection,
+  readPendingWalletConnection,
+  savePendingWalletConnection,
+  walletVerificationInput,
+  type PendingWalletConnection,
+} from "../pending-connection.ts";
 
 export function WalletDialog({ close }: { close(): void }): ReactNode {
-  const status = useDormantApiQuery("wallet.get");
+  const status = useApiQuery("wallet.get");
+  const { data: walletStatus, refetch: refetchWallet } = status;
+  const userId = useSession()?.userId;
+  const resumed = useRef<string | null>(null);
   const [tonConnect] = useTonConnectUI();
   const wallet = useTonWallet();
-  const pending = useRef<Challenge | null>(null);
-  const [phase, setPhase] = useState<"idle" | "opening" | "verifying">("idle");
+  const restored = useIsConnectionRestored();
+  const active = useRef<AbortController | null>(null);
+  const mounted = useRef(true);
+  const [phase, setPhase] = useState<
+    "idle" | "opening" | "verifying" | "disconnecting"
+  >("idle");
   const [error, setError] = useState("");
-  const { run } = useDormantOperationCommands();
-  const verifyBlocked = useDormantOperationBlocked("wallet.verify");
-  const disconnectBlocked = useDormantOperationBlocked("wallet.disconnect");
-  const blocked = verifyBlocked || disconnectBlocked;
+  const { run } = useOperationCommands();
+  const verifyBlocked = useOperationBlocked("wallet.verify");
+  const disconnectBlocked = useOperationBlocked("wallet.disconnect");
+  const blocked = verifyBlocked || disconnectBlocked || phase !== "idle";
+  const verified = status.data?.connected === true;
+  const connected =
+    verified &&
+    wallet &&
+    wallet.account.address.toLowerCase() === status.data?.address &&
+    (wallet.account.chain === "-3" ? "testnet" : "mainnet") ===
+      status.data?.network;
+  const address = status.data?.address
+    ? toUserFriendlyAddress(
+        status.data.address,
+        status.data.network === "testnet",
+      )
+    : "";
 
   useEffect(() => {
-    if (!wallet || !pending.current || phase !== "opening") return;
-    const connection = wallet as unknown as {
-      account: {
-        address: string;
-        chain: string;
-        publicKey?: string;
-        walletStateInit?: string;
-      };
-      connectItems?: {
-        tonProof?: {
-          proof?: {
-            timestamp: number;
-            domain: { lengthBytes: number; value: string };
-            payload: string;
-            signature: string;
-          };
-        };
-      };
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      active.current?.abort();
     };
-    const proof = connection.connectItems?.tonProof?.proof;
-    if (!proof) {
-      queueMicrotask(() => {
-        setError(t("钱包未返回 TON Proof，请重新连接"));
-        setPhase("idle");
-      });
-      return;
-    }
-    queueMicrotask(() => setPhase("verifying"));
-    void run(t("正在验证 TON 钱包"), "wallet.verify", {
-      account: {
-        address: connection.account.address,
-        chain: connection.account.chain,
-        ...(connection.account.publicKey
-          ? { public_key: connection.account.publicKey }
-          : {}),
-        ...(connection.account.walletStateInit
-          ? { wallet_state_init: connection.account.walletStateInit }
-          : {}),
-      },
-      proof: {
-        timestamp: proof.timestamp,
-        domain: {
-          length_bytes: proof.domain.lengthBytes,
-          value: proof.domain.value,
-        },
-        payload: proof.payload,
-        signature: proof.signature,
-      },
-      wallet_app_name:
-        (wallet as unknown as { device?: { appName?: string } }).device
-          ?.appName ?? null,
-    }).then((result) => {
-      if (result) pending.current = null;
-      setPhase("idle");
-    });
-  }, [phase, run, wallet]);
+  }, [userId]);
 
-  const connect = async () => {
+  const connect = useCallback(
+    async (restore = false) => {
+      if (active.current || blocked || !restored || !userId) return;
+      let pending: PendingWalletConnection | null = restore
+        ? readPendingWalletConnection(userId)
+        : null;
+      if (restore && !pending) return;
+      const controller = new AbortController();
+      active.current = controller;
+      setError("");
+      setPhase("opening");
+      try {
+        if (!restore) {
+          if (tonConnect.connected) await tonConnect.disconnect();
+          const { data: challenge } = await apiRequest(
+            "wallet.challenge",
+            {},
+            { signal: controller.signal },
+          );
+          if (controller.signal.aborted || getSession()?.userId !== userId)
+            return;
+          pending = {
+            userId,
+            payload: challenge.payload,
+            expiresAt: Date.parse(challenge.expires_at),
+          };
+          savePendingWalletConnection(pending);
+        }
+        if (!pending) return;
+        const request = pending;
+        resumed.current = request.payload;
+        const remaining = request.expiresAt - Date.now();
+        if (remaining <= 0) throw new Error("WALLET_CONNECTION_EXPIRED");
+        const connection = await requestWalletConnection(
+          tonConnect,
+          controller.signal,
+          remaining,
+          {
+            restore,
+            beforeOpen: () => {
+              if (getSession()?.userId !== userId || controller.signal.aborted)
+                throw new Error("WALLET_CONNECTION_CANCELLED");
+              tonConnect.setConnectRequestParameters({
+                state: "ready",
+                value: { tonProof: request.payload },
+              });
+            },
+          },
+        );
+        if (controller.signal.aborted || getSession()?.userId !== userId)
+          return;
+        const current = readPendingWalletConnection(userId);
+        if (current?.payload !== request.payload)
+          throw new Error("WALLET_CONNECTION_EXPIRED");
+        const input = walletVerificationInput(
+          connection,
+          request,
+          getSession()?.userId,
+        );
+        // A request may already have committed before the WebView was reloaded.
+        const sameWallet = (data: typeof walletStatus) =>
+          data?.connected &&
+          data.address === input.account.address.toLowerCase() &&
+          data.network ===
+            (input.account.chain === "-3" ? "testnet" : "mainnet");
+        if (restore && sameWallet(walletStatus)) {
+          clearPendingWalletConnection(request);
+          return;
+        }
+        setPhase("verifying");
+        const result = await run(
+          tr("Verifying TON wallet", "正在验证 TON 钱包"),
+          "wallet.verify",
+          input,
+          { dialog: false },
+        );
+        if (result) clearPendingWalletConnection(request);
+        const refreshed = await refetchWallet();
+        if (sameWallet(refreshed.data)) clearPendingWalletConnection(request);
+        else if (!result && mounted.current && !controller.signal.aborted)
+          setError(
+            tr(
+              "Wallet verification was not completed. Check the operation status before trying again.",
+              "钱包验证尚未完成，请先查看操作状态再重试。",
+            ),
+          );
+      } catch (cause) {
+        if (mounted.current && !controller.signal.aborted) {
+          if (pending) clearPendingWalletConnection(pending);
+          setError(connectionError(cause));
+        }
+      } finally {
+        if (active.current === controller) {
+          tonConnect.setConnectRequestParameters(null);
+          active.current = null;
+          if (mounted.current) setPhase("idle");
+        }
+      }
+    },
+    [blocked, restored, userId, tonConnect, run, walletStatus, refetchWallet],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    // Let StrictMode's mount/cleanup cycle finish before starting side effects.
+    queueMicrotask(() => {
+      if (cancelled || status.isLoading || status.error || !restored || blocked)
+        return;
+      const pending = readPendingWalletConnection(userId);
+      if (pending && resumed.current !== pending.payload) void connect(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, restored, blocked, status.isLoading, status.error, connect]);
+
+  const closeWallet = () => {
+    const pending = readPendingWalletConnection(userId);
+    if (pending) clearPendingWalletConnection(pending);
+    active.current?.abort();
+    close();
+  };
+  const disconnect = async () => {
+    if (active.current || blocked) return;
+    const controller = new AbortController();
+    active.current = controller;
+    const pending = readPendingWalletConnection(userId);
+    if (pending) clearPendingWalletConnection(pending);
     setError("");
-    setPhase("opening");
+    setPhase("disconnecting");
     try {
-      const response = await dormantApiRequest("wallet.challenge", {});
-      const payload = response.data.payload;
-      pending.current = { payload, expiresAt: response.data.expires_at };
-      tonConnect.setConnectRequestParameters({
-        state: "ready",
-        value: { tonProof: payload },
-      });
-      await tonConnect.openModal();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t("钱包连接失败"));
-      setPhase("idle");
+      const result = verified
+        ? await run(
+            tr("Disconnecting TON wallet", "正在断开 TON 钱包"),
+            "wallet.disconnect",
+            {},
+            { dialog: false },
+          )
+        : true;
+      if (!result) {
+        setError(
+          tr(
+            "Disconnection is not confirmed. Check the operation status and try again.",
+            "尚未确认断开，请查看操作状态后重试。",
+          ),
+        );
+        return;
+      }
+      if (tonConnect.connected) await tonConnect.disconnect();
+    } catch {
+      if (mounted.current)
+        setError(
+          tr(
+            "Could not close the wallet session. Please retry.",
+            "钱包会话未能关闭，请重试。",
+          ),
+        );
+    } finally {
+      await status.refetch();
+      active.current = null;
+      if (mounted.current) setPhase("idle");
     }
   };
-  const disconnect = () =>
-    void run(t("正在断开 TON 钱包"), "wallet.disconnect", {}).then(
-      async (result) => {
-        if (result) await tonConnect.disconnect();
-      },
-    );
   return (
-    <AppModal labelledBy="wallet-dialog-title" onClose={close}>
+    <AppModal
+      labelledBy="wallet-dialog-title"
+      onClose={
+        phase === "verifying" || phase === "disconnecting"
+          ? undefined
+          : closeWallet
+      }
+    >
       <div className="modal wallet">
-        <WalletCards size={42} />
-        <Badge>{status.data?.connected ? t("已验证") : t("未连接")}</Badge>
-        <h2 id="wallet-dialog-title">{t("TON 主钱包")}</h2>
-        {status.isLoading ? (
-          <p>{t("正在加载钱包状态")}</p>
+        <WalletCards size={38} aria-hidden="true" />
+        <h2 id="wallet-dialog-title">{tr("TON Wallet", "TON 钱包")}</h2>
+        {status.isLoading || !restored ? (
+          <p role="status">{tr("Loading wallet…", "正在加载钱包…")}</p>
         ) : status.error ? (
-          <Button onClick={() => void status.refetch()}>{t("重新加载")}</Button>
-        ) : status.data?.connected ? (
           <>
-            <div className="verified-wallet">
-              <CheckCircle2 />
-              <div>
-                <strong>{shortAddress(status.data.address ?? "")}</strong>
-                <small>
-                  {status.data.wallet_app_name ?? "TON Wallet"} ·{" "}
-                  {status.data.network}
-                </small>
-              </div>
-            </div>
-            <p>{t("该地址是当前账号唯一经过 TON Proof 验证的主钱包。")}</p>
-            <Button
-              autoFocus
-              className="danger"
-              disabled={blocked}
-              onClick={disconnect}
-            >
-              <Link2Off />
-              {t("断开钱包")}
+            <p role="alert">
+              {tr("Could not load your wallet.", "无法加载钱包状态。")}
+            </p>
+            <Button onClick={() => void status.refetch()}>
+              {tr("Retry", "重试")}
             </Button>
           </>
         ) : (
           <>
-            <ShieldCheck size={34} />
-            <p>
-              {t(
-                "连接钱包后必须完成 TON Proof；钱包地址不能替代 Telegram 登录。",
-              )}
-            </p>
-            <Button
-              autoFocus
-              disabled={blocked || phase !== "idle"}
-              onClick={() => void connect()}
-            >
-              {phase === "opening"
-                ? t("请在钱包中确认")
-                : phase === "verifying"
-                  ? t("正在验证")
-                  : t("连接并验证钱包")}
-            </Button>
+            <Badge>
+              {connected
+                ? tr("Connected", "已连接")
+                : verified
+                  ? tr("Linked to your account", "已绑定账号")
+                  : tr("Not connected", "未连接")}
+            </Badge>
+            {verified ? (
+              <div className="verified-wallet">
+                <CheckCircle2 aria-hidden="true" />
+                <div>
+                  <strong>{`${address.slice(0, 6)}…${address.slice(-6)}`}</strong>
+                  <small>
+                    {status.data?.wallet_app_name ?? "TON Wallet"} ·{" "}
+                    {status.data?.network}
+                  </small>
+                  <code>{address}</code>
+                </div>
+              </div>
+            ) : (
+              <p>
+                {tr(
+                  "Connect your TON wallet and confirm ownership in your wallet app.",
+                  "连接 TON 钱包，并在钱包中确认地址归属。",
+                )}
+              </p>
+            )}
+            {!connected ? (
+              <Button disabled={blocked} onClick={() => void connect()}>
+                {phase === "opening"
+                  ? tr("Confirm in your wallet…", "请在钱包中确认…")
+                  : phase === "verifying"
+                    ? tr("Verifying…", "正在验证…")
+                    : verified
+                      ? tr("Reconnect wallet", "重新连接钱包")
+                      : tr("Connect wallet", "连接钱包")}
+              </Button>
+            ) : null}
+            {verified || wallet ? (
+              <Button
+                className="secondary"
+                disabled={blocked}
+                onClick={() => void disconnect()}
+              >
+                <Link2Off size={18} />
+                {tr("Disconnect wallet", "断开钱包")}
+              </Button>
+            ) : null}
           </>
         )}
-        {error && <p className="error-text">{error}</p>}
-        <Button className="secondary" onClick={close}>
-          {t("关闭")}
+        {error ? (
+          <p className="error-text" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <Button
+          className="secondary"
+          disabled={phase === "verifying" || phase === "disconnecting"}
+          onClick={closeWallet}
+        >
+          {tr("Close", "关闭")}
         </Button>
       </div>
     </AppModal>
   );
 }
 
-function shortAddress(value: string): string {
-  return value.length > 14 ? `${value.slice(0, 7)}…${value.slice(-6)}` : value;
+function connectionError(cause: unknown): string {
+  const code = cause instanceof Error ? cause.message : "";
+  if (code === "WALLET_CONNECTION_CANCELLED")
+    return tr(
+      "Connection cancelled. You can try again.",
+      "已取消连接，可以重试。",
+    );
+  if (code === "WALLET_CONNECTION_EXPIRED")
+    return tr(
+      "Connection timed out. Please try again.",
+      "连接已超时，请重试。",
+    );
+  if (code === "WALLET_PROOF_MISSING")
+    return tr(
+      "Your wallet did not confirm ownership. Please reconnect.",
+      "钱包未返回地址归属验证，请重新连接。",
+    );
+  return tr(
+    "Could not connect your wallet. Check your connection and try again.",
+    "钱包连接失败，请检查网络后重试。",
+  );
 }

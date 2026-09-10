@@ -8,4 +8,4 @@ K-coin 的 `pending` 未付款订单可随时取消或由下一笔创建原子�
 
 TON 钱包通过服务端 challenge 和 `ton_proof` 验证，一个地址只能属于一个账号。Mint 使用 reserve、submit、reconcile、complete/cancel 状态机；链上确认是最终事实，metadata 在成功时冻结为不可变快照。
 
-当前 MVP 只启用 Telegram 身份与 Stars 支付。TON 钱包、Mint、对应任务、Web 路由、前端恢复和 Mint 对账调度全部休眠；保留上述状态机只用于保护底层代码边界，不构成当前产品入口或发布验收项。
+当前启用 Telegram 身份、Stars 支付和顶部 TON 钱包连接及验证。钱包接入与数据库归属保护见 [ADR-099](ADR-099-ton-wallet-connection.md)。Mint、对应奖励任务、Mint Web 路由、Mint 前端恢复和对账调度继续休眠。

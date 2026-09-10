@@ -1,32 +1,18 @@
-import { lazy, Suspense, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
-import { AppModal } from "../../../shared/ui/AppModal.tsx";
-import { t } from "../../../platform/i18n/index.ts";
+import TonProvider from "../../../platform/ton/TonProvider.tsx";
+import { WalletDialog } from "./WalletDialog.tsx";
+import "./wallet.css";
 
-const TonProvider = lazy(() => import("../../../platform/ton/TonProvider.tsx"));
-
-const WalletDialog = lazy(() =>
-  import("./WalletDialog.tsx").then((module) => ({
-    default: module.WalletDialog,
-  })),
-);
-
+// The global dialog loader owns this entire capability's retryable import boundary.
 export function WalletCapabilityDialog({
   close,
 }: {
   close(): void;
 }): ReactNode {
   return (
-    <Suspense
-      fallback={
-        <AppModal label={t("正在加载钱包能力")}>
-          <div className="modal">{t("正在加载钱包能力")}</div>
-        </AppModal>
-      }
-    >
-      <TonProvider>
-        <WalletDialog close={close} />
-      </TonProvider>
-    </Suspense>
+    <TonProvider>
+      <WalletDialog close={close} />
+    </TonProvider>
   );
 }

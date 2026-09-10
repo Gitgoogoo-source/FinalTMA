@@ -1,6 +1,6 @@
 import { Address } from "@ton/ton";
 
-import { getTonEnv } from "../env/index.ts";
+import { getTonWalletEnv } from "../env/index.ts";
 
 export interface TonWalletChainPublicKeyInput {
   address: string;
@@ -33,7 +33,7 @@ const DEFAULT_TIMEOUT_MS = 5_000;
 export async function resolveTonWalletPublicKeyFromChain(
   input: TonWalletChainPublicKeyInput,
 ): Promise<string | null> {
-  const env = getTonEnv();
+  const env = getTonWalletEnv();
   const expectedNetwork =
     input.chain === "TESTNET" || input.chain === "-3" ? "testnet" : "mainnet";
   if (expectedNetwork !== env.TON_NETWORK) return null;
@@ -56,7 +56,7 @@ export async function resolveTonWalletPublicKeyFromChain(
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "x-api-key": env.TON_API_KEY,
+          ...(env.TON_API_KEY ? { "x-api-key": env.TON_API_KEY } : {}),
         },
         body: JSON.stringify({
           address,

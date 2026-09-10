@@ -1,0 +1,42 @@
+.app-shell .modal.wallet {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  text-align: center;
+}
+.app-shell .modal.wallet > svg {
+  align-self: center;
+  color: #69c5ff;
+}
+.app-shell .modal.wallet h2,
+.app-shell .modal.wallet p {
+  margin: 0;
+}
+.app-shell .verified-wallet {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #559edc66;
+  border-radius: 16px;
+  background: #102842;
+  text-align: left;
+}
+.app-shell .verified-wallet > div {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+.app-shell .verified-wallet > svg {
+  flex-shrink: 0;
+  color: #70dab0;
+}
+.app-shell .verified-wallet small {
+  color: #a5b8cc;
+}
+.app-shell .verified-wallet code {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  user-select: all;
+}

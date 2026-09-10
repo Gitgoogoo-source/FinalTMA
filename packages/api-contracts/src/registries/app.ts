@@ -24,6 +24,7 @@ import { referralRoutes } from "../domains/referral/routes.ts";
 import { taskRoutes } from "../domains/tasks/routes.ts";
 import { topupRoutes } from "../domains/topup/routes.ts";
 import { vipRoutes } from "../domains/vip/routes.ts";
+import { walletRoutes } from "../domains/wallet/routes.ts";
 import { wheelRoutes } from "../domains/wheel/routes.ts";
 
 export const activeRoutes = [
@@ -33,6 +34,7 @@ export const activeRoutes = [
   ...inventoryRoutes,
   ...expeditionRoutes,
   ...wheelRoutes,
+  ...walletRoutes,
   ...marketRoutes,
   ...topupRoutes,
   ...vipRoutes,

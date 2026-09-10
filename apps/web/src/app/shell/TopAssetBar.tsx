@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { VipDailyBenefits } from "../../domains/vip/ui/VipDailyBenefits.tsx";
 import { getAppLanguage, tr } from "../../platform/i18n/index.ts";
@@ -6,30 +6,13 @@ import { useApiQuery } from "../../platform/query/index.ts";
 import { getIdentityInitial } from "../../shared/identityInitial.ts";
 import { preloadGlobalDialog } from "./global-dialog-loader.ts";
 
-type AccountLanguageMenuModule = {
-  default: (typeof import("./AccountLanguageMenu.tsx"))["AccountLanguageMenu"];
-};
-
-let accountLanguageMenuTask: Promise<AccountLanguageMenuModule> | null = null;
-const loadAccountLanguageMenu = (): Promise<AccountLanguageMenuModule> => {
-  accountLanguageMenuTask ??= import("./AccountLanguageMenu.tsx")
-    .then((module) => ({ default: module.AccountLanguageMenu }))
-    .catch((cause: unknown) => {
-      accountLanguageMenuTask = null;
-      throw cause;
-    });
-  return accountLanguageMenuTask;
-};
-const AccountLanguageMenu = lazy(loadAccountLanguageMenu);
-
-export type GlobalDialog = "topup" | "vip";
+export type GlobalDialog = "topup" | "vip" | "wallet" | "account";
 
 export function TopAssetBar({
   openDialog,
 }: {
   openDialog(dialog: GlobalDialog): void;
 }): ReactNode {
-  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const summary = useApiQuery("identity.summary");
   const kcoin = summary.data?.assets.kcoin;
   const fgems = summary.data?.assets.fgems;
@@ -45,11 +28,7 @@ export function TopAssetBar({
         className="identity account-menu-trigger"
         aria-label={tr("Open account and language menu", "打开账号与语言菜单")}
         aria-haspopup="dialog"
-        onPointerDown={() =>
-          void loadAccountLanguageMenu().catch(() => undefined)
-        }
-        onFocus={() => void loadAccountLanguageMenu().catch(() => undefined)}
-        onClick={() => setAccountMenuOpen(true)}
+        {...dialogTrigger("account", openDialog)}
       >
         <Avatar name={userLabel} />
         <div>
@@ -59,65 +38,104 @@ export function TopAssetBar({
       </button>
       <VipDailyBenefits />
       <div className="asset-actions">
+        <button
+          type="button"
+          className="ton-wallet-action"
+          aria-label={tr("Open TON wallet", "打开 TON 钱包")}
+          aria-haspopup="dialog"
+          {...dialogTrigger("wallet", openDialog)}
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M4 5h16v3L12 21 4 8V5Zm8 0v16"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <small>TON</small>
+        </button>
         <div
           className="asset-pill fgems"
           role="status"
           aria-live="polite"
           aria-label={`Gems: ${fgems?.available ?? tr("Loading", "加载中")}`}
         >
-          <img
-            className="asset-icon"
-            src="/assets/topbar/fgems-gem.png"
-            width="20"
-            height="20"
-            alt=""
-            aria-hidden="true"
+          <AssetAmount
+            image="fgems-gem"
+            value={fgems?.available}
+            loading={summary.isLoading}
           />
-          <span className="asset-copy">
-            <strong>{formatAsset(fgems?.available, summary.isLoading)}</strong>
-          </span>
         </div>
         <button
           type="button"
           className="asset-pill kcoin"
           data-kcoin-target
           aria-label={`Stars: ${kcoin?.available ?? tr("Loading", "加载中")}. ${tr("Open top-up", "打开充值")}`}
-          onPointerDown={() => prepareGlobalDialog("topup")}
-          onFocus={() => prepareGlobalDialog("topup")}
-          onClick={() => openDialog("topup")}
+          {...dialogTrigger("topup", openDialog)}
         >
-          <img
-            className="asset-icon"
-            src="/assets/topbar/kcoin-star.png"
-            width="20"
-            height="20"
-            alt=""
-            aria-hidden="true"
+          <AssetAmount
+            image="kcoin-star"
+            value={kcoin?.available}
+            loading={summary.isLoading}
           />
-          <span className="asset-copy">
-            <strong>{formatAsset(kcoin?.available, summary.isLoading)}</strong>
-          </span>
         </button>
       </div>
-      {accountMenuOpen ? (
-        <Suspense fallback={null}>
-          <AccountLanguageMenu
-            savedLanguage={user?.preferred_language ?? getAppLanguage()}
-            close={() => setAccountMenuOpen(false)}
-          />
-        </Suspense>
-      ) : null}
     </header>
   );
 }
 
-function prepareGlobalDialog(kind: GlobalDialog): void {
-  void preloadGlobalDialog(kind).catch(() => undefined);
+function dialogTrigger(kind: GlobalDialog, open: (kind: GlobalDialog) => void) {
+  const prepare = () => {
+    void preloadGlobalDialog(kind).catch(() => undefined);
+  };
+  return {
+    onPointerDown: prepare,
+    onFocus: prepare,
+    onClick: () => open(kind),
+  };
 }
 
 function formatAsset(value: number | undefined, loading: boolean): string {
   if (value === undefined) return loading ? "…" : "—";
-  return String(value);
+  return value < 10_000
+    ? String(value)
+    : new Intl.NumberFormat(getAppLanguage(), {
+        notation: "compact",
+        maximumFractionDigits: 1,
+      }).format(value);
+}
+
+function AssetAmount({
+  image,
+  value,
+  loading,
+}: {
+  image: string;
+  value: number | undefined;
+  loading: boolean;
+}): ReactNode {
+  return (
+    <>
+      <img
+        className="asset-icon"
+        src={`/assets/topbar/${image}.png`}
+        width="20"
+        height="20"
+        alt=""
+        aria-hidden="true"
+      />
+      <span className="asset-copy">
+        <strong>{formatAsset(value, loading)}</strong>
+      </span>
+    </>
+  );
 }
 
 function Avatar({ name }: { name: string }): ReactNode {

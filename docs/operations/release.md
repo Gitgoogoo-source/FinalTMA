@@ -1,5 +1,7 @@
 # 生产发布手册
 
+> 2026-09-10 更新：[ADR-099](../architecture/adr/ADR-099-ton-wallet-connection.md) 已启用 TON 钱包连接。下文历史 MVP 中关于 Wallet 休眠、manifest 不使用及 TON 不需配置的描述由 ADR-099 取代；Mint、钱包奖励任务与 Mint 对账继续休眠。先应用钱包前向迁移，再发布同一提交的 Web/API；配置 `TON_NETWORK`、`TON_API_BASE_URL`，按需配置 `TON_API_KEY`。
+
 ## 1. 硬前提
 
 - Vercel production 的 `pnpm build` 必须先执行 `tools/assets/assert-deploy-ready.mjs`；该门禁只在 `VERCEL=1`、`VERCEL_ENV=production` 且 `APP_ENV=production` 时运行当前 v2 manifest 的 `assets:release status`。当前 v2、历史 v1、产品指针、两批 210 映射、URL 或目录密钥任一缺失即使部署非零失败；本地与 Preview 构建不访问远端目录。

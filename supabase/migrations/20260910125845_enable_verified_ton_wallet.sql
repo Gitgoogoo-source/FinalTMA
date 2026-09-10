@@ -1,78 +1,4 @@
-create table onchain.wallet_challenges (
-  id uuid primary key default extensions.gen_random_uuid(),
-  user_id uuid not null references identity.users(id) on delete cascade,
-  challenge text not null unique,
-  expires_at timestamptz not null,
-  consumed_at timestamptz,
-  created_at timestamptz not null default now()
-);
-
-create index wallet_challenges_user_active_idx on onchain.wallet_challenges (user_id, expires_at desc) where consumed_at is null;
-
-create table onchain.wallets (
-  id uuid primary key default extensions.gen_random_uuid(),
-  user_id uuid not null references identity.users(id) on delete cascade,
-  address text not null unique,
-  network text not null check (network in ('mainnet', 'testnet')),
-  wallet_app_name text,
-  public_key text not null,
-  status text not null default 'verified' check (status in ('verified', 'disconnected', 'revoked')),
-  verified_at timestamptz not null default now(),
-  disconnected_at timestamptz,
-  updated_at timestamptz not null default now()
-);
-
-create unique index wallets_user_verified_idx on onchain.wallets (user_id) where status = 'verified';
-
-create or replace function api.wallet_get(p_session_id uuid)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_user_id uuid := api.session_user(p_session_id);
-  v_result jsonb;
-begin
-  select jsonb_build_object(
-    'connected', true,
-    'address', w.address,
-    'network', w.network,
-    'wallet_app_name', w.wallet_app_name,
-    'verified_at', w.verified_at
-  ) into v_result
-  from onchain.wallets w where w.user_id = v_user_id and w.status = 'verified';
-  return coalesce(v_result, jsonb_build_object(
-    'connected', false,
-    'address', null,
-    'network', null,
-    'wallet_app_name', null,
-    'verified_at', null
-  ));
-end;
-$$;
-
-create or replace function api.wallet_create_challenge(
-  p_session_id uuid,
-  p_payload text,
-  p_expires_at timestamptz
-)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_user_id uuid := api.session_user(p_session_id);
-begin
-  delete from onchain.wallet_challenges
-  where user_id = v_user_id and consumed_at is null and expires_at <= now();
-  insert into onchain.wallet_challenges (user_id, challenge, expires_at)
-  values (v_user_id, p_payload, p_expires_at);
-  return jsonb_build_object('payload', p_payload, 'expires_at', p_expires_at);
-end;
-$$;
-
+-- Serialize wallet mutations and prevent reassignment of another account's address.
 create or replace function api.wallet_save_verified(
   p_session_id uuid,
   p_operation_id uuid,
@@ -158,4 +84,3 @@ begin
   end;
 end;
 $$;
-

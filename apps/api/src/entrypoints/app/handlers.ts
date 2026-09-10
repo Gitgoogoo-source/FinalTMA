@@ -14,6 +14,7 @@ import { referralHandlers } from "../../domains/referral/routes.ts";
 import { taskHandlers } from "../../domains/tasks/routes.ts";
 import { topupHandlers } from "../../domains/topup/routes.ts";
 import { vipHandlers } from "../../domains/vip/routes.ts";
+import { walletHandlers } from "../../domains/wallet/routes.ts";
 import { wheelHandlers } from "../../domains/wheel/routes.ts";
 import type { RouteHandler } from "../../http/handlers.ts";
 import { operationRecoveryHandlers } from "../../workflows/operation-recovery/routes.ts";
@@ -31,6 +32,7 @@ export const appHandlers = {
   ...decompositionHandlers,
   ...expeditionHandlers,
   ...wheelHandlers,
+  ...walletHandlers,
   ...marketHandlers,
   ...topupHandlers,
   ...vipHandlers,

@@ -59,6 +59,7 @@ export interface TonProofVerificationResult {
 
 export type TonProofVerificationErrorCode =
   | "TON_PROOF_ADDRESS_UNSUPPORTED"
+  | "TON_PROOF_NETWORK_INVALID"
   | "TON_PROOF_DOMAIN_INVALID"
   | "TON_PROOF_DOMAIN_LENGTH_MISMATCH"
   | "TON_PROOF_DOMAIN_MISMATCH"
@@ -164,7 +165,7 @@ export async function verifyTonProof(
 
   return {
     verified: true,
-    address: input.account.address,
+    address: `${parsedAddress.workchain}:${parsedAddress.hash.toString("hex")}`,
     network: normalizeTonNetwork(input.account.chain),
     domain: proofDomain,
     payload: input.proof.payload,
@@ -241,7 +242,11 @@ export function normalizeTonNetwork(
     return "testnet";
   }
 
-  return "mainnet";
+  if (normalized === "MAINNET" || normalized === "-239") return "mainnet";
+  throw new TonProofVerificationError(
+    "TON_PROOF_NETWORK_INVALID",
+    "Unsupported TON network.",
+  );
 }
 
 export interface ParsedRawTonAddress {

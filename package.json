@@ -12,6 +12,7 @@
     "pnpm": "11.1.3"
   },
   "scripts": {
+    "test:web:wallet": "node --experimental-strip-types --test tools/web/ton_wallet_connection.test.ts tools/web/ton_wallet_proof.test.ts tools/web/ton_wallet_recovery.test.ts tools/web/ton_wallet_chain.test.ts",
     "test:web:startup": "node --experimental-strip-types --test tools/web/telegram_sdk_startup.test.ts",
     "test:web:tutorial": "node --experimental-strip-types --test tools/web/new_user_gacha_tutorial.test.ts",
     "prebuild": "node tools/assets/assert-deploy-ready.mjs",
@@ -50,7 +51,7 @@
     "manifest:check:production": "python3 tools/web/check_manifest.py production",
     "architecture:check": "python3 tools/architecture/check.py",
     "chain:build": "pnpm --filter @evomypet/ton build",
-    "validate:static": "pnpm test:web:startup && pnpm test:web:tutorial && pnpm lint && pnpm format:check && pnpm typecheck && pnpm contracts:check && pnpm i18n:check && pnpm catalog:check && pnpm db:migrations:check && pnpm db:lint && pnpm db:diff:check && pnpm architecture:check && pnpm manifest:check && APP_ENV=development pnpm build",
+    "validate:static": "pnpm test:web:wallet && pnpm test:web:startup && pnpm test:web:tutorial && pnpm lint && pnpm format:check && pnpm typecheck && pnpm contracts:check && pnpm i18n:check && pnpm catalog:check && pnpm db:migrations:check && pnpm db:lint && pnpm db:diff:check && pnpm architecture:check && pnpm manifest:check && APP_ENV=development pnpm build",
     "deploy:preview": "vercel deploy",
     "deploy:production": "vercel deploy --prod"
   },

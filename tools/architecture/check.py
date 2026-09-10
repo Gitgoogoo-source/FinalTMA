@@ -461,7 +461,9 @@ def verify_browser_csp_boundaries() -> None:
     if module_position < 0 or index_html.find(telegram_tag) > module_position:
         raise SystemExit("The integrity-pinned Telegram SDK tag must precede the app module")
 
+    ton_origins = json.loads((ROOT / "tools/web/ton-wallet-origins.json").read_text())
     expected_image_sources = {
+        *ton_origins["image_sources"],
         "'self'",
         "data:",
         "blob:",
@@ -473,10 +475,11 @@ def verify_browser_csp_boundaries() -> None:
         or len(image_sources) != len(expected_image_sources)
     ):
         raise SystemExit(
-            "CSP image sources must remain same-origin, inline, blob, and public Supabase assets only"
+            "CSP image sources must remain same-origin, inline, blob, public Supabase assets, and approved TON wallet icons only"
         )
 
     expected_connect_sources = {
+        *ton_origins["connect_sources"],
         "'self'",
         "https://rest.ably.io",
         "https://realtime.ably.io",
@@ -492,7 +495,7 @@ def verify_browser_csp_boundaries() -> None:
         or len(connect_sources) != len(expected_connect_sources)
     ):
         raise SystemExit(
-            "CSP connect-src must remain same-origin plus the exact Ably browser endpoint allowlist"
+            "CSP connect-src must remain same-origin plus the exact Ably and TON wallet endpoint allowlists"
         )
 
 
@@ -1205,9 +1208,9 @@ def verify_first_screen_persistent_page_boundaries() -> None:
     ).read_text(encoding="utf-8")
     if any(
         term in app_handlers
-        for term in ("walletHandlers", "mintHandlers", "domains/wallet", "domains/mint")
+        for term in ("mintHandlers", "domains/mint")
     ):
-        raise SystemExit("Wallet and Mint handlers cannot enter the active App gateway")
+        raise SystemExit("Mint handlers cannot enter the active App gateway")
     persistent_pages = (WEB_ROOT / "app/router/PersistentPages.tsx").read_text(
         encoding="utf-8"
     )
@@ -2393,13 +2396,12 @@ def verify_game_page_boundary() -> None:
         or "mint/:templateId" in app_router
         or "inventory-action-button--mint" in inventory_page
         or 'useApiQuery("wallet.get")' in top_asset_bar
-        or "WalletDialog" in global_dialogs
         or "useMintRecovery" in recovery
         or 'prefetchApiQuery("wallet.get")' in bootstrap
         or '"/api/jobs/reconcile-mints"' in vercel
     ):
         raise SystemExit(
-            "Current MVP must not expose wallet/Mint UI, routing, recovery, prefetch, or Cron"
+            "Mint remains dormant; wallet must not be queried on the first screen"
         )
 
 
@@ -3963,12 +3965,12 @@ def verify_contract_boundaries() -> None:
         CONTRACT_ROOT / "registries/server.ts"
     ).read_text(encoding="utf-8")
     if (
-        "walletRoutes" in app_registry
+        "...walletRoutes" not in app_registry
         or "mintRoutes" in app_registry
         or "export const routes = activeRoutes" not in app_registry
         or "return findRouteIn(activeRoutes" not in app_registry
         or "return findRouteByPathIn(activeRoutes" not in app_registry
-        or "export const dormantRoutes = [...walletRoutes, ...mintRoutes]"
+        or "export const dormantRoutes = [...mintRoutes]"
         not in dormant_registry
         or 'import("./client-routes/first-screen.ts")' not in app_client
         or "export async function loadClientRoute" not in app_client
@@ -3981,7 +3983,7 @@ def verify_contract_boundaries() -> None:
         or "...activeJobRoutes" not in server_registry
     ):
         raise SystemExit(
-            "Wallet, Mint, and Mint reconciliation must remain outside current runtime registries"
+            "Wallet must be active; Mint and Mint reconciliation must remain outside runtime registries"
         )
     battle_routes = (
         CONTRACT_ROOT / "domains/battle/routes.ts"

@@ -20,10 +20,6 @@ def main() -> None:
             raise SystemExit("OpenAPI drift detected; run pnpm contracts:openapi and commit the result")
         document = json.loads(actual.read_text(encoding="utf-8"))
         dormant_paths = {
-            "/api/wallet",
-            "/api/wallet/challenges",
-            "/api/wallet/proofs",
-            "/api/wallet/disconnect",
             "/api/mints",
             "/api/mints/{mint_id}",
             "/api/mints/reservations",
@@ -35,7 +31,7 @@ def main() -> None:
         exposed_dormant_paths = sorted(dormant_paths & document["paths"].keys())
         if exposed_dormant_paths:
             raise SystemExit(
-                f"Dormant wallet/Mint routes remain in OpenAPI: {exposed_dormant_paths}"
+                f"Dormant Mint routes remain in OpenAPI: {exposed_dormant_paths}"
             )
         for path, path_item in document["paths"].items():
             for method, operation in path_item.items():

@@ -3,12 +3,13 @@ import { useState, type ReactNode } from "react";
 
 import { apiRequest } from "../../platform/api/client.ts";
 import {
+  getAppLanguage,
   setAppLanguage,
   synchronizeAccountLanguage,
   tr,
   type AppLanguage,
 } from "../../platform/i18n/index.ts";
-import { refreshUserState } from "../../platform/query/index.ts";
+import { refreshUserState, useApiQuery } from "../../platform/query/index.ts";
 import { selectionHaptic } from "../../platform/telegram/index.ts";
 import { AppModal } from "../../shared/ui/AppModal.tsx";
 
@@ -17,13 +18,10 @@ const options = [
   { value: "zh-CN", label: "简体中文" },
 ] as const satisfies readonly { value: AppLanguage; label: string }[];
 
-export function AccountLanguageMenu({
-  savedLanguage,
-  close,
-}: {
-  savedLanguage: AppLanguage;
-  close(): void;
-}): ReactNode {
+export function AccountLanguageMenu({ close }: { close(): void }): ReactNode {
+  const summary = useApiQuery("identity.summary");
+  const savedLanguage =
+    summary.data?.user.preferred_language ?? getAppLanguage();
   const [saving, setSaving] = useState<AppLanguage | null>(null);
   const [error, setError] = useState(false);
 

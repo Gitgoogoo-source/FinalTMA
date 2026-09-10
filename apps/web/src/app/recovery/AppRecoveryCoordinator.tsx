@@ -1,5 +1,7 @@
 import { useCallback, type ReactNode } from "react";
 
+import { useWalletConnectionResume } from "../../domains/wallet/useWalletConnectionResume.ts";
+
 import { useApiQuery } from "../../platform/query/index.ts";
 import { useIdentityRecovery } from "../../platform/session/store.ts";
 import {
@@ -10,6 +12,7 @@ import { useNavigationIntentResume } from "../../workflows/payment-recovery/useN
 import { useStarsPaymentRecovery } from "../../workflows/payment-recovery/useStarsPaymentRecovery.ts";
 import { useBlockingOperationRecovery } from "../../workflows/operation-recovery/useBlockingOperationRecovery.ts";
 import { useRecoverableOperationDiscovery } from "../../workflows/operation-recovery/useRecoverableOperationDiscovery.ts";
+import { useGlobalDialogReload } from "../shell/useGlobalDialogReload.ts";
 import type { GlobalDialog } from "../shell/TopAssetBar.tsx";
 
 export function AppRecoveryCoordinator({
@@ -19,6 +22,7 @@ export function AppRecoveryCoordinator({
   openDialog(dialog: GlobalDialog): void;
   closeDialogs(): void;
 }): ReactNode {
+  useGlobalDialogReload(openDialog);
   const recovery = useIdentityRecovery();
   const pendingPayments = useApiQuery("topup.bootstrap");
   const { activateGachaResume, clearTopupRequest, topupRequest } =
@@ -38,6 +42,7 @@ export function AppRecoveryCoordinator({
     },
     [activateGachaResume, clearTopupRequest, closeDialogs],
   );
+  useWalletConnectionResume(openDialog);
   useBlockingOperationRecovery(recovery?.blocking_operations);
   useRecoverableOperationDiscovery(recovery?.authority_cursor);
   useStarsPaymentRecovery(recoveryPayments, openPaymentRecovery);
